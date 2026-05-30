@@ -5,6 +5,9 @@
 /* Trang chỉ hỗ trợ light */
 :root {
   color-scheme: light;
+  --shop-primary: #f7357f;
+  --shop-primary-soft: #ffe1ec;
+  --shop-sky: #a8ddf7;
 }
 
 /* Tránh UA tự tối nền khi tiết kiệm pin */
@@ -49,6 +52,113 @@ body {
 @layer utilities {
   .text-balance {
     text-wrap: balance;
+  }
+}
+
+@layer components {
+  .shop-container {
+    @apply mx-auto max-w-6xl px-4 md:px-6;
+  }
+
+  .shop-topbar {
+    background: #9dd0eb;
+    color: #102235;
+  }
+
+  .shop-hero {
+    background:
+      radial-gradient(circle at 12% 16%, rgba(247, 53, 127, 0.14), transparent 26%),
+      linear-gradient(135deg, #f4fbff 0%, #e2f5ff 52%, #fff4f8 100%);
+  }
+
+  .shop-hero-card {
+    @apply relative overflow-hidden border border-white/80 bg-white/70 shadow-sm;
+    border-radius: 8px;
+  }
+
+  .shop-sale-badge {
+    @apply flex aspect-square flex-col items-center justify-center bg-[var(--shop-primary)] text-white shadow-sm;
+    border-radius: 8px;
+  }
+
+  .shop-sale-badge span {
+    @apply text-4xl font-black leading-none;
+  }
+
+  .shop-sale-badge small {
+    @apply mt-1 text-xs font-bold tracking-[0.24em];
+  }
+
+  .shop-button {
+    @apply inline-flex items-center justify-center px-5 py-3 text-xs font-black uppercase tracking-wide text-white transition;
+    background: var(--shop-primary);
+    border-radius: 4px;
+  }
+
+  .shop-button:hover {
+    background: #db2468;
+  }
+
+  .shop-button-outline {
+    @apply inline-flex items-center justify-center border px-5 py-3 text-xs font-black uppercase tracking-wide transition;
+    border-color: var(--shop-primary);
+    color: var(--shop-primary);
+    border-radius: 4px;
+  }
+
+  .shop-button-outline:hover {
+    background: var(--shop-primary-soft);
+  }
+
+  .shop-promo,
+  .shop-wide-promo {
+    @apply flex min-h-44 items-center justify-between gap-3 overflow-hidden p-6;
+    border-radius: 4px;
+  }
+
+  .shop-promo p,
+  .shop-wide-promo p {
+    @apply text-xs font-black uppercase tracking-wide text-[var(--shop-primary)];
+  }
+
+  .shop-promo h2,
+  .shop-wide-promo h2 {
+    @apply mt-2 max-w-40 text-xl font-black leading-tight text-slate-950;
+  }
+
+  .shop-promo a,
+  .shop-wide-promo a {
+    @apply mt-4 inline-block border-b-2 border-slate-950 text-xs font-black uppercase tracking-wide;
+  }
+
+  .shop-chip {
+    @apply border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-600 transition;
+    border-radius: 999px;
+  }
+
+  .shop-chip:hover {
+    border-color: var(--shop-primary);
+    color: var(--shop-primary);
+  }
+
+  .shop-product-card {
+    @apply overflow-hidden bg-white;
+    border-radius: 4px;
+  }
+
+  .shop-deal {
+    @apply bg-[#f4fbff] p-6 text-center shadow-sm;
+    border-radius: 4px;
+  }
+
+  .shop-service-strip {
+    background:
+      repeating-linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.18) 0 32px,
+        rgba(255, 255, 255, 0) 32px 64px
+      ),
+      #a8ddf7;
   }
 }
 
