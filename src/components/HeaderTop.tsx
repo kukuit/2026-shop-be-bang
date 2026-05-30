@@ -9,7 +9,7 @@ import { Info, FolderKanban, ShoppingCart, BookOpen } from 'lucide-react'
 type Item = { label: string; href: string; icon: React.ReactNode }
 
 const NAV_ITEMS: Item[] = [
-  { label: 'Về Cam Hữu Cơ', href: '/about', icon: <Info className="w-4 h-4" /> },
+  { label: 'Shop Bé Băng', href: '/about', icon: <Info className="w-4 h-4" /> },
   { label: 'Sản Phẩm', href: '/products', icon: <FolderKanban className="w-4 h-4" /> },
   { label: 'Blog', href: '/blogs', icon: <BookOpen className="w-4 h-4" /> },
   {
@@ -39,11 +39,11 @@ function NavItem({
   const base =
     'flex items-center gap-2 px-2 py-2 text-[15px] sm:text-base font-medium transition-colors focus:outline-none focus-visible:ring-0 border-b-2 border-transparent'
 
-  const desktop = 'hidden sm:flex text-gray-600 hover:text-gray-900 hover:border-orange-300'
-  const desktopActive = 'border-orange-500 text-orange-600'
+  const desktop = 'hidden sm:flex text-gray-600 hover:text-gray-900 hover:border-pink-300'
+  const desktopActive = 'border-[var(--shop-primary)] text-[var(--shop-primary)]'
 
   const mobile = 'sm:hidden text-gray-700 hover:bg-gray-50 active:bg-gray-100'
-  const mobileActive = 'border-orange-500 bg-orange-50 text-orange-600'
+  const mobileActive = 'border-[var(--shop-primary)] bg-pink-50 text-[var(--shop-primary)]'
 
   return (
     <Link
@@ -55,10 +55,10 @@ function NavItem({
         isActive ? (isMobile ? mobileActive : desktopActive) : '',
       ].join(' ')}
     >
-      <span className={isActive ? 'text-orange-600' : 'text-gray-500 group-hover:text-orange-600'}>
+      <span className={isActive ? 'text-[var(--shop-primary)]' : 'text-gray-500'}>
         {icon}
       </span>
-      <span className={isActive ? 'text-orange-600' : ''}>{label}</span>
+      <span className={isActive ? 'text-[var(--shop-primary)]' : ''}>{label}</span>
     </Link>
   )
 }
@@ -75,7 +75,6 @@ export default function HeaderTop() {
   return (
     <header className="sticky top-0 z-30 bg-white/80 backdrop-blur border-b">
       <div className={`${CONTAINER} h-14 flex items-center gap-2`}>
-        {/* Logo (replaces Trang Chủ) */}
         <Link
           href="/"
           aria-label="Go to home"
@@ -84,17 +83,14 @@ export default function HeaderTop() {
         >
           <Image
             src="/images/logo.png"
-            alt="Cam Hữu Cơ"
+            alt="Shop Bé Băng"
             width={56}
             height={56}
             className="rounded-full"
             priority
           />
-          {/* <span className="hidden sm:inline text-[15px] font-semibold text-gray-900">
-              Cam Hữu Cơ
-            </span> */}
         </Link>
-        {/* Hamburger (mobile) */}
+
         <button
           aria-label="Open menu"
           aria-expanded={open}
@@ -106,7 +102,6 @@ export default function HeaderTop() {
           </svg>
         </button>
 
-        {/* Nav (desktop) */}
         <nav className="ml-2 hidden sm:flex items-stretch justify-start">
           <div className="flex items-end gap-3">
             {NAV_ITEMS.map((it) => (
@@ -122,7 +117,6 @@ export default function HeaderTop() {
         </nav>
       </div>
 
-      {/* Mobile menu */}
       {open && (
         <div className="sm:hidden border-t bg-white/95 backdrop-blur">
           <div className={`${CONTAINER}`}>

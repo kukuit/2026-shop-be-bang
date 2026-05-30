@@ -1,483 +1,336 @@
-'use client'
-
-import { useState, useEffect } from 'react'
-import Link from 'next/link'
 import Image from 'next/image'
-import { motion, type Variants } from 'framer-motion'
+import Link from 'next/link'
 import {
-  ChevronRight,
-  ChevronLeft,
-  ShoppingCart,
-  Leaf,
-  Phone,
-  MessageCircle,
-  Facebook,
+  Heart,
+  Menu,
+  Search,
+  ShieldCheck,
+  ShoppingBag,
+  Star,
+  Truck,
+  WalletCards,
 } from 'lucide-react'
 
-const containerClass = 'max-w-6xl mx-auto px-4 md:px-6'
-
-// cubic-bezier thay cho 'easeOut' để hợp TypeScript
-const easeOutExpo = [0.16, 1, 0.3, 1] as const
-
-// Variants tái sử dụng
-const fadeInUp: Variants = {
-  hidden: { opacity: 0, y: 12 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.5, ease: easeOutExpo },
+const products = [
+  {
+    name: 'Đầm Bé Gái Hoa Nhí',
+    price: '189.000đ',
+    image: '/images/products/product-0001.webp',
   },
-}
+  {
+    name: 'Set Áo Thun Dễ Thương',
+    price: '159.000đ',
+    image: '/images/products/product-0002.webp',
+  },
+  {
+    name: 'Bộ Đi Chơi Mùa Hè',
+    price: '219.000đ',
+    image: '/images/products/product-0003.webp',
+  },
+  {
+    name: 'Váy Công Chúa Bé Băng',
+    price: '249.000đ',
+    image: '/images/products/product-0004.webp',
+  },
+]
 
-const staggerParent: Variants = {
-  hidden: {},
-  visible: { transition: { staggerChildren: 0.08, delayChildren: 0.05 } },
-}
+const categories = ['Bé gái', 'Bé trai', 'Sơ sinh', 'Đồ bộ', 'Phụ kiện']
 
 export default function HomePage() {
-  const [bannerSlide, setBannerSlide] = useState(0)
-  const [isHovering, setIsHovering] = useState(false)
-
-  const bannerImages = [
-    '/images/home/banner-orange-1.jpg',
-    '/images/home/banner-orange-2.jpg',
-    '/images/home/banner-orange-3.jpg',
-  ]
-
-  // Auto-rotate banner every 7 seconds (pause when hovering)
-  useEffect(() => {
-    if (isHovering) return
-
-    const interval = setInterval(() => {
-      setBannerSlide((prev) => (prev + 1) % bannerImages.length)
-    }, 7000)
-    return () => clearInterval(interval)
-  }, [bannerImages.length, isHovering])
-
-  const nextBanner = () => {
-    setBannerSlide((prev) => (prev + 1) % bannerImages.length)
-  }
-
-  const prevBanner = () => {
-    setBannerSlide((prev) => (prev - 1 + bannerImages.length) % bannerImages.length)
-  }
-
-  const products = [
-    {
-      name: 'Cam sành hữu cơ loại I',
-      desc: 'Trái to, vỏ mỏng, ngọt thanh, canh tác 100% theo tiêu chuẩn hữu cơ.',
-      price: '65.000đ / kg',
-      img: '/images/products/orange-1.jpg',
-    },
-    {
-      name: 'Nước ép cam sành tươi',
-      desc: 'Ép lạnh từ cam sành hữu cơ, giữ trọn vitamin C, không chất bảo quản.',
-      price: '35.000đ / chai 330ml',
-      img: '/images/products/orange-2.jpg',
-    },
-    {
-      name: 'Mứt cam sành nguyên vỏ',
-      desc: 'Mứt cam sành dẻo, ít đường, giữ hương thơm tự nhiên của vỏ cam.',
-      price: '75.000đ / hũ 250g',
-      img: '/images/products/orange-3.jpg',
-    },
-  ]
-
   return (
-    <main className="">
-      {/* SECTION 1: HERO BANNER (bg cam nhạt) */}
-      {/* SECTION 1: HERO BANNER (bg cam nhạt) */}
-      <section className="bg-orange-50/70">
-        <div className={`${containerClass} pt-10 pb-12`}>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
-            {/* Banner image / carousel placeholder (mobile lên trước) */}
-            <motion.div
-              className="relative order-1 md:order-2"
-              initial={{ opacity: 0, scale: 0.92, y: 10 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              transition={{ duration: 0.8, ease: easeOutExpo, delay: 0.1 }}
-            >
-              <div
-                className="
-            relative w-full aspect-[3/2]
-            rounded-2xl overflow-hidden shadow-md
-            ring-4 ring-orange-100/70 bg-white
-          "
-                onMouseEnter={() => setIsHovering(true)}
-                onMouseLeave={() => setIsHovering(false)}
-              >
-                {/* Slider */}
-                <div className="relative w-full h-full">
-                  {bannerImages.map((image, idx) => (
-                    <motion.div
-                      key={idx}
-                      className="absolute inset-0"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: idx === bannerSlide ? 1 : 0 }}
-                      transition={{ duration: 0.5 }}
-                    >
-                      <Image
-                        src={image}
-                        alt={`Giỏ cam sành hữu cơ ${idx + 1}`}
-                        fill
-                        className="object-cover"
-                        sizes="(max-width: 768px) 100vw, 448px"
-                        priority={idx === 0}
-                      />
-                    </motion.div>
-                  ))}
-                </div>
-
-                {/* Navigation Buttons (hidden) */}
-                <button
-                  onClick={prevBanner}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 z-10 opacity-0 pointer-events-none"
-                  aria-label="Previous image"
-                >
-                  <ChevronLeft className="w-5 h-5 text-slate-700" />
-                </button>
-                <button
-                  onClick={nextBanner}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 z-10 opacity-0 pointer-events-none"
-                  aria-label="Next image"
-                >
-                  <ChevronRight className="w-5 h-5 text-slate-700" />
-                </button>
-
-                {/* Dots Indicator */}
-                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex gap-2">
-                  {bannerImages.map((_, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => setBannerSlide(idx)}
-                      className={`w-2.5 h-2.5 rounded-full transition-all ${
-                        idx === bannerSlide ? 'bg-orange-500' : 'bg-white/60 hover:bg-white/80'
-                      }`}
-                      aria-label={`Go to image ${idx + 1}`}
-                    />
-                  ))}
-                </div>
-              </div>
-            </motion.div>
-
-            {/* Text side (mobile xuống dưới) */}
-            <motion.div
-              className="order-2 md:order-1"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
-            >
-              <p className="text-xs md:text-sm tracking-wide uppercase text-orange-600 font-semibold">
-                Cam sành hữu cơ - Sạch từ vườn đến bàn
-              </p>
-
-              <h1 className="mt-3 text-3xl md:text-4xl font-bold leading-tight text-slate-900">
-                Cam sành hữu cơ cho gia đình khỏe mạnh mỗi ngày
-              </h1>
-
-              <p className="mt-4 text-slate-600 max-w-prose">
-                Cam được trồng theo hướng hữu cơ, không thuốc trừ sâu hóa học, không phân bón vô cơ,
-                thu hoạch đúng vụ. Vị ngọt thanh, mọng nước, an tâm cho cả nhà từ người lớn đến trẻ
-                nhỏ.
-              </p>
-
-              <div className="mt-6 flex flex-wrap items-center gap-3">
-                <Link
-                  href="/products"
-                  className="
-              inline-flex items-center gap-2 rounded-xl
-              bg-orange-500 text-white px-4 py-2 text-sm font-medium
-              hover:bg-orange-600 transition
-            "
-                >
-                  <ShoppingCart className="w-4 h-4" />
-                  Đặt cam ngay hôm nay
-                </Link>
-
-                <Link
-                  href="/about"
-                  className="inline-flex items-center gap-2 text-sm font-medium text-orange-700 hover:underline"
-                >
-                  Tìm hiểu quy trình hữu cơ
-                  <ChevronRight className="w-4 h-4" />
-                </Link>
-              </div>
-
-              <div className="mt-5 flex flex-wrap gap-4 text-xs md:text-sm text-slate-600">
-                <div className="flex items-center gap-2">
-                  <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-white shadow-sm">
-                    <Leaf className="w-3.5 h-3.5 text-orange-500" />
-                  </span>
-                  Không thuốc trừ sâu hóa học
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-white shadow-sm">
-                    <Leaf className="w-3.5 h-3.5 text-orange-500" />
-                  </span>
-                  Thu hoạch trong ngày
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-white shadow-sm">
-                    <Leaf className="w-3.5 h-3.5 text-orange-500" />
-                  </span>
-                  Vườn nhà chăm chuẩn
-                </div>
-              </div>
-            </motion.div>
-          </div>
+    <main className="bg-white text-slate-900">
+      <section className="shop-topbar">
+        <div className="shop-container flex items-center justify-between gap-4 text-[11px] font-medium">
+          <span>Welcome to Shop Bé Băng</span>
+          <span className="hidden sm:inline">Hotline: 0923 456 789</span>
+          <span>Register / Login</span>
         </div>
       </section>
 
-      {/* SECTION 2: GIỚI THIỆU CAM HỮU CƠ (bg trắng) */}
-      <section className="bg-white">
-        <div className={`${containerClass} py-12 md:py-16`}>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
-            <motion.div
-              variants={fadeInUp}
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true, amount: 0.25 }}
-            >
-              <h2 className="text-2xl md:text-3xl font-bold text-slate-900">
-                Cam sành hữu cơ – trọn vị thiên nhiên trong từng tép
-              </h2>
-              <p className="mt-4 text-slate-600 leading-relaxed">
-                Vườn cam được chăm sóc theo tiêu chuẩn hữu cơ: sử dụng phân hữu cơ ủ hoai mục, chế
-                phẩm sinh học và biện pháp sinh học để phòng trừ sâu bệnh. Đất được nghỉ luân canh,
-                tưới nước sạch và hoàn toàn không dùng thuốc diệt cỏ.
-              </p>
-              <p className="mt-3 text-slate-600 leading-relaxed">
-                Mỗi trái cam đều được tuyển lựa kỹ, thu hoạch đúng độ chín, bảo quản tự nhiên, giữ
-                lại vỏ xanh đẹp mắt và múi cam mọng nước. Quy trình từ vườn đến tay người dùng được
-                kiểm soát chặt chẽ để đảm bảo tính an toàn và độ tươi ngon.
-              </p>
-              <p className="mt-3 text-slate-600 leading-relaxed">
-                Đây là lựa chọn lý tưởng cho gia đình muốn giảm bớt hóa chất trong bữa ăn, bổ sung
-                vitamin C tự nhiên, tăng đề kháng cho người lớn tuổi và trẻ em.
-              </p>
+      <section className="border-b border-slate-100 bg-white">
+        <div className="shop-container flex h-16 items-center justify-between gap-4">
+          <Link href="/" className="text-xl font-black uppercase tracking-wide text-[var(--shop-primary)]">
+            Bé Băng
+          </Link>
 
-              <div className="mt-6">
-                <Link
-                  href="/about"
-                  className="inline-flex items-center gap-2 rounded-xl bg-orange-500 text-white px-4 py-2 text-sm font-medium hover:bg-orange-600 transition"
-                >
-                  Xem chi tiết quy trình hữu cơ
-                  <ChevronRight className="w-4 h-4" />
-                </Link>
-              </div>
-            </motion.div>
-
-            <motion.div
-              variants={fadeInUp}
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true, amount: 0.25 }}
-              className="grid grid-cols-2 gap-4"
-            >
-              <div className="relative col-span-2 aspect-[16/9] rounded-2xl overflow-hidden bg-orange-50 border border-orange-100">
-                <Image
-                  src="/images/home/orange-garden-1.jpg"
-                  alt="Vườn cam sành hữu cơ"
-                  fill
-                  className="object-cover"
-                  sizes="(max-width: 768px) 100vw, 520px"
-                  loading="lazy"
-                />
-              </div>
-              <div className="relative aspect-square rounded-2xl overflow-hidden bg-orange-50 border border-orange-100">
-                <Image
-                  src="/images/home/orange-garden-2.jpg"
-                  alt="Cận cảnh trái cam sành hữu cơ"
-                  fill
-                  className="object-cover"
-                  sizes="(max-width: 768px) 50vw, 260px"
-                  loading="lazy"
-                />
-              </div>
-              <div className="relative aspect-square rounded-2xl overflow-hidden bg-orange-50 border border-orange-100">
-                <Image
-                  src="/images/home/orange-garden-3.jpg"
-                  alt="Thu hoạch cam sành"
-                  fill
-                  className="object-cover"
-                  sizes="(max-width: 768px) 50vw, 260px"
-                  loading="lazy"
-                />
-              </div>
-            </motion.div>
-          </div>
-        </div>
-      </section>
-
-      {/* SECTION 3: SẢN PHẨM TỪ CAM (bg cam rất nhạt) */}
-      <section className="bg-orange-50/60">
-        <div className={`${containerClass} py-12 md:py-16`}>
-          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
-            <motion.div
-              variants={fadeInUp}
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true, amount: 0.25 }}
-            >
-              <h2 className="text-2xl md:text-3xl font-bold text-slate-900">
-                Sản phẩm từ cam sành hữu cơ
-              </h2>
-              <p className="mt-3 text-slate-600 max-w-xl">
-                Từ trái cam sành hữu cơ, chúng tôi tạo ra nhiều sản phẩm tiện lợi: cam tươi, nước
-                ép, mứt, phù hợp cho sinh hoạt hằng ngày, biếu tặng hoặc dùng trong sự kiện.
-              </p>
-            </motion.div>
-
-            <motion.div
-              variants={fadeInUp}
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true, amount: 0.3 }}
-            >
+          <nav className="hidden items-center gap-7 text-xs font-bold uppercase tracking-wide md:flex">
+            {['Home', 'Shop', 'Pages', 'Blog', 'Contact'].map((item) => (
               <Link
-                href="/products"
-                className="inline-flex items-center gap-2 text-sm font-medium text-orange-700 hover:underline"
+                key={item}
+                href={item === 'Home' ? '/' : '#'}
+                className={
+                  item === 'Home'
+                    ? 'text-[var(--shop-primary)]'
+                    : 'text-slate-700 hover:text-[var(--shop-primary)]'
+                }
               >
-                Xem thêm sản phẩm
-                <ChevronRight className="w-4 h-4" />
+                {item}
               </Link>
-            </motion.div>
-          </div>
-
-          <motion.div
-            variants={staggerParent}
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, amount: 0.2 }}
-            className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
-          >
-            {products.map((p) => (
-              <motion.div
-                key={p.name}
-                variants={fadeInUp}
-                className="flex flex-col rounded-2xl border border-orange-100 bg-white shadow-sm overflow-hidden"
-              >
-                <div className="relative w-full aspect-[4/3] bg-orange-50">
-                  <Image
-                    src={p.img}
-                    alt={p.name}
-                    fill
-                    className="object-cover"
-                    sizes="(max-width: 768px) 100vw, 320px"
-                    loading="lazy"
-                  />
-                </div>
-                <div className="p-4 flex flex-col flex-1">
-                  <h3 className="text-base font-semibold text-slate-900">{p.name}</h3>
-                  <p className="mt-2 text-sm text-slate-600 flex-1">{p.desc}</p>
-                  <div className="mt-3 flex items-center justify-between">
-                    <span className="text-sm font-semibold text-orange-600">{p.price}</span>
-                  </div>
-                  <div className="mt-4">
-                    <Link
-                      href="/contact"
-                      className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-orange-500 text-white px-4 py-2 text-sm font-medium hover:bg-orange-600 transition"
-                    >
-                      <ShoppingCart className="w-4 h-4" />
-                      Đặt hàng ngay
-                    </Link>
-                  </div>
-                </div>
-              </motion.div>
             ))}
-          </motion.div>
+          </nav>
 
-          <div className="mt-8 text-center md:hidden">
-            <Link
-              href="/products"
-              className="inline-flex items-center gap-2 text-sm font-medium text-orange-700 hover:underline"
-            >
-              Xem thêm sản phẩm
-              <ChevronRight className="w-4 h-4" />
-            </Link>
+          <div className="flex items-center gap-3 text-slate-700">
+            <Search className="h-4 w-4" />
+            <Heart className="h-4 w-4" />
+            <ShoppingBag className="h-4 w-4" />
+            <Menu className="h-5 w-5 md:hidden" />
           </div>
         </div>
       </section>
 
-      {/* SECTION 4: THÔNG TIN ĐẶT MUA (bg trắng) */}
-      <section className="bg-white">
-        <div className={`${containerClass} py-12 md:py-16`}>
-          <motion.div
-            variants={fadeInUp}
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, amount: 0.2 }}
-            className="max-w-2xl mx-auto text-center"
-          >
-            <h2 className="text-2xl md:text-3xl font-bold text-slate-900">
-              Đặt cam sành hữu cơ dễ dàng
-            </h2>
-            <p className="mt-3 text-slate-600">
-              Bạn có thể đặt mua qua điện thoại, Zalo, Facebook hoặc đặt online trực tiếp trên
-              website. Chúng tôi sẽ liên hệ xác nhận và giao hàng trong thời gian sớm nhất.
+      <section className="shop-hero">
+        <div className="shop-container grid min-h-[430px] items-center gap-8 py-10 md:grid-cols-[0.9fr_1.1fr] md:py-14">
+          <div className="max-w-xl">
+            <p className="text-sm font-bold uppercase tracking-[0.24em] text-[var(--shop-primary)]">
+              New season for little stars
             </p>
-          </motion.div>
-
-          <motion.div
-            variants={staggerParent}
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, amount: 0.2 }}
-            className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-5 max-w-3xl mx-auto"
-          >
-            <motion.div
-              variants={fadeInUp}
-              className="rounded-2xl border border-orange-100 bg-orange-50/70 p-4 flex items-start gap-3"
-            >
-              <span className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-white shadow-sm">
-                <Phone className="w-4 h-4 text-orange-500" />
-              </span>
-              <div className="text-sm text-slate-700 text-left">
-                <p className="font-semibold">Gọi trực tiếp</p>
-                <p className="mt-1">SĐT: 0981 353 619</p>
-                <p className="mt-1">SĐT: 0838 222 902</p>
-              </div>
-            </motion.div>
-
-            <motion.div
-              variants={fadeInUp}
-              className="rounded-2xl border border-orange-100 bg-orange-50/70 p-4 flex items-start gap-3"
-            >
-              <span className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-white shadow-sm">
-                <MessageCircle className="w-4 h-4 text-orange-500" />
-              </span>
-              <div className="text-sm text-slate-700 text-left">
-                <p className="font-semibold">Zalo / Chat</p>
-                <p className="mt-1">Diễm: (0981 353 619)</p>
-                <p className="mt-1">Khang: (0932 912 524)</p>
-              </div>
-            </motion.div>
-
-            <motion.div
-              variants={fadeInUp}
-              className="rounded-2xl border border-orange-100 bg-orange-50/70 p-4 flex items-start gap-3"
-            >
-              <span className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-white shadow-sm">
-                <Facebook className="w-4 h-4 text-orange-500" />
-              </span>
-              <div className="text-sm text-slate-700 text-left">
-                <p className="font-semibold">Fanpage Facebook</p>
-                <p className="mt-1">fb.com/camhuucovn</p>
-              </div>
-            </motion.div>
-          </motion.div>
-
-          <div className="mt-8 text-center">
-            <Link
-              href="/contact"
-              className="inline-flex items-center gap-2 rounded-xl bg-orange-500 text-white px-5 py-2.5 text-sm font-medium hover:bg-orange-600 transition"
-            >
-              Đặt online ngay
-              <ChevronRight className="w-4 h-4" />
-            </Link>
+            <h1 className="mt-4 text-4xl font-black leading-tight text-slate-950 md:text-6xl">
+              Quần áo trẻ em mềm xinh, dễ mặc mỗi ngày
+            </h1>
+            <p className="mt-4 max-w-lg text-base leading-7 text-slate-600">
+              Shop Bé Băng chọn các mẫu váy, set đồ và phụ kiện đáng yêu cho bé từ sơ sinh đến 8
+              tuổi, ưu tiên chất liệu thoáng mát và form mặc thoải mái.
+            </p>
+            <div className="mt-7 flex flex-wrap gap-3">
+              <Link href="#products" className="shop-button">
+                Shop now
+              </Link>
+              <Link href="#collections" className="shop-button-outline">
+                Xem bộ sưu tập
+              </Link>
+            </div>
           </div>
+
+          <div className="relative grid grid-cols-2 gap-4">
+            <div className="shop-hero-card col-span-2 aspect-[16/10] md:col-span-1 md:aspect-[4/5]">
+              <Image
+                src="/images/products/product-0001.webp"
+                alt="Đầm trẻ em Shop Bé Băng"
+                fill
+                priority
+                className="object-contain p-6"
+                sizes="(max-width: 768px) 100vw, 360px"
+              />
+            </div>
+            <div className="grid gap-4">
+              <div className="shop-hero-card aspect-square">
+                <Image
+                  src="/images/products/product-0002.webp"
+                  alt="Set áo thun trẻ em"
+                  fill
+                  className="object-contain p-5"
+                  sizes="180px"
+                />
+              </div>
+              <div className="shop-sale-badge">
+                <span>35%</span>
+                <small>OFF</small>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="collections" className="shop-container py-7">
+        <div className="grid gap-4 md:grid-cols-3">
+          <article className="shop-promo bg-[#dff5ff]">
+            <div>
+              <p>New Arrival</p>
+              <h2>Baby dress get 30% off</h2>
+              <Link href="#products">Shop now</Link>
+            </div>
+            <Image
+              src="/images/products/product-0003.webp"
+              alt="New arrival"
+              width={190}
+              height={190}
+              className="object-contain"
+            />
+          </article>
+          <article className="shop-promo bg-[#ffe1ec]">
+            <div>
+              <p>New Style</p>
+              <h2>Set đồ xinh cho bé</h2>
+              <Link href="#products">Shop now</Link>
+            </div>
+            <Image
+              src="/images/products/product-0002.webp"
+              alt="Set đồ trẻ em"
+              width={180}
+              height={180}
+              className="object-contain"
+            />
+          </article>
+          <article className="shop-promo bg-[#dff5ff]">
+            <div>
+              <p>Trendy</p>
+              <h2>Collections mới về</h2>
+              <Link href="#products">Shop now</Link>
+            </div>
+            <Image
+              src="/images/products/product-0004.webp"
+              alt="Collection trẻ em"
+              width={185}
+              height={185}
+              className="object-contain"
+            />
+          </article>
+        </div>
+      </section>
+
+      <section id="products" className="shop-container py-10 md:py-14">
+        <div className="text-center">
+          <h2 className="text-2xl font-black">Popular Products</h2>
+          <p className="mt-1 text-sm text-slate-500">Những mẫu được mẹ chọn nhiều nhất tuần này</p>
+          <div className="mt-5 flex flex-wrap justify-center gap-2">
+            {categories.map((category) => (
+              <button key={category} className="shop-chip" type="button">
+                {category}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          {products.map((product) => (
+            <article key={product.name} className="shop-product-card">
+              <div className="relative aspect-square bg-[#f4fbff]">
+                <Image
+                  src={product.image}
+                  alt={product.name}
+                  fill
+                  className="object-contain p-6"
+                  sizes="(max-width: 768px) 50vw, 260px"
+                />
+              </div>
+              <div className="pt-3">
+                <div className="flex items-start justify-between gap-3">
+                  <h3 className="text-sm font-semibold text-slate-800">{product.name}</h3>
+                  <span className="text-sm font-bold text-[var(--shop-primary)]">
+                    {product.price}
+                  </span>
+                </div>
+                <div className="mt-2 flex gap-0.5 text-[#8ed3ee]" aria-label="5 stars">
+                  {Array.from({ length: 5 }).map((_, index) => (
+                    <Star key={index} className="h-3.5 w-3.5 fill-current" />
+                  ))}
+                </div>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="grid md:grid-cols-3">
+        <article className="shop-wide-promo bg-[#92d7f2]">
+          <Image
+            src="/images/products/product-0002.webp"
+            alt="New arrivals"
+            width={260}
+            height={220}
+            className="object-contain"
+          />
+          <div>
+            <p>New Arrivals</p>
+            <h2>Up to 35% off</h2>
+            <Link href="#products">Shop now</Link>
+          </div>
+        </article>
+        <article className="shop-wide-promo bg-[#7fc9eb]">
+          <div>
+            <p>Online Shopping</p>
+            <h2>Flat 25% off</h2>
+            <Link href="#products">Shop now</Link>
+          </div>
+          <Image
+            src="/images/products/product-0003.webp"
+            alt="Online shopping"
+            width={260}
+            height={220}
+            className="object-contain"
+          />
+        </article>
+        <article className="shop-wide-promo bg-[#a9ddf5]">
+          <div>
+            <p>Baby Girl's</p>
+            <h2>Collection mới</h2>
+            <Link href="#products">Shop now</Link>
+          </div>
+          <Image
+            src="/images/products/product-0004.webp"
+            alt="Baby girls collection"
+            width={250}
+            height={220}
+            className="object-contain"
+          />
+        </article>
+      </section>
+
+      <section className="shop-container grid gap-10 py-12 md:grid-cols-[0.9fr_1.1fr] md:py-16">
+        <article className="shop-deal">
+          <p className="text-xs font-bold uppercase tracking-[0.2em] text-[var(--shop-primary)]">
+            Best Deal
+          </p>
+          <h2 className="mt-2 text-2xl font-black">Combo bé đi chơi cuối tuần</h2>
+          <Image
+            src="/images/products/product-0001.webp"
+            alt="Best deal"
+            width={320}
+            height={320}
+            className="mx-auto mt-3 object-contain"
+          />
+          <div className="mt-4 flex justify-center gap-4 text-center text-xs font-semibold text-slate-500">
+            {['307 Days', '22 Hours', '29 Mins', '54 Secs'].map((time) => (
+              <span key={time}>{time}</span>
+            ))}
+          </div>
+          <Link href="#products" className="shop-button mt-5">
+            Shop now
+          </Link>
+        </article>
+
+        <div>
+          <h2 className="text-2xl font-black">On Sale Products</h2>
+          <p className="mt-1 text-sm text-slate-500">Một số mẫu đang ưu đãi trong tháng</p>
+          <div className="mt-5 grid gap-4 sm:grid-cols-2">
+            {products.map((product) => (
+              <article key={`sale-${product.name}`} className="flex items-center gap-4">
+                <div className="relative h-24 w-24 shrink-0 bg-[#f4fbff]">
+                  <Image src={product.image} alt={product.name} fill className="object-contain p-3" sizes="96px" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold">{product.name}</h3>
+                  <p className="mt-1 text-sm font-bold text-[var(--shop-primary)]">
+                    {product.price}
+                  </p>
+                  <div className="mt-1 flex gap-0.5 text-[#8ed3ee]">
+                    {Array.from({ length: 5 }).map((_, index) => (
+                      <Star key={index} className="h-3 w-3 fill-current" />
+                    ))}
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="shop-service-strip">
+        <div className="shop-container grid gap-6 py-8 text-center md:grid-cols-3">
+          {[
+            { icon: Truck, title: 'Free Shipping', text: 'Cho đơn từ 500.000đ' },
+            { icon: WalletCards, title: 'Money Back Guarantee', text: 'Đổi trả trong 7 ngày' },
+            { icon: ShieldCheck, title: 'Secure Payment', text: 'Thanh toán an toàn' },
+          ].map((item) => {
+            const Icon = item.icon
+            return (
+              <div key={item.title}>
+                <Icon className="mx-auto h-8 w-8 text-slate-800" />
+                <h3 className="mt-2 text-sm font-black">{item.title}</h3>
+                <p className="text-xs text-slate-600">{item.text}</p>
+              </div>
+            )
+          })}
         </div>
       </section>
     </main>
