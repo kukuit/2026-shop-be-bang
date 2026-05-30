@@ -252,7 +252,7 @@ export default function HomePage() {
         </article>
         <article className="shop-wide-promo bg-[#a9ddf5]">
           <div>
-            <p>Baby Girl's</p>
+            <p>Baby Girl&apos;s</p>
             <h2>Collection mới</h2>
             <Link href="#products">Shop now</Link>
           </div>
