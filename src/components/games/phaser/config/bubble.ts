@@ -1,0 +1,31 @@
+export const BUBBLE_CONFIG = {
+  targetActive: 6,
+  maxActive: 7,
+  spawnDelayMin: 850,
+  spawnDelayMax: 1150,
+  refillCheckDelay: 220,
+  initialSpawnDelay: 300,
+  lanes: 5,
+  laneJitter: 34,
+  minDistance: 135,
+  correctMinDistance: 155,
+  maxSpawnAttempts: 8,
+  correctSpawnOrderMin: 3,
+  correctSpawnOrderMax: 10,
+  radiusMin: 48,
+  radiusMax: 60,
+  speedLevels: [78, 92, 106] as readonly number[],
+  swayMin: 10,
+  swayMax: 28,
+  frequencyMin: 0.00065,
+  frequencyMax: 0.00115,
+  edgeMargin: 12,
+  spawnOffsetMin: 4,
+  spawnOffsetMax: 16,
+  topDespawnY: 245,
+  shooterSafeTop: 1030,
+} as const
+
+export const BUBBLE_COLORS = [
+  0xfb7185, 0x60a5fa, 0xfacc15, 0xa78bfa, 0xfb923c, 0xf472b6, 0x34d399,
+] as const
