@@ -1,0 +1,33 @@
+import type { LessonData, MathQuestion } from '../types/game'
+
+const shuffle = <T,>(items: T[]) => {
+  for (let index = items.length - 1; index > 0; index -= 1) {
+    const target = Math.floor(Math.random() * (index + 1))
+    ;[items[index], items[target]] = [items[target], items[index]]
+  }
+  return items
+}
+
+export class QuestionSystem {
+  constructor(private readonly lesson?: LessonData) {}
+
+  next(): MathQuestion {
+    if (this.lesson?.questions.length) {
+      const source = this.lesson.questions[Math.floor(Math.random() * this.lesson.questions.length)]
+      return { ...source, options: shuffle([...source.options]) }
+    }
+
+    const first = Math.floor(Math.random() * 9) + 1
+    const second = Math.floor(Math.random() * (10 - first)) + 1
+    const answer = first + second
+    const values = new Set<number>([answer])
+
+    while (values.size < 6) values.add(Math.floor(Math.random() * 10) + 1)
+
+    return {
+      text: `${first} + ${second} = ?`,
+      answer,
+      options: shuffle(Array.from(values)),
+    }
+  }
+}
