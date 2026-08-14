@@ -1,5 +1,5 @@
 import * as Phaser from 'phaser'
-import { BUBBLE_CONFIG } from '../config/bubble'
+import { BUBBLE_CONFIG, BUBBLE_VISUAL_CONFIG } from '../config/bubble'
 
 export interface BubbleMovement {
   radius: number
@@ -29,19 +29,29 @@ export class Bubble extends Phaser.GameObjects.Container {
     gameWidth: number,
   ) {
     const radius = movement.radius
-    const circle = scene.add.circle(0, 0, radius, color, 0.9).setStrokeStyle(5, 0xffffff, 0.75)
-    const shine = scene.add.ellipse(-radius * 0.32, -radius * 0.3, radius * 0.35, radius * 0.18, 0xffffff, 0.65).setAngle(-28)
-    const knot = scene.add.triangle(0, radius + 8, -9, 9, 9, 9, 0, -8, color, 0.95)
+    const balloon = scene.add.image(0, radius * BUBBLE_VISUAL_CONFIG.bodyOffsetYFactor, 'balloon')
+      .setDisplaySize(
+        radius * BUBBLE_VISUAL_CONFIG.bodyWidthFactor,
+        radius * BUBBLE_VISUAL_CONFIG.bodyHeightFactor,
+      )
+      .setTint(color)
+      .setAlpha(BUBBLE_VISUAL_CONFIG.colorOpacity)
     const label = scene.add.text(0, 1, String(value), {
       fontFamily: 'Arial, sans-serif',
-      fontSize: '48px',
+      fontSize: `${Math.round(radius * BUBBLE_VISUAL_CONFIG.numberSizeFactor)}px`,
       fontStyle: 'bold',
-      color: '#172554',
-      stroke: '#ffffff',
-      strokeThickness: 7,
+      color: '#ffffff',
+      stroke: '#2f286b',
+      strokeThickness: BUBBLE_VISUAL_CONFIG.numberStrokeThickness,
     }).setOrigin(0.5)
+    label.setShadow(
+      0,
+      BUBBLE_VISUAL_CONFIG.numberShadowOffsetY,
+      'rgba(31, 27, 82, 0.28)',
+      2,
+    )
 
-    super(scene, x, y, [knot, circle, shine, label])
+    super(scene, x, y, [balloon, label])
     this.value = value
     this.hitRadius = radius
     this.baseX = x
