@@ -26,6 +26,24 @@ export const BUBBLE_CONFIG = {
   shooterSafeTop: 1030,
 } as const
 
-export const BUBBLE_COLORS = [
-  0xfb7185, 0x60a5fa, 0xfacc15, 0xa78bfa, 0xfb923c, 0xf472b6, 0x34d399,
-] as const
+export const BUBBLE_VISUAL_CONFIG = {
+  bodyWidthFactor: 2.35,
+  bodyHeightFactor: 3.15,
+  bodyOffsetYFactor: 0.5,
+  colorOpacity: 0.9,
+  numberSizeFactor: 1,
+  numberStrokeThickness: 5,
+  numberShadowOffsetY: 2,
+} as const
+
+export const BUBBLE_PALETTE = {
+  pink: { light: 0xffa6d4, main: 0xff5aaa, dark: 0xdc2475 },
+  red: { light: 0xff958d, main: 0xff493d, dark: 0xdc2830 },
+  orange: { light: 0xffc273, main: 0xff8a16, dark: 0xe05b00 },
+  yellow: { light: 0xffef74, main: 0xffd11a, dark: 0xdf9700 },
+  green: { light: 0xb6ef70, main: 0x63d238, dark: 0x2b982a },
+  blue: { light: 0x82dcff, main: 0x32a6ff, dark: 0x176bcd },
+  purple: { light: 0xda9cff, main: 0xb64cff, dark: 0x7b24c4 },
+} as const
+
+export const BUBBLE_COLORS = Object.values(BUBBLE_PALETTE).map(({ main }) => main)

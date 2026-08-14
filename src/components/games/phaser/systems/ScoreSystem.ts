@@ -7,8 +7,16 @@ export class ScoreSystem {
   }
 
   wrong() {
+    const previousValue = this.value
     this.value = Math.max(0, this.value - 2)
-    return this.value
+    return {
+      score: this.value,
+      deducted: this.value < previousValue,
+    }
+  }
+
+  reset() {
+    this.value = 0
   }
 
   get current() {
