@@ -1,7 +1,15 @@
 import * as Phaser from 'phaser'
 import { BubbleMathScene } from './scenes/BubbleMathScene'
 
-export const createGameConfig = (parent: HTMLElement): Phaser.Types.Core.GameConfig => ({
+type GameLoadingCallbacks = {
+  onProgress: (progress: number) => void
+  onReady: () => void
+}
+
+export const createGameConfig = (
+  parent: HTMLElement,
+  { onProgress, onReady }: GameLoadingCallbacks,
+): Phaser.Types.Core.GameConfig => ({
   type: Phaser.AUTO,
   parent,
   width: 720,
@@ -19,4 +27,10 @@ export const createGameConfig = (parent: HTMLElement): Phaser.Types.Core.GameCon
     height: 1280,
   },
   render: { antialias: true, roundPixels: true },
+  callbacks: {
+    preBoot: (game) => {
+      game.events.on('bubble-shooter:load-progress', onProgress)
+      game.events.once('bubble-shooter:ready', onReady)
+    },
+  },
 })

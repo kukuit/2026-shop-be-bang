@@ -6,7 +6,8 @@ import ChatWidget from '@/components/ChatWidget'
 
 export default function SiteShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
-  const isGameRoute = pathname === '/game/demo-phaser3' || pathname.startsWith('/game/demo-phaser3/')
+  const gameRoute = '/game/lop-1/toan/luyen-tap/cong-den-10'
+  const isGameRoute = pathname === gameRoute || pathname.startsWith(`${gameRoute}/`)
 
   if (isGameRoute) return <>{children}</>
 
