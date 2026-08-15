@@ -49,6 +49,10 @@ export class BubbleMathScene extends Phaser.Scene {
   }
 
   preload() {
+    this.load.on('progress', (progress: number) => {
+      this.game.events.emit('bubble-shooter:load-progress', progress)
+    })
+
     this.load.image('game-background', '/games/phaser/images/background.png')
     this.load.image('cannon-base', '/games/phaser/images/cannon-base.png')
     this.load.image('cannon-barrel', '/games/phaser/images/cannon-barrel.png')
@@ -123,6 +127,7 @@ export class BubbleMathScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.cleanup, this)
 
     this.startQuestion()
+    this.game.events.emit('bubble-shooter:ready')
   }
 
   update(time: number, delta: number) {

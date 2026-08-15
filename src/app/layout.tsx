@@ -1,10 +1,9 @@
 import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
-import 'grapesjs/dist/css/grapes.min.css'
 import Providers from './providers'
 import SiteShell from '@/components/SiteShell'
-import { GoogleAnalytics } from '@next/third-parties/google'
+import GoogleAnalytics from '@/components/analytics/GoogleAnalytics'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -81,7 +80,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <SiteShell>{children}</SiteShell>
         </Providers>
 
-        <GoogleAnalytics gaId="G-2EF1HMW0BP" />
+        <GoogleAnalytics />
       </body>
     </html>
   )
