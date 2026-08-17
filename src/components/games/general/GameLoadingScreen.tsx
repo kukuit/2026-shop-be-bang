@@ -7,7 +7,7 @@ export default function GameLoadingScreen({ progress }: GameLoadingScreenProps) 
 
   return (
     <div
-      className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-gradient-to-b from-sky-300 via-sky-200 to-cyan-100 px-8 text-center"
+      className="absolute inset-0 z-[60] flex flex-col items-center justify-center bg-gradient-to-b from-sky-300 via-sky-200 to-cyan-100 px-8 text-center"
       role="status"
       aria-live="polite"
       aria-label={percentage === undefined ? 'Đang tải trò chơi' : `Đang tải trò chơi ${percentage}%`}

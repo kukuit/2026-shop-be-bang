@@ -1,13 +1,15 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import GameLoadingScreen from './GameLoadingScreen'
+import { GameLoadingScreen, GameShell } from '../general'
 
 export default function PhaserGame() {
   const containerRef = useRef<HTMLDivElement>(null)
   const gameRef = useRef<import('phaser').Game | null>(null)
   const [progress, setProgress] = useState(5)
   const [isReady, setIsReady] = useState(false)
+  const [score, setScore] = useState(0)
+  const [muted, setMuted] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -25,6 +27,7 @@ export default function PhaserGame() {
           setIsReady(true)
         },
       }))
+      gameRef.current.events.on('game-ui:score', setScore)
     })
 
     return () => {
@@ -34,8 +37,16 @@ export default function PhaserGame() {
     }
   }, [])
 
+  const sendToGame = (event: string, value?: boolean) => gameRef.current?.events.emit(event, value)
+
   return (
-    <div className="relative aspect-[9/16] max-h-dvh w-full max-w-[calc(100dvh*0.5625)] overflow-hidden bg-sky-200">
+    <GameShell
+      score={score}
+      muted={muted}
+      onMutedChange={(value) => { setMuted(value); sendToGame('game-ui:mute', value) }}
+      onPauseChange={(value) => sendToGame('game-ui:pause', value)}
+      onRestart={() => { setScore(0); sendToGame('game-ui:restart') }}
+    >
       {!isReady && <GameLoadingScreen progress={progress} />}
       <div
         ref={containerRef}
@@ -44,6 +55,6 @@ export default function PhaserGame() {
         aria-label="Game bắn bong bóng toán học"
         aria-hidden={!isReady}
       />
-    </div>
+    </GameShell>
   )
 }
