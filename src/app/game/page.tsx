@@ -36,7 +36,7 @@ export default function GamePage() {
             <Gamepad2 size={24} aria-hidden="true" />
           </div>
           <div className="text-left">
-            <h1 className="text-2xl font-black text-slate-900 md:text-3xl">Chọn trò chơi</h1>
+            <h1 className="text-2xl font-black text-slate-900 md:text-3xl">Bé Băng Games</h1>
             <p className="text-xs font-bold text-slate-500 md:text-sm">Bé muốn chơi game nào?</p>
           </div>
         </div>
@@ -46,7 +46,7 @@ export default function GamePage() {
             <Link
               key={game.href}
               href={game.href}
-              className="group relative aspect-square overflow-hidden rounded-2xl border-[3px] border-white bg-white shadow-xl transition duration-300 hover:-translate-y-1 hover:shadow-2xl focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-sky-400 md:rounded-[2rem]"
+              className="group relative aspect-square overflow-hidden rounded-2xl border-[3px] border-white bg-white shadow-xl focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-sky-400 md:rounded-[2rem]"
               aria-label={`Chơi ${game.title}`}
             >
               <Image
@@ -62,7 +62,7 @@ export default function GamePage() {
                 <p className="text-base font-black leading-tight md:text-2xl">{game.title}</p>
                 <p className="mt-0.5 text-[10px] font-bold text-white/85 md:text-sm">{game.subtitle}</p>
               </div>
-              <span className="absolute right-3 top-3 grid h-9 w-9 place-items-center rounded-full border-2 border-white bg-white/90 text-sky-600 shadow-lg transition group-hover:scale-110 md:h-11 md:w-11">
+              <span className="absolute right-3 top-3 grid h-9 w-9 place-items-center rounded-full border-2 border-white bg-white/90 text-sky-600 shadow-lg md:h-11 md:w-11">
                 <Play className="ml-0.5 h-4 w-4 fill-current md:h-5 md:w-5" aria-hidden="true" />
               </span>
             </Link>

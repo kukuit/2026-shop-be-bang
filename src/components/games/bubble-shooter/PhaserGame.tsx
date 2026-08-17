@@ -9,6 +9,7 @@ export default function PhaserGame() {
   const [progress, setProgress] = useState(5)
   const [isReady, setIsReady] = useState(false)
   const [score, setScore] = useState(0)
+  const [currentRound, setCurrentRound] = useState(1)
   const [muted, setMuted] = useState(false)
 
   useEffect(() => {
@@ -28,6 +29,7 @@ export default function PhaserGame() {
         },
       }))
       gameRef.current.events.on('game-ui:score', setScore)
+      gameRef.current.events.on('game-ui:round', setCurrentRound)
     })
 
     return () => {
@@ -42,6 +44,7 @@ export default function PhaserGame() {
   return (
     <GameShell
       score={score}
+      currentRound={currentRound}
       muted={muted}
       onMutedChange={(value) => { setMuted(value); sendToGame('game-ui:mute', value) }}
       onPauseChange={(value) => sendToGame('game-ui:pause', value)}
