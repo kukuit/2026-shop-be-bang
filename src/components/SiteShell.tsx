@@ -6,8 +6,8 @@ import ChatWidget from '@/components/ChatWidget'
 
 export default function SiteShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
-  const gameRoute = '/game/lop-1/toan/luyen-tap/cong-den-10'
-  const isGameRoute = pathname === gameRoute || pathname.startsWith(`${gameRoute}/`)
+  // Trang /game vẫn là trang danh sách; mọi route con là màn chơi toàn màn hình.
+  const isGameRoute = pathname.startsWith('/game/')
 
   if (isGameRoute) return <>{children}</>
 

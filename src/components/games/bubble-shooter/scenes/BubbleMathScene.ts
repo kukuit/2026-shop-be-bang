@@ -6,11 +6,13 @@ import { ScoreSystem } from '../systems/ScoreSystem'
 import { BubbleSpawner } from '../systems/BubbleSpawner'
 import { BUBBLE_CONFIG } from '../config/bubble'
 import type { MathQuestion } from '../types/game'
+import { GAME_BACKGROUND_MUSIC } from '../../general/audio'
 
 const WIDTH = 720
 const HEIGHT = 1280
 const TOTAL_QUESTIONS = 10
 const HUD_TOP = 1182
+const QUESTION_Y = 145
 type RoundState = 'PLAYING' | 'CORRECT' | 'SHOW_RESULT' | 'ROUND_TRANSITION' | 'NEW_QUESTION' | 'COMPLETE'
 
 export class BubbleMathScene extends Phaser.Scene {
@@ -38,10 +40,7 @@ export class BubbleMathScene extends Phaser.Scene {
   private roundState: RoundState = 'PLAYING'
   private transitionTimers = new Set<Phaser.Time.TimerEvent>()
   private transitionLabel?: Phaser.GameObjects.Text
-  private pauseMenu?: Phaser.GameObjects.Container
   private isPauseMenuOpen = false
-  private voiceButton?: Phaser.GameObjects.Image
-  private voiceMutedMark?: Phaser.GameObjects.Text
   private backgroundMusic?: Phaser.Sound.BaseSound
 
   constructor() {
@@ -53,40 +52,35 @@ export class BubbleMathScene extends Phaser.Scene {
       this.game.events.emit('bubble-shooter:load-progress', progress)
     })
 
-    this.load.image('game-background', '/games/phaser/images/background.png')
-    this.load.image('cannon-base', '/games/phaser/images/cannon-base.png')
-    this.load.image('cannon-barrel', '/games/phaser/images/cannon-barrel.png')
-    this.load.image('question-panel', '/games/phaser/images/question-panel.png')
-    this.load.image('player-card', '/games/phaser/images/player-card.png')
-    this.load.image('player-avatar', '/games/phaser/images/player-avatar.png')
-    this.load.image('balloon', '/games/phaser/images/balloon.png')
-    this.load.spritesheet('ammo', '/games/phaser/images/ammo.png', {
+    this.load.image('game-background', '/games/bubble-shooter/images/background.png')
+    this.load.image('cannon-base', '/games/bubble-shooter/images/cannon-base.png')
+    this.load.image('cannon-barrel', '/games/bubble-shooter/images/cannon-barrel.png')
+    this.load.image('question-panel', '/games/bubble-shooter/images/question-panel.png')
+    this.load.image('balloon', '/games/bubble-shooter/images/balloon.png')
+    this.load.spritesheet('ammo', '/games/bubble-shooter/images/ammo.png', {
       frameWidth: 724,
       frameHeight: 724,
     })
-    this.load.spritesheet('ui-icons', '/games/phaser/images/ui-icons.png', {
-      frameWidth: 724,
-      frameHeight: 724,
-    })
-    this.load.audio('voice-background', '/games/phaser/voices/background.mp3')
-    this.load.audio('voice-bullet-rocket', '/games/phaser/voices/bullet-rocket.mp3')
-    this.load.audio('voice-bullet-bomb', '/games/phaser/voices/bullet-bomb.mp3')
-    this.load.audio('voice-bullet-bubble', '/games/phaser/voices/bullet-bubble.mp3')
+    this.load.audio('voice-background', GAME_BACKGROUND_MUSIC)
+    this.load.audio('voice-bullet-rocket', '/games/bubble-shooter/voices/bullet-rocket.mp3')
+    this.load.audio('voice-bullet-bomb', '/games/bubble-shooter/voices/bullet-bomb.mp3')
+    this.load.audio('voice-bullet-bubble', '/games/bubble-shooter/voices/bullet-bubble.mp3')
   }
 
   create() {
     this.setupAudio()
     this.drawBackground()
-    this.createPlayerCard()
-    this.createTopControls()
+    this.game.events.on('game-ui:mute', this.setMuted, this)
+    this.game.events.on('game-ui:pause', this.setPaused, this)
+    this.game.events.on('game-ui:restart', this.restartGame, this)
     this.bubbles = this.add.group({ runChildUpdate: false })
     this.projectiles = this.physics.add.group({ maxSize: 8, allowGravity: false })
 
-    this.add.image(WIDTH / 2, 116, 'question-panel')
+    this.add.image(WIDTH / 2, QUESTION_Y, 'question-panel')
       .setDisplaySize(430, 151)
       .setDepth(9)
-    this.questionText = this.add.container(WIDTH / 2, 116).setDepth(10)
-    this.feedbackText = this.add.text(WIDTH / 2, 215, '', {
+    this.questionText = this.add.container(WIDTH / 2, QUESTION_Y).setDepth(10)
+    this.feedbackText = this.add.text(WIDTH / 2, QUESTION_Y + 99, '', {
       fontFamily: 'Arial, sans-serif', fontSize: '34px', fontStyle: 'bold', color: '#047857',
       stroke: '#ffffff', strokeThickness: 7,
     }).setOrigin(0.5).setDepth(30)
@@ -101,6 +95,7 @@ export class BubbleMathScene extends Phaser.Scene {
     this.scoreText.setVisible(false)
     this.progressText.setVisible(false)
     this.createBottomHudV2()
+    this.emitScore()
 
     const nextBackground = this.add.rectangle(0, 0, 188, 68, 0x16a34a).setStrokeStyle(4, 0xffffff)
     this.nextButtonLabel = this.add.text(0, 0, 'Tiếp theo  →', {
@@ -158,38 +153,26 @@ export class BubbleMathScene extends Phaser.Scene {
     texture.destroy()
   }
 
-  private createTopControls() {
-    this.voiceButton = this.add.image(WIDTH - 98, 42, 'ui-icons', 0)
-      .setDisplaySize(56, 56)
-      .setDepth(50)
-      .setInteractive({ useHandCursor: true })
-      .setName('Bật hoặc tắt âm thanh')
-      .on('pointerdown', this.toggleVoice, this)
-
-    this.voiceMutedMark = this.add.text(WIDTH - 98, 42, '/', {
-      fontFamily: 'Arial, sans-serif', fontSize: '52px', fontStyle: 'bold', color: '#ef4444',
-      stroke: '#ffffff', strokeThickness: 5,
-    }).setOrigin(0.5).setDepth(51).setVisible(this.sound.mute)
-    this.voiceButton.setTint(this.sound.mute ? 0x94a3b8 : 0xffffff)
-
-    const backBackground = this.add.circle(0, 0, 28, 0x2563eb, 1)
-      .setStrokeStyle(4, 0xffffff, 1)
-    const backArrow = this.add.text(0, -2, '←', {
-      fontFamily: 'Arial, sans-serif', fontSize: '40px', fontStyle: 'bold', color: '#ffffff',
-    }).setOrigin(0.5)
-    this.add.container(WIDTH - 30, 42, [backBackground, backArrow])
-      .setSize(56, 56)
-      .setDepth(50)
-      .setInteractive({ useHandCursor: true })
-      .setName('Quay lại')
-      .on('pointerdown', this.openPauseMenu, this)
+  private setMuted(muted: boolean) {
+    this.sound.mute = muted
+    if (!muted) this.ensureBackgroundMusic()
   }
 
-  private toggleVoice() {
-    this.sound.mute = !this.sound.mute
-    this.voiceButton?.setTint(this.sound.mute ? 0x94a3b8 : 0xffffff)
-    this.voiceMutedMark?.setVisible(this.sound.mute)
-    if (!this.sound.mute) this.ensureBackgroundMusic()
+  private setPaused(paused: boolean) {
+    this.isPauseMenuOpen = paused
+    if (paused) {
+      this.physics.pause()
+      this.time.paused = true
+      this.tweens.pauseAll()
+      return
+    }
+    this.time.paused = false
+    this.tweens.resumeAll()
+    this.physics.resume()
+  }
+
+  private emitScore() {
+    this.game.events.emit('game-ui:score', this.score.current)
   }
 
   private setupAudio() {
@@ -210,85 +193,16 @@ export class BubbleMathScene extends Phaser.Scene {
     this.backgroundMusic?.play()
   }
 
-  private openPauseMenu() {
-    if (this.isPauseMenuOpen) return
-    this.isPauseMenuOpen = true
-    this.physics.pause()
-    this.time.paused = true
-    this.tweens.pauseAll()
-
-    const overlay = this.add.rectangle(0, 0, WIDTH, HEIGHT, 0x07152a, 0.68).setOrigin(0)
-    const panel = this.add.rectangle(WIDTH / 2, HEIGHT / 2, 560, 650, 0xffffff, 0.98)
-      .setStrokeStyle(8, 0xffc928, 1)
-    const title = this.add.text(WIDTH / 2, HEIGHT / 2 - 245, 'Tạm dừng', {
-      fontFamily: 'Arial, sans-serif', fontSize: '52px', fontStyle: 'bold', color: '#2563eb',
-    }).setOrigin(0.5)
-    const buttons = [
-      this.createPauseMenuButton(-135, 'Tiếp tục chơi', 0x22c55e, this.closePauseMenu),
-      this.createPauseMenuButton(-25, 'Chơi lại', 0xf59e0b, this.restartGame),
-      this.createPauseMenuButton(85, 'Về game', 0x7c3aed, () => this.navigateTo('/game')),
-      this.createPauseMenuButton(195, 'Về Shop Bé Băng', 0x2563eb, () => this.navigateTo('/')),
-    ]
-    this.pauseMenu = this.add.container(0, 0, [overlay, panel, title, ...buttons]).setDepth(200)
-  }
-
-  private createPauseMenuButton(offsetY: number, label: string, color: number, action: () => void) {
-    const background = this.add.rectangle(0, 0, 430, 82, color, 1)
-      .setStrokeStyle(4, 0xffffff, 0.95)
-    const text = this.add.text(0, 0, label, {
-      fontFamily: 'Arial, sans-serif', fontSize: '29px', fontStyle: 'bold', color: '#ffffff',
-    }).setOrigin(0.5)
-    return this.add.container(WIDTH / 2, HEIGHT / 2 + offsetY, [background, text])
-      .setSize(430, 82)
-      .setInteractive({ useHandCursor: true })
-      .on('pointerdown', action, this)
-  }
-
-  private closePauseMenu() {
-    this.pauseMenu?.destroy(true)
-    this.pauseMenu = undefined
-    this.isPauseMenuOpen = false
-    this.time.paused = false
-    this.tweens.resumeAll()
-    this.physics.resume()
-  }
-
   private restartGame() {
     this.time.paused = false
     this.tweens.resumeAll()
     this.physics.resume()
     this.score.reset()
+    this.emitScore()
     this.questionNumber = 1
     this.selectedAmmo = 0
     this.isPauseMenuOpen = false
-    this.pauseMenu = undefined
     this.scene.restart()
-  }
-
-  private navigateTo(path: string) {
-    window.location.assign(path)
-  }
-
-  private createPlayerCard() {
-    const x = 76
-    const y = 42
-    const width = 142
-    const height = 62
-
-    this.add.image(x, y, 'player-card')
-      .setDisplaySize(width, height)
-      .setDepth(50)
-    this.add.image(30, y, 'player-avatar')
-      .setDisplaySize(52, 52)
-      .setDepth(51)
-    this.add.text(103, y, 'Bé Băng', {
-      fontFamily: 'Arial, sans-serif',
-      fontSize: '18px',
-      fontStyle: 'bold',
-      color: '#ffffff',
-      stroke: '#164e9b',
-      strokeThickness: 3,
-    }).setOrigin(0.5).setDepth(51)
   }
 
   private createBottomHudV2() {
@@ -304,32 +218,12 @@ export class BubbleMathScene extends Phaser.Scene {
       .strokeRoundedRect(leftX, 1202, leftWidth, 66, 22)
       .setDepth(44)
 
-    this.add.graphics()
-      .fillStyle(0x15518a, 1)
-      .fillPoints([
-        new Phaser.Geom.Point(42, 1188),
-        new Phaser.Geom.Point(202, 1188),
-        new Phaser.Geom.Point(212, 1216),
-        new Phaser.Geom.Point(32, 1216),
-      ], true)
-      .lineStyle(3, 0x78d5ff, 0.9)
-      .strokePoints([
-        new Phaser.Geom.Point(42, 1188),
-        new Phaser.Geom.Point(202, 1188),
-        new Phaser.Geom.Point(212, 1216),
-        new Phaser.Geom.Point(32, 1216),
-      ], true)
-      .setDepth(47)
-    this.add.text(122, 1202, 'CHỌN ĐẠN', {
-      fontFamily: 'Arial, sans-serif', fontSize: '17px', fontStyle: 'bold', color: '#ffffff',
-    }).setOrigin(0.5).setDepth(48)
-
     const ammoXs = [52, 122, 192]
     this.ammoSelectionRings = ammoXs.map((x, frame) => {
-      const ring = this.add.circle(x, 1238, 25, 0x071f3d, 0.85)
+      const ring = this.add.circle(x, 1235, 25, 0x071f3d, 0.85)
         .setStrokeStyle(frame === this.selectedAmmo ? 5 : 2, frame === this.selectedAmmo ? 0xffd43b : 0x9bdcff)
         .setDepth(45)
-      this.add.image(x, 1238, 'ammo', frame)
+      this.add.image(x, 1235, 'ammo', frame)
         .setDisplaySize(frame === 0 ? 29 : 39, frame === 0 ? 44 : 39)
         .setDepth(46)
         .setInteractive({ useHandCursor: true })
@@ -337,16 +231,10 @@ export class BubbleMathScene extends Phaser.Scene {
       return ring
     })
 
-    this.add.graphics()
-      .fillStyle(0x123b62, 0.94)
-      .fillRoundedRect(260, 1215, 200, 55, 23)
-      .lineStyle(4, 0xffb72b, 1)
-      .strokeRoundedRect(260, 1215, 200, 55, 23)
-      .setDepth(44)
     this.scoreText = this.add.text(WIDTH / 2, 1242, '★  0', {
       fontFamily: 'Arial, sans-serif', fontSize: '32px', fontStyle: 'bold', color: '#ffd43b',
       stroke: '#7c3f00', strokeThickness: 5,
-    }).setOrigin(0.5).setDepth(46)
+    }).setOrigin(0.5).setDepth(46).setVisible(false)
 
     this.add.graphics()
       .fillStyle(0x123b62, 0.94)
@@ -455,7 +343,7 @@ export class BubbleMathScene extends Phaser.Scene {
     this.bubbleSpawner.start(this.currentQuestion)
   }
 
-  private renderQuestion(question: string) {
+  private renderQuestion(question: string, showCheck = false) {
     this.questionText.removeAll(true)
 
     const tokens = question.split(/\s+/).filter(Boolean)
@@ -469,12 +357,12 @@ export class BubbleMathScene extends Phaser.Scene {
     const gap = 14
     const labels = tokens.map((token, index) => {
       const label = this.add.text(0, 0, token, {
-        fontFamily: 'Arial, sans-serif',
+        fontFamily: 'Arial Black, Arial, sans-serif',
         fontSize: '58px',
         fontStyle: 'bold',
         color: token === '?' ? '#ef2f36' : token === '✓' ? '#22c55e' : palette[index % palette.length],
         stroke: '#ffffff',
-        strokeThickness: 3,
+        strokeThickness: 4,
       }).setOrigin(0.5)
       label.setShadow(0, 3, 'rgba(49, 46, 129, 0.22)', 3)
       return label
@@ -487,6 +375,21 @@ export class BubbleMathScene extends Phaser.Scene {
       cursor += label.width + gap
       this.questionText.add(label)
     })
+
+    // Dấu check là overlay nằm ngoài phép tính, không tham gia tính totalWidth nên
+    // khi xuất hiện sẽ không đẩy toàn bộ dãy chữ sang trái.
+    if (showCheck) {
+      const check = this.add.text(totalWidth / 2 + 5, 0, '✓', {
+        fontFamily: 'Arial Black, Arial, sans-serif',
+        fontSize: '44px',
+        fontStyle: 'bold',
+        color: '#22c55e',
+        stroke: '#ffffff',
+        strokeThickness: 4,
+      }).setOrigin(0, 0.5)
+      check.setShadow(0, 3, 'rgba(21, 128, 61, 0.2)', 3)
+      this.questionText.add(check)
+    }
   }
 
   private aim(pointer: Phaser.Input.Pointer) {
@@ -520,6 +423,7 @@ export class BubbleMathScene extends Phaser.Scene {
 
     if (bubble.value !== this.currentQuestion.answer) {
       const { score, deducted } = this.score.wrong()
+      this.emitScore()
       this.scoreText.setText(`★  ${score}`)
       this.pop(bubble, false)
       this.showFloatingScore(hitX, hitY, deducted ? '-2' : '0', '#fb7185')
@@ -531,6 +435,7 @@ export class BubbleMathScene extends Phaser.Scene {
     this.bubbleSpawner.pause()
     this.projectiles.clear(true, true)
     const score = this.score.correct()
+    this.emitScore()
     this.scoreText.setText(`★  ${score}`)
     this.pop(bubble, true)
     this.showFloatingScore(hitX, hitY, '+10 ★', '#facc15')
@@ -557,11 +462,11 @@ export class BubbleMathScene extends Phaser.Scene {
   private showCorrectAnswer() {
     if (this.roundState !== 'CORRECT') return
     this.roundState = 'SHOW_RESULT'
-    this.renderQuestion(this.currentQuestion.text.replace('?', `${this.currentQuestion.answer} ✓`))
+    this.renderQuestion(this.currentQuestion.text.replace('?', `${this.currentQuestion.answer}`), true)
     this.questionText.setScale(1)
     this.tweens.add({
       targets: this.questionText,
-      scale: 1.15,
+      scale: 1.06,
       duration: 180,
       yoyo: true,
       ease: 'Sine.InOut',
@@ -615,7 +520,7 @@ export class BubbleMathScene extends Phaser.Scene {
     this.updateLevelHud()
     this.animateProgress()
     this.renderQuestion(this.currentQuestion.text)
-    this.questionText.setPosition(WIDTH / 2 + 90, 116).setAlpha(0).setScale(0.9)
+    this.questionText.setPosition(WIDTH / 2 + 90, QUESTION_Y).setAlpha(0).setScale(0.9)
     this.tweens.add({
       targets: this.questionText,
       x: WIDTH / 2,
@@ -703,6 +608,7 @@ export class BubbleMathScene extends Phaser.Scene {
       this.locked = true
       this.bubbleSpawner.pause()
       this.scoreText.setText(`★ Điểm: ${this.score.correct()}`)
+      this.emitScore()
       this.feedbackText.setColor('#047857').setText('Chính xác! +10 ★')
       this.pop(bubble, true)
       this.scoreText.setText(this.scoreText.text.replace(/^.*?:\s*/, '★  '))
@@ -710,6 +616,7 @@ export class BubbleMathScene extends Phaser.Scene {
       this.nextButton.setVisible(true)
     } else {
       const { score, deducted } = this.score.wrong()
+      this.emitScore()
       this.scoreText.setText(`★ Điểm: ${score}`)
       this.feedbackText.setColor('#be123c').setText(deducted ? 'Chưa đúng! -2' : 'Thử lại nhé!')
       this.pop(bubble, false)
@@ -772,8 +679,6 @@ export class BubbleMathScene extends Phaser.Scene {
     this.transitionTimers.clear()
     this.transitionLabel?.destroy()
     this.transitionLabel = undefined
-    this.pauseMenu?.destroy(true)
-    this.pauseMenu = undefined
     this.sound.off(Phaser.Sound.Events.UNLOCKED, this.ensureBackgroundMusic, this)
     this.input.off('pointerdown', this.ensureBackgroundMusic, this)
     this.backgroundMusic?.destroy()
@@ -783,5 +688,8 @@ export class BubbleMathScene extends Phaser.Scene {
     this.input.off('pointerdown', this.aim, this)
     this.input.off('pointerup', this.shoot, this)
     this.nextButton?.off('pointerdown', this.goToNextQuestion, this)
+    this.game.events.off('game-ui:mute', this.setMuted, this)
+    this.game.events.off('game-ui:pause', this.setPaused, this)
+    this.game.events.off('game-ui:restart', this.restartGame, this)
   }
 }

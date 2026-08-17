@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import Image from 'next/image'
 import Link from 'next/link'
 import { Gamepad2, Play } from 'lucide-react'
 
@@ -7,26 +8,66 @@ export const metadata: Metadata = {
   description: 'Các trò chơi học tập vui nhộn dành cho bé.',
 }
 
+const games = [
+  {
+    title: 'Bắn bong bóng',
+    subtitle: 'Phép cộng đến 10',
+    href: '/game/lop-1/toan/luyen-tap/cong-den-10',
+    image: '/games/bubble-shooter/images/background.png',
+    position: 'center 38%',
+    color: 'from-sky-500 to-blue-700',
+  },
+  {
+    title: 'Kéo thả số',
+    subtitle: 'Các số từ 0 đến 5',
+    href: '/game/lop-1/toan-1/bai-1',
+    image: '/games/drag-drop/images/farm-background.png',
+    position: 'center 68%',
+    color: 'from-emerald-500 to-teal-700',
+  },
+]
+
 export default function GamePage() {
   return (
-    <main className="min-h-[70vh] bg-gradient-to-b from-sky-50 to-white px-4 py-16">
-      <section className="mx-auto max-w-3xl text-center">
-        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-sky-100 text-sky-600">
-          <Gamepad2 className="h-8 w-8" aria-hidden="true" />
+    <main className="relative overflow-hidden bg-gradient-to-b from-sky-50 to-pink-50 px-3 py-7 md:py-10">
+      <section className="relative mx-auto max-w-3xl">
+        <div className="flex items-center justify-center gap-3 text-center">
+          <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-sky-500 text-white shadow-lg shadow-sky-200">
+            <Gamepad2 size={24} aria-hidden="true" />
+          </div>
+          <div className="text-left">
+            <h1 className="text-2xl font-black text-slate-900 md:text-3xl">Chọn trò chơi</h1>
+            <p className="text-xs font-bold text-slate-500 md:text-sm">Bé muốn chơi game nào?</p>
+          </div>
         </div>
 
-        <h1 className="mt-6 text-3xl font-black text-slate-900 md:text-4xl">Trò chơi học tập</h1>
-        <p className="mx-auto mt-3 max-w-xl text-base leading-7 text-slate-600">
-          Vừa chơi vừa luyện toán với những thử thách vui nhộn dành cho bé.
-        </p>
-
-        <Link
-          href="/game/lop-1/toan/luyen-tap/cong-den-10"
-          className="mt-8 inline-flex items-center gap-2 rounded-full bg-sky-500 px-6 py-3 font-bold text-white shadow-lg shadow-sky-200 transition hover:bg-sky-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2"
-        >
-          <Play className="h-5 w-5" aria-hidden="true" />
-          Chơi game cộng đến 10
-        </Link>
+        <div className="mt-6 grid grid-cols-2 gap-3 md:gap-6">
+          {games.map((game) => (
+            <Link
+              key={game.href}
+              href={game.href}
+              className="group relative aspect-square overflow-hidden rounded-2xl border-[3px] border-white bg-white shadow-xl transition duration-300 hover:-translate-y-1 hover:shadow-2xl focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-sky-400 md:rounded-[2rem]"
+              aria-label={`Chơi ${game.title}`}
+            >
+              <Image
+                src={game.image}
+                alt={`Ảnh game ${game.title}`}
+                fill
+                sizes="(min-width: 768px) 360px, 48vw"
+                className="object-cover transition duration-500 group-hover:scale-105"
+                style={{ objectPosition: game.position }}
+                priority
+              />
+              <div className={`absolute inset-x-0 bottom-0 bg-gradient-to-t ${game.color} px-3 pb-3 pt-10 text-white md:px-5 md:pb-5 md:pt-16`}>
+                <p className="text-base font-black leading-tight md:text-2xl">{game.title}</p>
+                <p className="mt-0.5 text-[10px] font-bold text-white/85 md:text-sm">{game.subtitle}</p>
+              </div>
+              <span className="absolute right-3 top-3 grid h-9 w-9 place-items-center rounded-full border-2 border-white bg-white/90 text-sky-600 shadow-lg transition group-hover:scale-110 md:h-11 md:w-11">
+                <Play className="ml-0.5 h-4 w-4 fill-current md:h-5 md:w-5" aria-hidden="true" />
+              </span>
+            </Link>
+          ))}
+        </div>
       </section>
     </main>
   )
