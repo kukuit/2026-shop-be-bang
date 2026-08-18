@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { GameLoadingScreen, GameShell } from '../general'
+import { GameCompletion, GameLoadingScreen, GameShell } from '../general'
 
 export default function PhaserGame() {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -11,6 +11,7 @@ export default function PhaserGame() {
   const [score, setScore] = useState(0)
   const [currentRound, setCurrentRound] = useState(1)
   const [muted, setMuted] = useState(false)
+  const [gameCompleted, setGameCompleted] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -30,6 +31,11 @@ export default function PhaserGame() {
       }))
       gameRef.current.events.on('game-ui:score', setScore)
       gameRef.current.events.on('game-ui:round', setCurrentRound)
+      gameRef.current.events.on('game-ui:complete', (finalScore: number) => {
+        setScore(finalScore)
+        setGameCompleted(true)
+        gameRef.current?.events.emit('game-ui:pause', true)
+      })
     })
 
     return () => {
@@ -48,7 +54,7 @@ export default function PhaserGame() {
       muted={muted}
       onMutedChange={(value) => { setMuted(value); sendToGame('game-ui:mute', value) }}
       onPauseChange={(value) => sendToGame('game-ui:pause', value)}
-      onRestart={() => { setScore(0); sendToGame('game-ui:restart') }}
+      onRestart={() => { setGameCompleted(false); setScore(0); setCurrentRound(1); sendToGame('game-ui:restart') }}
     >
       {!isReady && <GameLoadingScreen progress={progress} />}
       <div
@@ -58,6 +64,7 @@ export default function PhaserGame() {
         aria-label="Game bắn bong bóng toán học"
         aria-hidden={!isReady}
       />
+      {gameCompleted && <GameCompletion score={score} onRestart={() => { setGameCompleted(false); setScore(0); setCurrentRound(1); sendToGame('game-ui:restart') }} />}
     </GameShell>
   )
 }

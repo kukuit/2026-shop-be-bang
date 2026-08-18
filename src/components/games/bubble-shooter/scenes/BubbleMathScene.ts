@@ -541,6 +541,7 @@ export class BubbleMathScene extends Phaser.Scene {
     this.feedbackText.setColor('#047857').setText(`Hoàn thành!  ★ ${this.score.current}`)
     this.feedbackText.setAlpha(0).setScale(0.9)
     this.tweens.add({ targets: this.feedbackText, alpha: 1, scale: 1, duration: 350, ease: 'Back.Out' })
+    this.game.events.emit('game-ui:complete', this.score.current)
   }
 
   private scheduleTransition(delay: number, callback: () => void) {

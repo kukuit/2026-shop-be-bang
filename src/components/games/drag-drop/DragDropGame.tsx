@@ -1,8 +1,7 @@
 'use client'
 
-import { PointerEvent as ReactPointerEvent, useCallback, useEffect, useMemo, useState } from 'react'
-import { RotateCcw, Trophy } from 'lucide-react'
-import { GameLoadingScreen, GameShell, useBackgroundMusic } from '../general'
+import { PointerEvent as ReactPointerEvent, useCallback, useEffect, useState } from 'react'
+import { GameCompletion, GameLoadingScreen, GameShell, useBackgroundMusic } from '../general'
 import { createRandomizedLevels, DRAG_DROP_LEVELS, NUMBER_COLORS } from './levels'
 import type { CountGroup, NumberValue, SequenceCell } from './types'
 import styles from './DragDropGame.module.css'
@@ -19,6 +18,8 @@ const shuffleNumbers = () => {
   return values
 }
 
+const INITIAL_NUMBER_TRAY: NumberValue[] = [0, 1, 2, 3, 4, 5]
+
 export default function DragDropGame() {
   const [currentLevel, setCurrentLevel] = useState(0)
   const [levels, setLevels] = useState(DRAG_DROP_LEVELS)
@@ -33,8 +34,8 @@ export default function DragDropGame() {
   const [wrongTarget, setWrongTarget] = useState<string | null>(null)
   const [correctTarget, setCorrectTarget] = useState<string | null>(null)
   const [floatingScore, setFloatingScore] = useState<FloatingScore>(null)
+  const [numberTray, setNumberTray] = useState<NumberValue[]>(INITIAL_NUMBER_TRAY)
   const level = levels[currentLevel]
-  const numberTray = useMemo(() => shuffleNumbers(), [level.id, levels])
   const density = level.groups && level.groups.length >= 4 ? 'dense' : level.groups && level.groups.length === 1 ? 'simple' : 'standard'
   useBackgroundMusic(soundEnabled)
 
@@ -44,8 +45,13 @@ export default function DragDropGame() {
     return () => window.clearTimeout(timer)
   }, [])
 
+  useEffect(() => {
+    setNumberTray(shuffleNumbers())
+  }, [currentLevel])
+
   const restart = useCallback(() => {
     setLevels((current) => createRandomizedLevels(current))
+    setNumberTray(shuffleNumbers())
     setCurrentLevel(0); setScore(0); setCompletedTargets({}); setIsTransitioning(false)
     setGameCompleted(false); setDrag(null)
   }, [])
@@ -120,7 +126,7 @@ export default function DragDropGame() {
         {drag && <div className="pointer-events-none fixed z-[100] grid h-14 w-14 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-2xl border-[3px] border-white text-3xl font-black text-white shadow-2xl" style={{ left: drag.x, top: drag.y, backgroundColor: NUMBER_COLORS[drag.value], transform: 'translate(-50%, -50%) scale(1.08)' }}>{drag.value}</div>}
         {floatingScore && <div key={floatingScore.id} className={`pointer-events-none fixed z-[110] text-xl font-black ${styles.floatingScore} ${floatingScore.correct ? 'text-emerald-600' : 'text-red-500'}`} style={{ left: floatingScore.x, top: floatingScore.y, textShadow: '0 2px 0 white, 0 -2px 0 white, 2px 0 0 white, -2px 0 0 white' }}>{floatingScore.value}</div>}
         {isTransitioning && !gameCompleted && <div className="pointer-events-none absolute inset-0 z-30" aria-hidden="true"><div className={styles.fireworks}>{Array.from({ length: 12 }, (_, index) => <span key={index} className={styles.fireworkParticle} />)}</div></div>}
-        {gameCompleted && <Completion score={score} onRestart={restart} />}
+        {gameCompleted && <GameCompletion score={score} onRestart={restart} />}
       </div>
     </GameShell>
   )
@@ -133,8 +139,8 @@ function DropTarget({ id, completed, wrong, correct, large = false }: { id: stri
 }
 
 function CountGroups({ groups, completed, wrongTarget, correctTarget }: { groups: CountGroup[]; completed: Record<string, NumberValue>; wrongTarget: string | null; correctTarget: string | null }) {
-  return <div className={styles.countGroups} data-count={groups.length}>
-    {groups.map((group, index) => <div key={group.id} data-target-id={group.id} className={`${styles.countGroup} ${wrongTarget === group.id ? styles.shake : ''} ${groups.length === 3 && index === 2 ? styles.lastOddGroup : ''}`}>
+  return <div className={styles.countGroups} data-count={groups.length} style={{ display: 'flex', flexDirection: 'column' }}>
+    {groups.map((group) => <div key={group.id} data-target-id={group.id} className={`${styles.countGroup} ${wrongTarget === group.id ? styles.shake : ''}`} style={{ width: '100%' }}>
       <div className={styles.animals} data-items={group.count} aria-label={`${group.count} ${group.label}`}>
         {group.count > 0 && Array.from({ length: group.count }, (_, itemIndex) => <span key={itemIndex}>{group.icon}</span>)}
       </div><DropTarget large id={group.id} completed={completed[group.id]} wrong={false} correct={correctTarget === group.id} />
@@ -149,12 +155,4 @@ function SequenceRow({ cells, completed, wrongTarget, correctTarget }: { cells: 
       {index < cells.length - 1 && <span className="text-sm font-black text-sky-500">›</span>}
     </div>)}
   </div>
-}
-
-function Completion({ score, onRestart }: { score: number; onRestart: () => void }) {
-  return <div className="absolute inset-0 z-50 grid place-items-center bg-sky-950/65 p-6"><div className="w-full rounded-[2rem] border-4 border-amber-300 bg-white p-7 text-center shadow-2xl">
-    <Trophy className="mx-auto animate-bounce text-amber-400" size={64} /><p className="mt-3 text-sm font-black text-pink-500">{score === 100 ? 'HOÀN HẢO!' : 'TUYỆT LẮM!'}</p>
-    <h2 className="text-3xl font-black text-sky-700">HOÀN THÀNH</h2><p className="mt-4 text-4xl font-black text-amber-500">{score} / 100</p>
-    <button type="button" onClick={onRestart} className="mt-6 inline-flex items-center gap-2 rounded-2xl bg-emerald-500 px-6 py-3 font-black text-white shadow-lg"><RotateCcw size={20} /> Chơi lại</button>
-  </div></div>
 }
