@@ -1,0 +1,39 @@
+.fireworks {
+  pointer-events: none;
+  position: absolute;
+  width: 1px;
+  height: 1px;
+}
+
+.particle {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  animation: firework-pop 1.65s ease-out infinite;
+  animation-delay: inherit;
+}
+
+.particle:nth-child(1) { --x: -90px; --y: -80px; background: #facc15; }
+.particle:nth-child(2) { --x: -62px; --y: -125px; background: #fb7185; }
+.particle:nth-child(3) { --x: -28px; --y: -95px; background: #38bdf8; }
+.particle:nth-child(4) { --x: 0px; --y: -145px; background: #4ade80; }
+.particle:nth-child(5) { --x: 34px; --y: -105px; background: #a78bfa; }
+.particle:nth-child(6) { --x: 72px; --y: -130px; background: #fb923c; }
+.particle:nth-child(7) { --x: 98px; --y: -76px; background: #f43f5e; }
+.particle:nth-child(8) { --x: -106px; --y: -35px; background: #22d3ee; }
+.particle:nth-child(9) { --x: -45px; --y: -48px; background: #fde047; }
+.particle:nth-child(10) { --x: 45px; --y: -55px; background: #34d399; }
+.particle:nth-child(11) { --x: 112px; --y: -28px; background: #c084fc; }
+.particle:nth-child(12) { --x: 5px; --y: -75px; background: #f472b6; }
+
+@keyframes firework-pop {
+  0%, 8% { opacity: 0; transform: translate(-50%, 10px) scale(.2); }
+  18% { opacity: 1; transform: translate(-50%, 0) scale(1.15); }
+  62% { opacity: 1; transform: translate(var(--x), var(--y)) scale(1); }
+  82%, 100% { opacity: 0; transform: translate(var(--x), calc(var(--y) + 24px)) scale(.55); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .particle { animation: none; opacity: 0; }
+}

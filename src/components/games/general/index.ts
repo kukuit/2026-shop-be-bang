@@ -1,4 +1,5 @@
 export { default as GameShell } from './GameShell'
 export { default as GameLoadingScreen } from './GameLoadingScreen'
 export { default as GameProgress } from './GameProgress'
+export { default as GameCompletion } from './GameCompletion'
 export { default as useBackgroundMusic } from './useBackgroundMusic'
