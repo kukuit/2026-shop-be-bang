@@ -3,10 +3,14 @@
 import Image from 'next/image'
 import { ArrowLeft, Gamepad2, Play, RotateCcw, Store, Volume2, VolumeX, X } from 'lucide-react'
 import { ReactNode, useState } from 'react'
+import StarIcon from './StarIcon'
+import GameProgress from './GameProgress'
 
 type GameShellProps = {
   children: ReactNode
   score: number
+  currentRound: number
+  totalRounds?: number
   playerName?: string
   muted: boolean
   onMutedChange: (muted: boolean) => void
@@ -18,6 +22,8 @@ type GameShellProps = {
 export default function GameShell({
   children,
   score,
+  currentRound,
+  totalRounds = 10,
   playerName = 'Bé Băng',
   muted,
   onMutedChange,
@@ -74,11 +80,13 @@ export default function GameShell({
         </div>
       </div>
 
-      <div className="pointer-events-none absolute inset-x-0 bottom-[0.8%] z-40 flex justify-center">
-        <div className="flex h-10 min-w-[28%] items-center justify-center rounded-2xl border-[3px] border-[#80d9ff] bg-[#123b62]/95 px-8 text-center text-lg font-black text-amber-300 shadow-xl sm:text-xl">
-          <span className="mr-[2px]" aria-hidden>★</span>{score}
+      <div className="pointer-events-none absolute inset-x-0 bottom-[0.7%] z-40 flex justify-center">
+        <div className="flex h-[clamp(34px,9.2cqw,39px)] min-w-[27%] items-center justify-center gap-1 rounded-2xl border-[0.556cqw] border-[#80d9ff] bg-[#123b62]/95 px-[6cqw] text-center text-[clamp(17px,5cqw,20px)] font-black leading-none text-amber-300 shadow-xl">
+          <StarIcon size="medium" />{score}
         </div>
       </div>
+
+      <GameProgress currentRound={currentRound} totalRounds={totalRounds} />
 
       {showExit && (
         <div className="absolute inset-0 z-50 grid place-items-center bg-slate-950/70 p-6" role="dialog" aria-modal="true" aria-labelledby="game-menu-title">

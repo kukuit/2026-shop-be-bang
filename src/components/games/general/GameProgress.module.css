@@ -1,0 +1,23 @@
+.progress {
+  pointer-events: none;
+  position: absolute;
+  right: 1.667cqw;
+  bottom: .94%;
+  z-index: 40;
+  width: 30.556cqw;
+  height: 9.167cqw;
+  box-sizing: border-box;
+  border: .556cqw solid rgb(128 217 255 / 85%);
+  border-radius: 3.056cqw;
+  background: rgb(18 59 98 / 94%);
+  color: white;
+  text-align: center;
+  font-family: Arial, sans-serif;
+  font-weight: 700;
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 20%);
+}
+.title { position: absolute; inset: 4% 0 auto; font-size: 2.55cqw; line-height: 1; }
+.bar { position: absolute; left: 9.091%; top: 35%; width: 81.818%; height: 27%; border-radius: 1.528cqw; background: rgb(7 31 61 / 92%); box-shadow: inset 0 2px 4px rgb(0 0 0 / 25%); }
+.fill { height: 100%; border-radius: inherit; background: #ff9f1c; transition: width 250ms ease; }
+.star { position: absolute; top: 50%; color: #ffd43b; text-shadow: .2cqw 0 #a75b00, -.2cqw 0 #a75b00, 0 .2cqw #a75b00, 0 -.2cqw #a75b00; transform: translate(-50%, -50%); transition: left 250ms ease; }
+.count { position: absolute; inset: auto 0 4%; font-size: 2.4cqw; line-height: 1; }

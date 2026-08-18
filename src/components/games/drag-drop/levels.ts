@@ -16,4 +16,52 @@ export const DRAG_DROP_LEVELS: DragDropLevel[] = [
   { id: 10, type: 'mixed', title: 'Thử thách cuối cùng!', instruction: 'Bé cố lên nhé!', groups: [{ id: 'boss-cow', icon: '🐮', count: 2, label: 'chú bò' }, { id: 'boss-duck', icon: '🦆', count: 5, label: 'chú vịt' }, { id: 'boss-empty', icon: '🐟', count: 0, label: 'bể cá trống' }], sequence: sequence([2, 4]), answers: { 'boss-cow': 2, 'boss-duck': 5, 'boss-empty': 0, 'sequence-2': 2, 'sequence-4': 4 } },
 ]
 
+const VALUES: NumberValue[] = [0, 1, 2, 3, 4, 5]
+
+const shuffled = <T,>(items: T[]) => {
+  const result = [...items]
+  for (let index = result.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(Math.random() * (index + 1))
+    ;[result[index], result[swapIndex]] = [result[swapIndex], result[index]]
+  }
+  return result
+}
+
+const randomCount = (previous: NumberValue): NumberValue => {
+  const choices = VALUES.slice(1).filter((value) => value !== previous)
+  return choices[Math.floor(Math.random() * choices.length)]
+}
+
+const randomSequence = (targetCount: number) => {
+  const targets = shuffled(VALUES).slice(0, targetCount)
+  return sequence(targets)
+}
+
+/** Creates a fresh question set while preserving every level's original visual template. */
+export const createRandomizedLevels = (previousLevels: DragDropLevel[] = DRAG_DROP_LEVELS): DragDropLevel[] => DRAG_DROP_LEVELS.map((template, levelIndex) => {
+  const previousLevel = previousLevels[levelIndex] ?? template
+  const groups = template.groups?.map((group, groupIndex) => ({
+    ...group,
+    // Empty-tank questions must stay empty; all visible groups vary from 1 to 5.
+    count: group.count === 0 ? 0 : randomCount(previousLevel.groups?.[groupIndex]?.count ?? group.count),
+  }))
+
+  const originalTargetCount = template.sequence?.filter((cell) => cell.target).length ?? 0
+  let randomizedSequence = template.sequence
+    ? template.type === 'sort' ? template.sequence.map((cell) => ({ ...cell })) : randomSequence(originalTargetCount)
+    : undefined
+  if (randomizedSequence && template.type !== 'sort') {
+    const previousTargets = previousLevel.sequence?.filter((cell) => cell.target).map((cell) => cell.value).sort().join(',')
+    while (randomizedSequence.filter((cell) => cell.target).map((cell) => cell.value).sort().join(',') === previousTargets) {
+      randomizedSequence = randomSequence(originalTargetCount)
+    }
+  }
+
+  const answers: Record<string, NumberValue> = {}
+  groups?.forEach((group) => { answers[group.id] = group.count })
+  randomizedSequence?.forEach((cell) => { if (cell.target) answers[cell.id] = cell.value })
+
+  return { ...template, groups, sequence: randomizedSequence, answers }
+})
+
 export const NUMBER_COLORS = ['#ec4899', '#f59e0b', '#22c55e', '#06b6d4', '#6366f1', '#a855f7']

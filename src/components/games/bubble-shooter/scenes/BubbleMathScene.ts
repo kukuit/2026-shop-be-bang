@@ -94,7 +94,7 @@ export class BubbleMathScene extends Phaser.Scene {
     }).setOrigin(1, 1).setDepth(30)
     this.scoreText.setVisible(false)
     this.progressText.setVisible(false)
-    this.createBottomHudV2()
+    this.createAmmoSelector()
     this.emitScore()
 
     const nextBackground = this.add.rectangle(0, 0, 188, 68, 0x16a34a).setStrokeStyle(4, 0xffffff)
@@ -205,16 +205,14 @@ export class BubbleMathScene extends Phaser.Scene {
     this.scene.restart()
   }
 
-  private createBottomHudV2() {
+  private createAmmoSelector() {
     const leftX = 12
     const leftWidth = 220
-    const rightX = WIDTH - 232
-    const rightWidth = 220
 
     this.add.graphics()
       .fillStyle(0x123b62, 0.92)
       .fillRoundedRect(leftX, 1202, leftWidth, 66, 22)
-      .lineStyle(4, 0x80d9ff, 0.85)
+      .lineStyle(3, 0x80d9ff, 0.85)
       .strokeRoundedRect(leftX, 1202, leftWidth, 66, 22)
       .setDepth(44)
 
@@ -230,49 +228,11 @@ export class BubbleMathScene extends Phaser.Scene {
         .on('pointerdown', () => this.selectAmmo(frame))
       return ring
     })
-
-    this.scoreText = this.add.text(WIDTH / 2, 1242, '★  0', {
-      fontFamily: 'Arial, sans-serif', fontSize: '32px', fontStyle: 'bold', color: '#ffd43b',
-      stroke: '#7c3f00', strokeThickness: 5,
-    }).setOrigin(0.5).setDepth(46).setVisible(false)
-
-    this.add.graphics()
-      .fillStyle(0x123b62, 0.94)
-      .fillRoundedRect(rightX, 1195, rightWidth, 75, 22)
-      .lineStyle(4, 0x80d9ff, 0.85)
-      .strokeRoundedRect(rightX, 1195, rightWidth, 75, 22)
-      .setDepth(44)
-    this.levelTitleText = this.add.text(rightX + rightWidth / 2, 1208, '', {
-      fontFamily: 'Arial, sans-serif', fontSize: '19px', fontStyle: 'bold', color: '#ffffff',
-    }).setOrigin(0.5).setDepth(46)
-    this.add.graphics()
-      .fillStyle(0x071f3d, 0.92)
-      .fillRoundedRect(rightX + 20, 1221, rightWidth - 40, 21, 11)
-      .lineStyle(2, 0x07152a, 0.8)
-      .strokeRoundedRect(rightX + 20, 1221, rightWidth - 40, 21, 11)
-      .setDepth(45)
-    this.levelProgressFill = this.add.graphics().setDepth(46)
-    this.levelProgressStar = this.add.text(0, 1231, '★', {
-      fontFamily: 'Arial, sans-serif', fontSize: '30px', fontStyle: 'bold', color: '#ffd43b',
-      stroke: '#a75b00', strokeThickness: 4,
-    }).setOrigin(0.5).setDepth(47)
-    this.progressText = this.add.text(rightX + rightWidth / 2, 1257, '', {
-      fontFamily: 'Arial, sans-serif', fontSize: '18px', fontStyle: 'bold', color: '#ffffff',
-    }).setOrigin(0.5).setDepth(46)
     this.updateLevelHud()
   }
 
   private updateLevelHud() {
-    const barX = WIDTH - 212
-    const barWidth = 180
-    const progress = this.questionNumber / TOTAL_QUESTIONS
-    const fillWidth = Math.max(14, barWidth * progress)
-    this.levelTitleText.setText(`MÀN ${this.questionNumber}`)
-    this.progressText.setText(`${this.questionNumber}/${TOTAL_QUESTIONS}`)
-    this.levelProgressFill.clear()
-      .fillStyle(0xff9f1c, 1)
-      .fillRoundedRect(barX, 1223, fillWidth, 17, 9)
-    this.levelProgressStar.setX(barX + fillWidth)
+    this.game.events.emit('game-ui:round', this.questionNumber)
   }
 
   private createBottomHud() {
@@ -572,13 +532,7 @@ export class BubbleMathScene extends Phaser.Scene {
   }
 
   private animateProgress() {
-    this.tweens.add({
-      targets: [this.progressText, this.levelTitleText, this.levelProgressStar],
-      scale: 1.15,
-      duration: 150,
-      yoyo: true,
-      ease: 'Sine.InOut',
-    })
+    this.game.events.emit('game-ui:round', this.questionNumber)
   }
 
   private finishGame() {
