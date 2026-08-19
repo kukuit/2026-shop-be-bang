@@ -20,10 +20,18 @@ const games = [
   {
     title: 'Kéo thả số',
     subtitle: 'Các số từ 0 đến 5',
-    href: '/game/lop-1/toan-1/bai-1',
+    href: '/game/lop-1/toan/bai-1/drag-drop',
     image: '/games/drag-drop/images/farm-background.png',
     position: 'center 68%',
     color: 'from-emerald-500 to-teal-700',
+  },
+  {
+    title: 'Đào vàng',
+    subtitle: 'Nhìn hình và đếm số',
+    href: '/game/lop-1/toan/bai-1/gold-mining',
+    image: '/games/gold-mining/images/mine-background.png',
+    position: 'center 22%',
+    color: 'from-amber-500 to-orange-800',
   },
 ]
 

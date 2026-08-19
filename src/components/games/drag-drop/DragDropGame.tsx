@@ -1,7 +1,8 @@
 'use client'
 
 import { PointerEvent as ReactPointerEvent, useCallback, useEffect, useState } from 'react'
-import { GameCompletion, GameLoadingScreen, GameShell, useBackgroundMusic } from '../general'
+import { GameCompletion, GameLoadingScreen, GameShell, preloadAssets, useBackgroundMusic } from '../general'
+import { GAME_BACKGROUND_MUSIC } from '../general/audio'
 import { createRandomizedLevels, DRAG_DROP_LEVELS, NUMBER_COLORS } from './levels'
 import type { CountGroup, NumberValue, SequenceCell } from './types'
 import styles from './DragDropGame.module.css'
@@ -30,6 +31,7 @@ export default function DragDropGame() {
   const [gameCompleted, setGameCompleted] = useState(false)
   const [gamePaused, setGamePaused] = useState(false)
   const [isReady, setIsReady] = useState(false)
+  const [loadProgress, setLoadProgress] = useState(0)
   const [drag, setDrag] = useState<DragState>(null)
   const [wrongTarget, setWrongTarget] = useState<string | null>(null)
   const [correctTarget, setCorrectTarget] = useState<string | null>(null)
@@ -37,12 +39,23 @@ export default function DragDropGame() {
   const [numberTray, setNumberTray] = useState<NumberValue[]>(INITIAL_NUMBER_TRAY)
   const level = levels[currentLevel]
   const density = level.groups && level.groups.length >= 4 ? 'dense' : level.groups && level.groups.length === 1 ? 'simple' : 'standard'
-  useBackgroundMusic(soundEnabled)
+  useBackgroundMusic(soundEnabled, isReady)
 
   useEffect(() => {
+    let cancelled = false
     setLevels((current) => createRandomizedLevels(current))
-    const timer = window.setTimeout(() => setIsReady(true), 700)
-    return () => window.clearTimeout(timer)
+    void preloadAssets({
+      images: [
+        '/games/drag-drop/images/farm-background.png',
+        '/games/general/images/player-avatar.png',
+      ],
+      audio: [GAME_BACKGROUND_MUSIC],
+    }, (progress) => {
+      if (!cancelled) setLoadProgress(progress)
+    }).then(() => {
+      if (!cancelled) setIsReady(true)
+    })
+    return () => { cancelled = true }
   }, [])
 
   useEffect(() => {
@@ -112,7 +125,7 @@ export default function DragDropGame() {
 
   return (
     <GameShell score={score} currentRound={level.id} muted={!soundEnabled} onMutedChange={(muted) => setSoundEnabled(!muted)} onPauseChange={(paused) => { setGamePaused(paused); if (paused) setDrag(null) }} onRestart={restart}>
-      {!isReady && <GameLoadingScreen />}
+      {!isReady && <GameLoadingScreen progress={loadProgress} />}
       <div className="relative h-full touch-none overflow-hidden bg-sky-300 bg-cover bg-center" style={{ backgroundImage: "url('/games/drag-drop/images/farm-background.png')" }}>
         <div className={styles.gameplayPanel} data-density={density}>
           <div className={styles.questionArea}>

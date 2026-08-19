@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import PhaserGame from '@/components/games/bubble-shooter/PhaserGame'
 
 export const metadata: Metadata = {
-  title: 'Bắn Bong Bóng Toán Học',
+  title: 'Toán 1 - Luyện Tập',
   description: 'Mini game Phaser 3 luyện phép cộng trong phạm vi 10 cho bé.',
 }
 
