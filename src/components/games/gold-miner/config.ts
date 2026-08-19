@@ -1,7 +1,7 @@
 import * as Phaser from 'phaser'
 import { GoldMinerScene } from './GoldMinerScene'
 
-type Callbacks = { onReady: () => void }
+type Callbacks = { onProgress: (progress: number) => void; onReady: () => void }
 
 export const createGoldMinerConfig = (parent: HTMLElement, callbacks: Callbacks): Phaser.Types.Core.GameConfig => ({
   type: Phaser.AUTO,
@@ -14,6 +14,7 @@ export const createGoldMinerConfig = (parent: HTMLElement, callbacks: Callbacks)
   render: { antialias: true, roundPixels: true },
   callbacks: {
     preBoot: (game) => {
+      game.events.on('gold-miner:progress', callbacks.onProgress)
       game.events.once('gold-miner:ready', callbacks.onReady)
     },
   },

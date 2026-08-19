@@ -56,13 +56,15 @@ export class GoldMinerScene extends Phaser.Scene {
   constructor() { super('GoldMinerScene') }
 
   preload() {
+    this.load.on(Phaser.Loader.Events.PROGRESS, (progress: number) => {
+      this.game.events.emit('gold-miner:progress', progress)
+    })
     this.load.audio('gold-background', GAME_BACKGROUND_MUSIC)
     this.load.image('mine-background', '/games/gold-mining/images/mine-background.png')
     this.load.image('gold-nugget', '/games/gold-mining/images/gold.png')
     this.load.image('mine-rock', '/games/gold-mining/images/rock.png')
     this.load.image('golden-claw', '/games/gold-mining/images/golden-claw.png')
     this.load.image('golden-claw-closed', '/games/gold-mining/images/golden-claw-closed.png')
-    this.load.image('wolf-thief', '/games/gold-mining/images/wolf.png')
     this.load.spritesheet('wolf-animation', '/games/gold-mining/images/wolf-animation-alpha.png', {
       frameWidth: 512,
       frameHeight: 512,
@@ -271,7 +273,12 @@ export class GoldMinerScene extends Phaser.Scene {
     this.feedback.setColor('#ffb4a8').setText('-2')
     this.cappyFace.setText('•︵•')
     this.tweens.add({ targets: item, x: item.x + 15, duration: 60, yoyo: true, repeat: 3, onComplete: () => item.destroy() })
-    this.time.delayedCall(650, () => { if (this.state === GoldMinerState.CHECK_ANSWER) { this.cappyFace.setText('•ᴗ•'); this.state = GoldMinerState.AIMING } })
+    this.time.delayedCall(650, () => {
+      if (this.state !== GoldMinerState.CHECK_ANSWER) return
+      this.feedback.setText('')
+      this.cappyFace.setText('•ᴗ•')
+      this.state = GoldMinerState.AIMING
+    })
   }
 
   private scheduleWolf() {
