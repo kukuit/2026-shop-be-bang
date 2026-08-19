@@ -38,6 +38,7 @@ export class GoldMinerScene extends Phaser.Scene {
   private cappyFace!: Phaser.GameObjects.Text
   private wolfCaughtIcons!: Phaser.GameObjects.Container
   private wolfCaught = 0
+  private wolfRounds = new Set<number>()
   private mineItems: MineItem[] = []
   private grabbed?: MineItem
   private wolf?: Phaser.GameObjects.Container
@@ -80,6 +81,8 @@ export class GoldMinerScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.cleanup, this)
     this.music = this.sound.add('gold-background', { loop: true, volume: 0.22 })
     this.input.once('pointerdown', this.startMusic, this)
+    if (this.wolfRounds.size === 0) this.prepareWolfRounds()
+    this.game.events.emit('game-ui:score', this.score)
     this.startRound()
     this.game.events.emit('gold-miner:ready')
   }
@@ -246,10 +249,23 @@ export class GoldMinerScene extends Phaser.Scene {
   }
 
   private scheduleWolf() {
-    if (this.round < 2 || this.wolfAppeared) return
-    const chance = this.round < 5 ? .2 : this.round < 8 ? .3 : .4
-    if (Math.random() > chance) return
-    this.wolfSpawn = this.time.delayedCall(1800 + Math.random() * 1700, () => this.spawnWolf())
+    if (!this.wolfRounds.has(this.round) || this.wolfAppeared) return
+    const scheduledRound = this.round
+    this.wolfSpawn = this.time.delayedCall(450 + Math.random() * 450, () => this.attemptWolfSpawn(scheduledRound))
+  }
+
+  private prepareWolfRounds() {
+    const eligibleRounds = Phaser.Utils.Array.Shuffle([2, 3, 4, 5, 6, 7, 8, 9])
+    this.wolfRounds = new Set(eligibleRounds.slice(0, 4))
+  }
+
+  private attemptWolfSpawn(scheduledRound: number) {
+    if (this.round !== scheduledRound || this.wolfAppeared || this.state === GoldMinerState.ROUND_CLEAR || this.state === GoldMinerState.GAME_COMPLETE) return
+    if (this.state !== GoldMinerState.AIMING || this.grabbed) {
+      this.wolfSpawn = this.time.delayedCall(350, () => this.attemptWolfSpawn(scheduledRound))
+      return
+    }
+    this.spawnWolf()
   }
 
   private spawnWolf() {
@@ -381,7 +397,25 @@ export class GoldMinerScene extends Phaser.Scene {
   private startMusic() { if (!this.sound.mute && !this.music?.isPlaying) this.music?.play() }
   private setMuted(value: boolean) { this.sound.mute = value; if (!value) this.startMusic() }
   private setPaused(value: boolean) { this.paused = value; value ? this.tweens.pauseAll() : this.tweens.resumeAll() }
-  private restart() { this.scene.restart() }
+  private restart() {
+    this.cancelWolf()
+    this.round = 0
+    this.score = 0
+    this.wolfCaught = 0
+    this.wolfRounds.clear()
+    this.state = GoldMinerState.ROUND_START
+    this.wolfState = WolfState.IDLE
+    this.wolfAppeared = false
+    this.grabbed = undefined
+    this.grabbedWolf = false
+    this.ropeLength = 105
+    this.angle = -50
+    this.direction = 1
+    this.paused = false
+    this.game.events.emit('game-ui:score', 0)
+    this.game.events.emit('game-ui:round', 1)
+    this.scene.restart()
+  }
   private cleanup() {
     this.cancelWolf()
     this.input.off('pointerdown', this.dropHook, this)
