@@ -56,6 +56,7 @@ export default function GameShell({
             height={52}
             className="h-[34px] w-[34px] rounded-[0.8rem] object-cover"
             priority
+            unoptimized
           />
           <span className="max-w-20 truncate text-xs font-black drop-shadow">{playerName}</span>
         </div>

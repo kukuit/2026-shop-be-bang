@@ -3,7 +3,7 @@
 import { useEffect, useRef } from 'react'
 import { GAME_BACKGROUND_MUSIC } from './audio'
 
-export default function useBackgroundMusic(enabled: boolean) {
+export default function useBackgroundMusic(enabled: boolean, ready = true) {
   const audioRef = useRef<HTMLAudioElement | null>(null)
 
   useEffect(() => {
@@ -17,11 +17,11 @@ export default function useBackgroundMusic(enabled: boolean) {
   useEffect(() => {
     const audio = audioRef.current
     if (!audio) return
-    if (!enabled) { audio.pause(); return }
+    if (!enabled || !ready) { audio.pause(); return }
 
     const play = () => { void audio.play().catch(() => undefined) }
     play()
     window.addEventListener('pointerdown', play, { once: true })
     return () => window.removeEventListener('pointerdown', play)
-  }, [enabled])
+  }, [enabled, ready])
 }

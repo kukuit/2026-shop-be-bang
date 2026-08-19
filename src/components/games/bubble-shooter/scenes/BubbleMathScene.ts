@@ -53,6 +53,7 @@ export class BubbleMathScene extends Phaser.Scene {
     })
 
     this.load.image('game-background', '/games/bubble-shooter/images/background.png')
+    this.load.image('player-avatar-preload', '/games/general/images/player-avatar.png')
     this.load.image('cannon-base', '/games/bubble-shooter/images/cannon-base.png')
     this.load.image('cannon-barrel', '/games/bubble-shooter/images/cannon-barrel.png')
     this.load.image('question-panel', '/games/bubble-shooter/images/question-panel.png')
