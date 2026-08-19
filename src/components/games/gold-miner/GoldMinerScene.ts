@@ -9,6 +9,9 @@ const ANCHOR = new Phaser.Math.Vector2(300, 424)
 const MIN_ANGLE = -65
 const MAX_ANGLE = 65
 const MAX_LENGTH = 720
+const TASK_PANEL_CENTER = { x: 522, y: 270 }
+const GOLD_SIZE_SCALES = [0.8, 0.9, 1, 1.1, 1.2]
+const CLAW_GRIP_CENTER_Y = 68
 const GOLD_LAYOUTS: Record<number, Array<{ x: number; y: number }>> = {
   2: [{ x: 155, y: 735 }, { x: 545, y: 760 }],
   4: [{ x: 135, y: 680 }, { x: 550, y: 665 }, { x: 245, y: 910 }, { x: 540, y: 950 }],
@@ -32,7 +35,7 @@ export class GoldMinerScene extends Phaser.Scene {
   private hookSpeed = 540
   private rope!: Phaser.GameObjects.Graphics
   private hook!: Phaser.GameObjects.Container
-  private claw!: Phaser.GameObjects.Graphics
+  private claw!: Phaser.GameObjects.Image
   private taskItems!: Phaser.GameObjects.Text
   private feedback!: Phaser.GameObjects.Text
   private cappyFace!: Phaser.GameObjects.Text
@@ -57,6 +60,8 @@ export class GoldMinerScene extends Phaser.Scene {
     this.load.image('mine-background', '/games/gold-mining/images/mine-background.png')
     this.load.image('gold-nugget', '/games/gold-mining/images/gold.png')
     this.load.image('mine-rock', '/games/gold-mining/images/rock.png')
+    this.load.image('golden-claw', '/games/gold-mining/images/golden-claw.png')
+    this.load.image('golden-claw-closed', '/games/gold-mining/images/golden-claw-closed.png')
     this.load.image('wolf-thief', '/games/gold-mining/images/wolf.png')
     this.load.spritesheet('wolf-animation', '/games/gold-mining/images/wolf-animation-alpha.png', {
       frameWidth: 512,
@@ -105,7 +110,7 @@ export class GoldMinerScene extends Phaser.Scene {
     } else if (this.state === GoldMinerState.HOOK_UP) {
       this.ropeLength -= (this.grabbed ? 360 : 620) * seconds
       this.positionHook(this.lockedAngle, this.ropeLength)
-      if (this.grabbed) this.grabbed.setPosition(this.hook.x, this.hook.y + 25)
+      if (this.grabbed) this.positionItemInClaw(this.grabbed)
       if (this.grabbedWolf && this.wolf) this.wolf.setPosition(this.hook.x, this.hook.y + 38)
       if (this.ropeLength <= 108) this.finishReturn()
     }
@@ -120,18 +125,30 @@ export class GoldMinerScene extends Phaser.Scene {
 
   private createTopScene() {
     this.cappyFace = this.add.text(235, 327, '', { fontSize: '1px' })
-    this.taskItems = this.add.text(526, 235, '', { fontSize: '46px', align: 'center', wordWrap: { width: 230 } }).setOrigin(.5)
+    this.taskItems = this.add.text(TASK_PANEL_CENTER.x, TASK_PANEL_CENTER.y, '', {
+      fontSize: '46px',
+      align: 'center',
+      wordWrap: { width: 230 },
+    }).setPadding(0, 8, 0, 0).setOrigin(.5)
 
     this.wolfCaughtIcons = this.add.container(451, 416).setDepth(25)
   }
 
   private createHook() {
     this.rope = this.add.graphics().setDepth(18)
-    this.claw = this.add.graphics()
-    this.claw.lineStyle(9, 0xdce6ec).lineBetween(-2, -18, -2, 19)
-    this.claw.lineStyle(9, 0x7b8792).lineBetween(-2, 15, -24, 34).lineBetween(-24, 34, -34, 18)
-    this.claw.lineBetween(2, 15, 24, 34).lineBetween(24, 34, 34, 18)
+    this.claw = this.add.image(0, 0, 'golden-claw')
+      .setDisplaySize(88, 118)
+      .setOrigin(.5, .1)
     this.hook = this.add.container(ANCHOR.x, ANCHOR.y + this.ropeLength, [this.claw]).setDepth(20)
+  }
+
+  private setClawClosed(closed: boolean) {
+    this.claw.setTexture(closed ? 'golden-claw-closed' : 'golden-claw').setDisplaySize(88, 118)
+  }
+
+  private positionItemInClaw(item: MineItem) {
+    const gripOffset = new Phaser.Math.Vector2(0, CLAW_GRIP_CENTER_Y).rotate(this.hook.rotation)
+    item.setPosition(this.hook.x + gripOffset.x, this.hook.y + gripOffset.y)
   }
 
   private startRound() {
@@ -153,10 +170,12 @@ export class GoldMinerScene extends Phaser.Scene {
   }
 
   private createMineItem(x: number, y: number, value: number, rock: boolean) {
-    const sprite = this.add.image(0, 0, rock ? 'mine-rock' : 'gold-nugget').setDisplaySize(145, 106)
+    const sizeScale = rock ? 1 : Phaser.Utils.Array.GetRandom(GOLD_SIZE_SCALES)
+    const sprite = this.add.image(0, 0, rock ? 'mine-rock' : 'gold-nugget')
+      .setDisplaySize(145 * sizeScale, 106 * sizeScale)
     const label = this.add.text(0, 1, String(value), { fontFamily: 'Arial', fontSize: '55px', fontStyle: 'bold', color: '#ffffff', stroke: rock ? '#343434' : '#8a4300', strokeThickness: 9 }).setOrigin(.5)
     const item = this.add.container(x, y, [sprite, label]).setDepth(10) as MineItem
-    item.value = value; item.radius = 62; item.taken = false
+    item.value = value; item.radius = 62 * sizeScale; item.taken = false
     this.tweens.add({ targets: item, y: y - 7, duration: 1500 + x, yoyo: true, repeat: -1, ease: 'Sine.InOut' })
     return item
   }
@@ -166,11 +185,16 @@ export class GoldMinerScene extends Phaser.Scene {
     const x = ANCHOR.x + Math.sin(rad) * length
     const y = ANCHOR.y + Math.cos(rad) * length
     this.hook.setPosition(x, y).setRotation(-rad)
-    this.rope.clear().lineStyle(8, 0xd7ad67).lineBetween(ANCHOR.x, ANCHOR.y, x, y)
+    this.rope.clear()
+      .lineStyle(12, 0x70451f, 1).lineBetween(ANCHOR.x, ANCHOR.y, x, y)
+      .fillStyle(0x70451f, 1).fillCircle(ANCHOR.x, ANCHOR.y, 6).fillCircle(x, y, 6)
+      .lineStyle(8, 0xd7ad67, 1).lineBetween(ANCHOR.x, ANCHOR.y, x, y)
+      .fillStyle(0xd7ad67, 1).fillCircle(ANCHOR.x, ANCHOR.y, 4).fillCircle(x, y, 4)
   }
 
   private dropHook(pointer: Phaser.Input.Pointer) {
     if (this.paused || this.state !== GoldMinerState.AIMING || pointer.worldY < 90 || pointer.worldY > 1175) return
+    this.setClawClosed(false)
     this.lockedAngle = this.angle
     this.state = GoldMinerState.HOOK_DOWN
     this.feedback.setText('')
@@ -186,6 +210,7 @@ export class GoldMinerScene extends Phaser.Scene {
     if (!item) return false
     item.taken = true
     this.grabbed = item
+    this.setClawClosed(true)
     this.tweens.killTweensOf(item)
     this.state = GoldMinerState.GRABBING
     this.time.delayedCall(120, () => this.beginReturn())
@@ -197,6 +222,7 @@ export class GoldMinerScene extends Phaser.Scene {
   private finishReturn() {
     this.ropeLength = 105
     this.positionHook(this.angle, this.ropeLength)
+    this.setClawClosed(false)
     if (this.grabbedWolf) {
       this.grabbedWolf = false
       this.wolfCaught += 1
@@ -242,7 +268,7 @@ export class GoldMinerScene extends Phaser.Scene {
   private wrong(item: MineItem) {
     this.score = Math.max(0, this.score - 2)
     this.game.events.emit('game-ui:score', this.score)
-    this.feedback.setColor('#ffb4a8').setText('↻  -2')
+    this.feedback.setColor('#ffb4a8').setText('-2')
     this.cappyFace.setText('•︵•')
     this.tweens.add({ targets: item, x: item.x + 15, duration: 60, yoyo: true, repeat: 3, onComplete: () => item.destroy() })
     this.time.delayedCall(650, () => { if (this.state === GoldMinerState.CHECK_ANSWER) { this.cappyFace.setText('•ᴗ•'); this.state = GoldMinerState.AIMING } })
@@ -341,6 +367,7 @@ export class GoldMinerScene extends Phaser.Scene {
       this.tweens.add({ targets: dropped, y: dropped.y + 20, duration: 180, yoyo: true, ease: 'Bounce.Out' })
     }
     this.grabbedWolf = true
+    this.setClawClosed(true)
     // Frame 3 là dáng chạy toàn thân. Giữ frame này khi bị móc kéo lên để
     // không vô tình hiển thị frame rình vốn chỉ có đầu và hai chân trước.
     this.wolfSprite?.stop().setFrame(3).setFlipY(false).setAngle(12)
