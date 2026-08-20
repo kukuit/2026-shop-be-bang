@@ -12,6 +12,8 @@ const MAX_LENGTH = 720
 const TASK_PANEL_CENTER = { x: 522, y: 270 }
 const GOLD_SIZE_SCALES = [0.8, 0.9, 1, 1.1, 1.2]
 const CLAW_GRIP_CENTER_Y = 68
+// QA mode: round 1 demonstrates gold carry; round 2 demonstrates rock carry.
+const WOLF_CARRY_TEST_MODE = true
 const GOLD_LAYOUTS: Record<number, Array<{ x: number; y: number }>> = {
   2: [{ x: 155, y: 735 }, { x: 545, y: 760 }],
   4: [{ x: 135, y: 680 }, { x: 550, y: 665 }, { x: 245, y: 910 }, { x: 540, y: 950 }],
@@ -20,7 +22,7 @@ const GOLD_LAYOUTS: Record<number, Array<{ x: number; y: number }>> = {
   7: [{ x: 105, y: 625 }, { x: 355, y: 670 }, { x: 610, y: 625 }, { x: 175, y: 850 }, { x: 535, y: 850 }, { x: 125, y: 1060 }, { x: 575, y: 1060 }],
 }
 
-type MineItem = Phaser.GameObjects.Container & { value: number; radius: number; taken: boolean }
+type MineItem = Phaser.GameObjects.Container & { value: number; radius: number; taken: boolean; rock: boolean }
 
 export class GoldMinerScene extends Phaser.Scene {
   private state = GoldMinerState.ROUND_START
@@ -66,6 +68,10 @@ export class GoldMinerScene extends Phaser.Scene {
     this.load.image('golden-claw', '/games/gold-mining/images/golden-claw.png')
     this.load.image('golden-claw-closed', '/games/gold-mining/images/golden-claw-closed.png')
     this.load.spritesheet('wolf-animation', '/games/gold-mining/images/wolf-animation-alpha.png', {
+      frameWidth: 512,
+      frameHeight: 512,
+    })
+    this.load.spritesheet('wolf-rock-animation', '/games/gold-mining/images/wolf-rock-animation-alpha.png', {
       frameWidth: 512,
       frameHeight: 512,
     })
@@ -161,7 +167,10 @@ export class GoldMinerScene extends Phaser.Scene {
     this.taskItems.setText(Array.from({ length: this.question.count }, () => TASK_EMOJI[this.question.objectType]).join(' '))
     this.game.events.emit('game-ui:round', this.round + 1)
     const positions = Phaser.Utils.Array.Shuffle([...(GOLD_LAYOUTS[this.question.choices.length] ?? GOLD_LAYOUTS[7])])
-    this.question.choices.forEach((value, index) => this.mineItems.push(this.createMineItem(positions[index].x, positions[index].y, value, index % 3 === 2)))
+    this.question.choices.forEach((value, index) => {
+      const testRock = WOLF_CARRY_TEST_MODE && this.round === 1 && value !== this.question.correctAnswer
+      this.mineItems.push(this.createMineItem(positions[index].x, positions[index].y, value, testRock || index % 3 === 2))
+    })
     this.feedback.setText('')
     this.time.delayedCall(650, () => {
       if (this.state !== GoldMinerState.ROUND_START) return
@@ -177,7 +186,7 @@ export class GoldMinerScene extends Phaser.Scene {
       .setDisplaySize(145 * sizeScale, 106 * sizeScale)
     const label = this.add.text(0, 1, String(value), { fontFamily: 'Arial', fontSize: '55px', fontStyle: 'bold', color: '#ffffff', stroke: rock ? '#343434' : '#8a4300', strokeThickness: 9 }).setOrigin(.5)
     const item = this.add.container(x, y, [sprite, label]).setDepth(10) as MineItem
-    item.value = value; item.radius = 62 * sizeScale; item.taken = false
+    item.value = value; item.radius = 62 * sizeScale; item.taken = false; item.rock = rock
     this.tweens.add({ targets: item, y: y - 7, duration: 1500 + x, yoyo: true, repeat: -1, ease: 'Sine.InOut' })
     return item
   }
@@ -288,6 +297,10 @@ export class GoldMinerScene extends Phaser.Scene {
   }
 
   private prepareWolfRounds() {
+    if (WOLF_CARRY_TEST_MODE) {
+      this.wolfRounds = new Set([0, 1])
+      return
+    }
     const eligibleRounds = Phaser.Utils.Array.Shuffle([2, 3, 4, 5, 6, 7, 8, 9])
     this.wolfRounds = new Set(eligibleRounds.slice(0, 4))
   }
@@ -303,7 +316,11 @@ export class GoldMinerScene extends Phaser.Scene {
 
   private spawnWolf() {
     if (this.state !== GoldMinerState.AIMING || this.grabbed || this.wolfAppeared) return
-    const targets = this.mineItems.filter((item) => item.active && !item.taken && item.value !== this.question.correctAnswer)
+    let targets = this.mineItems.filter((item) => item.active && !item.taken && item.value !== this.question.correctAnswer)
+    if (WOLF_CARRY_TEST_MODE && this.round < 2) {
+      const shouldCarryRock = this.round === 1
+      targets = targets.filter((item) => item.rock === shouldCarryRock)
+    }
     if (!targets.length) return
     this.wolfAppeared = true
     this.wolfState = WolfState.PEEK
@@ -349,7 +366,9 @@ export class GoldMinerScene extends Phaser.Scene {
     this.wolfCarried = target
     const exitX = fromLeft ? -120 : W + 120
     target.setVisible(false)
-    this.wolfSprite?.setFlipX(exitX > this.wolf.x).play('wolf-carry')
+    this.wolfSprite?.setTexture(target.rock ? 'wolf-rock-animation' : 'wolf-animation')
+      .setFlipX(exitX > this.wolf.x)
+      .play(target.rock ? 'wolf-carry-rock' : 'wolf-carry')
     this.tweens.add({ targets: this.wolf, x: exitX, y: 1080, duration: 5400, ease: 'Sine.In', onComplete: () => {
       if (this.wolfState !== WolfState.STEAL) return
       this.wolfCarried?.destroy()
@@ -402,6 +421,7 @@ export class GoldMinerScene extends Phaser.Scene {
     if (!this.anims.exists('wolf-peek')) this.anims.create({ key: 'wolf-peek', frames: this.anims.generateFrameNumbers('wolf-animation', { frames: [0, 1] }), frameRate: 2, repeat: -1, yoyo: true })
     if (!this.anims.exists('wolf-run')) this.anims.create({ key: 'wolf-run', frames: this.anims.generateFrameNumbers('wolf-animation', { frames: [2, 3] }), frameRate: 5, repeat: -1 })
     if (!this.anims.exists('wolf-carry')) this.anims.create({ key: 'wolf-carry', frames: this.anims.generateFrameNumbers('wolf-animation', { frames: [4, 5] }), frameRate: 2.5, repeat: -1 })
+    if (!this.anims.exists('wolf-carry-rock')) this.anims.create({ key: 'wolf-carry-rock', frames: this.anims.generateFrameNumbers('wolf-rock-animation', { frames: [4, 5] }), frameRate: 2.5, repeat: -1 })
   }
 
   private playWolfRun(destinationX: number) {

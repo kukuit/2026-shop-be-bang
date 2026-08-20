@@ -1,0 +1,43 @@
+'use client'
+
+import { useEffect, useRef, useState } from 'react'
+import { GameCompletion, GameLoadingScreen, GameShell } from '../general'
+
+export default function RacingGame() {
+  const host = useRef<HTMLDivElement>(null)
+  const game = useRef<import('phaser').Game | null>(null)
+  const [loadProgress, setLoadProgress] = useState(5)
+  const [ready, setReady] = useState(false)
+  const [score, setScore] = useState(0)
+  const [round, setRound] = useState(1)
+  const [muted, setMuted] = useState(false)
+  const [complete, setComplete] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    Promise.all([import('phaser'), import('./config')]).then(([Phaser, { createRacingConfig }]) => {
+      if (cancelled || !host.current || game.current) return
+      setLoadProgress(15)
+      game.current = new Phaser.Game(createRacingConfig(host.current, {
+        onProgress: (progress) => { if (!cancelled) setLoadProgress(15 + progress * 84) },
+        onReady: () => { if (!cancelled) { setLoadProgress(100); setReady(true) } },
+      }))
+      game.current.events.on('game-ui:score', setScore)
+      game.current.events.on('game-ui:round', setRound)
+      game.current.events.on('game-ui:complete', (value: number) => { setScore(value); setComplete(true) })
+    })
+    return () => { cancelled = true; game.current?.destroy(true); game.current = null }
+  }, [])
+
+  const emit = (event: string, value?: boolean) => game.current?.events.emit(event, value)
+  const restart = () => { setScore(0); setRound(1); setComplete(false); emit('game-ui:restart') }
+
+  return <GameShell score={score} currentRound={round} muted={muted}
+    onMutedChange={(value) => { setMuted(value); emit('game-ui:mute', value) }}
+    onPauseChange={(value) => emit('game-ui:pause', value)} onRestart={restart}>
+    {!ready && <GameLoadingScreen progress={loadProgress} />}
+    <div ref={host} className={`h-full w-full touch-none [&_canvas]:block ${ready ? 'opacity-100' : 'opacity-0'}`}
+      role="application" aria-label="Trò chơi đua xe nhận biết số từ 0 đến 5" aria-hidden={!ready} />
+    {complete && <GameCompletion score={score} onRestart={restart} />}
+  </GameShell>
+}
