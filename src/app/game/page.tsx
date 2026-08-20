@@ -33,6 +33,14 @@ const games = [
     position: 'center 22%',
     color: 'from-amber-500 to-orange-800',
   },
+  {
+    title: 'Đua xe',
+    subtitle: 'Nhận biết số từ 0 đến 5',
+    href: '/game/lop-1/toan/bai-1/racing',
+    image: '/games/racing/images/card.svg',
+    position: 'center center',
+    color: 'from-red-500 to-blue-700',
+  },
 ]
 
 export default function GamePage() {
