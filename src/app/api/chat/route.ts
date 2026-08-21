@@ -1,12 +1,17 @@
 // app/api/chat/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { callChatModel, ClientMessage } from '@/lib/chat/provider'
+import { isChatContext } from '@/lib/chat/constants'
 
 export async function POST(req: NextRequest) {
   try {
-    const { messages } = (await req.json()) as { messages: ClientMessage[] }
+    const { messages, context } = (await req.json()) as { messages: ClientMessage[]; context: unknown }
 
-    const reply = await callChatModel(messages)
+    if (!isChatContext(context)) {
+      return NextResponse.json({ error: 'Ngữ cảnh chatbot không hợp lệ.' }, { status: 400 })
+    }
+
+    const reply = await callChatModel(messages, context)
 
     return NextResponse.json({ reply })
   } catch (error: any) {

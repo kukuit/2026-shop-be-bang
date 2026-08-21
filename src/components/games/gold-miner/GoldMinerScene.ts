@@ -12,8 +12,6 @@ const MAX_LENGTH = 720
 const TASK_PANEL_CENTER = { x: 522, y: 270 }
 const GOLD_SIZE_SCALES = [0.8, 0.9, 1, 1.1, 1.2]
 const CLAW_GRIP_CENTER_Y = 68
-// QA mode: round 1 demonstrates gold carry; round 2 demonstrates rock carry.
-const WOLF_CARRY_TEST_MODE = true
 const GOLD_LAYOUTS: Record<number, Array<{ x: number; y: number }>> = {
   2: [{ x: 155, y: 735 }, { x: 545, y: 760 }],
   4: [{ x: 135, y: 680 }, { x: 550, y: 665 }, { x: 245, y: 910 }, { x: 540, y: 950 }],
@@ -168,8 +166,7 @@ export class GoldMinerScene extends Phaser.Scene {
     this.game.events.emit('game-ui:round', this.round + 1)
     const positions = Phaser.Utils.Array.Shuffle([...(GOLD_LAYOUTS[this.question.choices.length] ?? GOLD_LAYOUTS[7])])
     this.question.choices.forEach((value, index) => {
-      const testRock = WOLF_CARRY_TEST_MODE && this.round === 1 && value !== this.question.correctAnswer
-      this.mineItems.push(this.createMineItem(positions[index].x, positions[index].y, value, testRock || index % 3 === 2))
+      this.mineItems.push(this.createMineItem(positions[index].x, positions[index].y, value, index % 3 === 2))
     })
     this.feedback.setText('')
     this.time.delayedCall(650, () => {
@@ -297,10 +294,6 @@ export class GoldMinerScene extends Phaser.Scene {
   }
 
   private prepareWolfRounds() {
-    if (WOLF_CARRY_TEST_MODE) {
-      this.wolfRounds = new Set([0, 1])
-      return
-    }
     const eligibleRounds = Phaser.Utils.Array.Shuffle([2, 3, 4, 5, 6, 7, 8, 9])
     this.wolfRounds = new Set(eligibleRounds.slice(0, 4))
   }
@@ -316,11 +309,7 @@ export class GoldMinerScene extends Phaser.Scene {
 
   private spawnWolf() {
     if (this.state !== GoldMinerState.AIMING || this.grabbed || this.wolfAppeared) return
-    let targets = this.mineItems.filter((item) => item.active && !item.taken && item.value !== this.question.correctAnswer)
-    if (WOLF_CARRY_TEST_MODE && this.round < 2) {
-      const shouldCarryRock = this.round === 1
-      targets = targets.filter((item) => item.rock === shouldCarryRock)
-    }
+    const targets = this.mineItems.filter((item) => item.active && !item.taken && item.value !== this.question.correctAnswer)
     if (!targets.length) return
     this.wolfAppeared = true
     this.wolfState = WolfState.PEEK
