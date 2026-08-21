@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { GAME_BACKGROUND_MUSIC } from './audio'
 
 export default function useBackgroundMusic(enabled: boolean, ready = true) {
@@ -14,14 +14,18 @@ export default function useBackgroundMusic(enabled: boolean, ready = true) {
     return () => { audio.pause(); audio.src = ''; audioRef.current = null }
   }, [])
 
+  const start = useCallback(async () => {
+    const audio = audioRef.current
+    if (!audio || !enabled || !audio.paused) return
+    await audio.play()
+  }, [enabled])
+
   useEffect(() => {
     const audio = audioRef.current
     if (!audio) return
     if (!enabled || !ready) { audio.pause(); return }
+    void start().catch(() => undefined)
+  }, [enabled, ready, start])
 
-    const play = () => { void audio.play().catch(() => undefined) }
-    play()
-    window.addEventListener('pointerdown', play, { once: true })
-    return () => window.removeEventListener('pointerdown', play)
-  }, [enabled, ready])
+  return start
 }

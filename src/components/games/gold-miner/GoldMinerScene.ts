@@ -12,8 +12,6 @@ const MAX_LENGTH = 720
 const TASK_PANEL_CENTER = { x: 522, y: 270 }
 const GOLD_SIZE_SCALES = [0.8, 0.9, 1, 1.1, 1.2]
 const CLAW_GRIP_CENTER_Y = 68
-// QA mode: round 1 demonstrates gold carry; round 2 demonstrates rock carry.
-const WOLF_CARRY_TEST_MODE = true
 const GOLD_LAYOUTS: Record<number, Array<{ x: number; y: number }>> = {
   2: [{ x: 155, y: 735 }, { x: 545, y: 760 }],
   4: [{ x: 135, y: 680 }, { x: 550, y: 665 }, { x: 245, y: 910 }, { x: 540, y: 950 }],
@@ -53,6 +51,7 @@ export class GoldMinerScene extends Phaser.Scene {
   private wolfSpawn?: Phaser.Time.TimerEvent
   private wolfAppeared = false
   private paused = false
+  private gameStarted = false
   private music?: Phaser.Sound.BaseSound
 
   constructor() { super('GoldMinerScene') }
@@ -91,17 +90,16 @@ export class GoldMinerScene extends Phaser.Scene {
     this.game.events.on('game-ui:mute', this.setMuted, this)
     this.game.events.on('game-ui:pause', this.setPaused, this)
     this.game.events.on('game-ui:restart', this.restart, this)
+    this.game.events.on('game-ui:start', this.startGameplay, this)
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.cleanup, this)
     this.music = this.sound.add('gold-background', { loop: true, volume: 0.22 })
-    this.input.once('pointerdown', this.startMusic, this)
-    if (this.wolfRounds.size === 0) this.prepareWolfRounds()
     this.game.events.emit('game-ui:score', this.score)
-    this.startRound()
     this.game.events.emit('gold-miner:ready')
+    if (this.game.registry.get('game-ui:started')) this.startGameplay()
   }
 
   update(_: number, delta: number) {
-    if (this.paused) return
+    if (!this.gameStarted || this.paused) return
     const seconds = Math.min(delta, 40) / 1000
     if (this.state === GoldMinerState.AIMING) {
       const speed = this.round < 2 ? 42 : this.round < 8 ? 49 : 55
@@ -147,7 +145,7 @@ export class GoldMinerScene extends Phaser.Scene {
     this.claw = this.add.image(0, 0, 'golden-claw')
       .setDisplaySize(88, 118)
       .setOrigin(.5, .1)
-    this.hook = this.add.container(ANCHOR.x, ANCHOR.y + this.ropeLength, [this.claw]).setDepth(20)
+    this.hook = this.add.container(ANCHOR.x, ANCHOR.y, [this.claw]).setDepth(20).setAlpha(0)
   }
 
   private setClawClosed(closed: boolean) {
@@ -168,8 +166,7 @@ export class GoldMinerScene extends Phaser.Scene {
     this.game.events.emit('game-ui:round', this.round + 1)
     const positions = Phaser.Utils.Array.Shuffle([...(GOLD_LAYOUTS[this.question.choices.length] ?? GOLD_LAYOUTS[7])])
     this.question.choices.forEach((value, index) => {
-      const testRock = WOLF_CARRY_TEST_MODE && this.round === 1 && value !== this.question.correctAnswer
-      this.mineItems.push(this.createMineItem(positions[index].x, positions[index].y, value, testRock || index % 3 === 2))
+      this.mineItems.push(this.createMineItem(positions[index].x, positions[index].y, value, index % 3 === 2))
     })
     this.feedback.setText('')
     this.time.delayedCall(650, () => {
@@ -204,7 +201,7 @@ export class GoldMinerScene extends Phaser.Scene {
   }
 
   private dropHook(pointer: Phaser.Input.Pointer) {
-    if (this.paused || this.state !== GoldMinerState.AIMING || pointer.worldY < 90 || pointer.worldY > 1175) return
+    if (!this.gameStarted || this.paused || this.state !== GoldMinerState.AIMING || pointer.worldY < 90 || pointer.worldY > 1175) return
     this.setClawClosed(false)
     this.lockedAngle = this.angle
     this.state = GoldMinerState.HOOK_DOWN
@@ -297,10 +294,6 @@ export class GoldMinerScene extends Phaser.Scene {
   }
 
   private prepareWolfRounds() {
-    if (WOLF_CARRY_TEST_MODE) {
-      this.wolfRounds = new Set([0, 1])
-      return
-    }
     const eligibleRounds = Phaser.Utils.Array.Shuffle([2, 3, 4, 5, 6, 7, 8, 9])
     this.wolfRounds = new Set(eligibleRounds.slice(0, 4))
   }
@@ -316,11 +309,7 @@ export class GoldMinerScene extends Phaser.Scene {
 
   private spawnWolf() {
     if (this.state !== GoldMinerState.AIMING || this.grabbed || this.wolfAppeared) return
-    let targets = this.mineItems.filter((item) => item.active && !item.taken && item.value !== this.question.correctAnswer)
-    if (WOLF_CARRY_TEST_MODE && this.round < 2) {
-      const shouldCarryRock = this.round === 1
-      targets = targets.filter((item) => item.rock === shouldCarryRock)
-    }
+    const targets = this.mineItems.filter((item) => item.active && !item.taken && item.value !== this.question.correctAnswer)
     if (!targets.length) return
     this.wolfAppeared = true
     this.wolfState = WolfState.PEEK
@@ -449,9 +438,42 @@ export class GoldMinerScene extends Phaser.Scene {
     this.wolfState = WolfState.IDLE
   }
   private startMusic() { if (!this.sound.mute && !this.music?.isPlaying) this.music?.play() }
-  private setMuted(value: boolean) { this.sound.mute = value; if (!value) this.startMusic() }
+  private startGameplay() {
+    if (this.gameStarted) return
+    this.gameStarted = true
+    this.game.registry.set('game-ui:started', true)
+    if (this.wolfRounds.size === 0) this.prepareWolfRounds()
+    this.startMusic()
+    this.playHookEntrance()
+  }
+  private playHookEntrance() {
+    const extension = { length: 0 }
+    this.ropeLength = 0
+    this.rope.clear()
+    this.hook.setPosition(ANCHOR.x, ANCHOR.y).setAlpha(0)
+    this.tweens.add({
+      targets: extension,
+      length: 105,
+      duration: 850,
+      ease: 'Sine.Out',
+      onUpdate: () => {
+        this.ropeLength = extension.length
+        this.hook.setAlpha(Phaser.Math.Clamp(extension.length / 38, 0, 1))
+        this.positionHook(0, extension.length)
+      },
+      onComplete: () => {
+        this.ropeLength = 105
+        this.angle = 0
+        this.direction = 1
+        this.hook.setAlpha(1)
+        this.startRound()
+      },
+    })
+  }
+  private setMuted(value: boolean) { this.sound.mute = value; if (!value && this.gameStarted) this.startMusic() }
   private setPaused(value: boolean) { this.paused = value; value ? this.tweens.pauseAll() : this.tweens.resumeAll() }
   private restart() {
+    this.gameStarted = false
     this.cancelWolf()
     this.round = 0
     this.score = 0
@@ -473,10 +495,10 @@ export class GoldMinerScene extends Phaser.Scene {
   private cleanup() {
     this.cancelWolf()
     this.input.off('pointerdown', this.dropHook, this)
-    this.input.off('pointerdown', this.startMusic, this)
     this.game.events.off('game-ui:mute', this.setMuted, this)
     this.game.events.off('game-ui:pause', this.setPaused, this)
     this.game.events.off('game-ui:restart', this.restart, this)
+    this.game.events.off('game-ui:start', this.startGameplay, this)
     this.music?.destroy()
   }
 }

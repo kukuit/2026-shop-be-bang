@@ -1,85 +1,54 @@
-// lib/chat/provider.ts
-import { SYSTEM_PROMPT } from './constants'
+import { SYSTEM_PROMPTS, type ChatContext } from './constants'
 
-export type ClientMessage = {
-  role: 'user' | 'assistant'
-  content: string
-}
+export type ClientMessage = { role: 'user' | 'assistant'; content: string }
+type LlmMessage = ClientMessage | { role: 'system'; content: string }
+type ChatProvider = 'groq' | 'openai' | 'anthropic'
 
-// Message format sent to the LLM (including system prompt)
-type LlmMessage = {
-  role: 'system' | 'user' | 'assistant'
-  content: string
-}
-
-const CHAT_BOT_STYLE = process.env.CHAT_BOT_STYLE ?? 'groq'
-const GROQ_MODEL = process.env.GROQ_MODEL ?? 'llama-3.1-8b-instant'
+const CHAT_PROVIDER = (process.env.CHAT_PROVIDER ?? 'groq').toLowerCase() as ChatProvider
 
 function getModelConfig() {
-  switch (CHAT_BOT_STYLE) {
+  switch (CHAT_PROVIDER) {
     case 'openai':
-      return {
-        provider: 'openai' as const,
-        baseUrl: 'https://api.openai.com/v1',
-        model: 'gpt-4.1-mini', // or gpt-4.1 depending on budget
-        apiKey: process.env.OPENAI_API_KEY,
-      }
-    case 'openaimini':
-      return {
-        provider: 'openai' as const,
-        baseUrl: 'https://api.openai.com/v1',
-        model: 'gpt-4o-mini',
-        apiKey: process.env.OPENAI_API_KEY,
-      }
+      return { provider: 'openai' as const, baseUrl: 'https://api.openai.com/v1', model: process.env.OPENAI_MODEL ?? 'gpt-4o-mini', apiKey: process.env.OPENAI_API_KEY }
+    case 'anthropic':
+      return { provider: 'anthropic' as const, baseUrl: 'https://api.anthropic.com/v1', model: process.env.ANTHROPIC_MODEL ?? 'claude-3-5-haiku-latest', apiKey: process.env.ANTHROPIC_API_KEY }
     case 'groq':
     default:
-      return {
-        provider: 'groq' as const,
-        baseUrl: 'https://api.groq.com/openai/v1',
-        // Supported model
-        model: GROQ_MODEL,
-        apiKey: process.env.GROQ_API_KEY,
-      }
+      return { provider: 'groq' as const, baseUrl: 'https://api.groq.com/openai/v1', model: process.env.GROQ_MODEL ?? 'openai/gpt-oss-20b', apiKey: process.env.GROQ_API_KEY }
   }
 }
 
-/**
- * The main function to call the LLM (OpenAI / Groq)
- * -> all “instruction tuning” is handled inside SYSTEM_PROMPT & buildMessages
- */
-export async function callChatModel(clientMessages: ClientMessage[]): Promise<string> {
-  const { baseUrl, model, apiKey } = getModelConfig()
+export async function callChatModel(clientMessages: ClientMessage[], context: ChatContext): Promise<string> {
+  const { provider, baseUrl, model, apiKey } = getModelConfig()
+  const systemPrompt = SYSTEM_PROMPTS[context]
 
-  if (!apiKey) {
-    throw new Error('Chatbot API key is not configured (OPENAI_API_KEY or GROQ_API_KEY)')
-  }
+  if (!apiKey) throw new Error(`Chưa cấu hình API key cho nhà cung cấp chatbot ${provider}.`)
 
-  const messages: LlmMessage[] = [{ role: 'system', content: SYSTEM_PROMPT }, ...clientMessages]
+  const request: { url: string; headers: Record<string, string>; body: object } = provider === 'anthropic'
+    ? {
+        url: `${baseUrl}/messages`,
+        headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
+        body: { model, system: systemPrompt, messages: clientMessages, temperature: 0.6, max_tokens: 350 },
+      }
+    : {
+        url: `${baseUrl}/chat/completions`,
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+        body: { model, messages: [{ role: 'system', content: systemPrompt }, ...clientMessages] as LlmMessage[], temperature: 0.6, max_tokens: 350 },
+      }
 
-  const res = await fetch(`${baseUrl}/chat/completions`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model,
-      messages,
-      temperature: 0.6,
-      max_tokens: 256,
-    }),
-  })
-
+  const res = await fetch(request.url, { method: 'POST', headers: request.headers, body: JSON.stringify(request.body) })
   if (!res.ok) {
-    const text = await res.text()
-    console.error('LLM error:', text)
-    throw new Error('The chatbot is currently busy. Please try again in a moment.')
+    const responseText = await res.text()
+    console.error('LLM request failed:', provider, model, res.status, responseText)
+    if (res.status === 401 || res.status === 403) throw new Error(`API key ${provider} không hợp lệ hoặc không có quyền truy cập.`)
+    if (res.status === 404) throw new Error(`Model chatbot “${model}” không tồn tại hoặc tài khoản chưa được cấp quyền.`)
+    if (res.status === 429) throw new Error('Chatbot đã đạt giới hạn miễn phí. Bạn vui lòng thử lại sau một chút.')
+    throw new Error(`Không thể kết nối chatbot (${provider}, mã lỗi ${res.status}).`)
   }
 
   const data = await res.json()
-  const reply: string =
-    data.choices?.[0]?.message?.content ??
-    "Sorry, I can't answer this question right now. Please try again."
-
-  return reply
+  const reply = provider === 'anthropic'
+    ? data.content?.find((item: { type?: string }) => item.type === 'text')?.text
+    : data.choices?.[0]?.message?.content
+  return reply ?? 'Mình chưa thể trả lời câu hỏi này. Bạn thử lại giúp mình nhé.'
 }
