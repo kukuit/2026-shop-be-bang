@@ -200,6 +200,7 @@ export class BubbleMathScene extends Phaser.Scene {
   }
 
   private restartGame() {
+    this.gameStarted = false
     this.time.paused = false
     this.tweens.resumeAll()
     this.physics.resume()

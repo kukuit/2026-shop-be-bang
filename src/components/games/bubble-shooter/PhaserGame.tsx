@@ -46,6 +46,13 @@ export default function PhaserGame() {
   }, [])
 
   const sendToGame = (event: string, value?: boolean) => gameRef.current?.events.emit(event, value)
+  const restart = () => {
+    gameRef.current?.registry.set('game-ui:started', true)
+    setGameCompleted(false)
+    setScore(0)
+    setCurrentRound(1)
+    sendToGame('game-ui:restart')
+  }
 
   return (
     <GameShell
@@ -54,7 +61,7 @@ export default function PhaserGame() {
       muted={muted}
       onMutedChange={(value) => { setMuted(value); sendToGame('game-ui:mute', value) }}
       onPauseChange={(value) => sendToGame('game-ui:pause', value)}
-      onRestart={() => { setGameCompleted(false); setScore(0); setCurrentRound(1); sendToGame('game-ui:restart') }}
+      onRestart={restart}
     >
       <GameLoadingScreen progress={progress} ready={isReady} unlockAudio={() => unlockGameAudio(gameRef.current)} onStart={() => { sendToGame('game-ui:start') }} />
       <div
@@ -64,7 +71,7 @@ export default function PhaserGame() {
         aria-label="Game bắn bong bóng toán học"
         aria-hidden={!isReady}
       />
-      {gameCompleted && <GameCompletion score={score} onRestart={() => { setGameCompleted(false); setScore(0); setCurrentRound(1); sendToGame('game-ui:restart') }} />}
+      {gameCompleted && <GameCompletion score={score} onRestart={restart} />}
     </GameShell>
   )
 }

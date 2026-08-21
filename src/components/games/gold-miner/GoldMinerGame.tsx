@@ -38,7 +38,11 @@ export default function GoldMinerGame() {
   }, [])
 
   const emit = (name: string, value?: boolean) => game.current?.events.emit(name, value)
-  const restart = () => { setScore(0); setRound(1); setComplete(false); emit('game-ui:restart') }
+  const restart = () => {
+    game.current?.registry.set('game-ui:started', true)
+    setScore(0); setRound(1); setComplete(false)
+    emit('game-ui:restart')
+  }
 
   return <GameShell score={score} currentRound={round} muted={muted}
     onMutedChange={(value) => { setMuted(value); emit('game-ui:mute', value) }}

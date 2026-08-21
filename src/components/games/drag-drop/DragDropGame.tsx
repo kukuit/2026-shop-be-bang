@@ -67,7 +67,7 @@ export default function DragDropGame() {
     setLevels((current) => createRandomizedLevels(current))
     setNumberTray(shuffleNumbers())
     setCurrentLevel(0); setScore(0); setCompletedTargets({}); setIsTransitioning(false)
-    setGameCompleted(false); setDrag(null)
+    setGameCompleted(false); setGamePaused(false); setGameStarted(true); setDrag(null)
   }, [])
 
   const finishDrop = useCallback((clientX: number, clientY: number, value: NumberValue) => {

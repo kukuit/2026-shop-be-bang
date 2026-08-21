@@ -281,7 +281,7 @@ export class RacingScene extends Phaser.Scene {
   }
   private setMuted(value: boolean) { this.sound.mute = value; if (!value && this.gameStarted) this.startMusic() }
   private setPaused(value: boolean) { this.paused = value; value ? this.tweens.pauseAll() : this.tweens.resumeAll() }
-  private restart() { this.scene.restart() }
+  private restart() { this.gameStarted = false; this.paused = false; this.scene.restart() }
   private cleanup() {
     this.input.off('pointerdown', this.onPointerDown, this)
     this.input.off('pointerup', this.onPointerUp, this)

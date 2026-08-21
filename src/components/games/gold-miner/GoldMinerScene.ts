@@ -473,6 +473,7 @@ export class GoldMinerScene extends Phaser.Scene {
   private setMuted(value: boolean) { this.sound.mute = value; if (!value && this.gameStarted) this.startMusic() }
   private setPaused(value: boolean) { this.paused = value; value ? this.tweens.pauseAll() : this.tweens.resumeAll() }
   private restart() {
+    this.gameStarted = false
     this.cancelWolf()
     this.round = 0
     this.score = 0
