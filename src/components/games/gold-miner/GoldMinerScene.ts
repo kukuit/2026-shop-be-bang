@@ -51,6 +51,7 @@ export class GoldMinerScene extends Phaser.Scene {
   private wolfSpawn?: Phaser.Time.TimerEvent
   private wolfAppeared = false
   private paused = false
+  private gameStarted = false
   private music?: Phaser.Sound.BaseSound
 
   constructor() { super('GoldMinerScene') }
@@ -89,17 +90,16 @@ export class GoldMinerScene extends Phaser.Scene {
     this.game.events.on('game-ui:mute', this.setMuted, this)
     this.game.events.on('game-ui:pause', this.setPaused, this)
     this.game.events.on('game-ui:restart', this.restart, this)
+    this.game.events.on('game-ui:start', this.startGameplay, this)
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.cleanup, this)
     this.music = this.sound.add('gold-background', { loop: true, volume: 0.22 })
-    this.input.once('pointerdown', this.startMusic, this)
-    if (this.wolfRounds.size === 0) this.prepareWolfRounds()
     this.game.events.emit('game-ui:score', this.score)
-    this.startRound()
     this.game.events.emit('gold-miner:ready')
+    if (this.game.registry.get('game-ui:started')) this.startGameplay()
   }
 
   update(_: number, delta: number) {
-    if (this.paused) return
+    if (!this.gameStarted || this.paused) return
     const seconds = Math.min(delta, 40) / 1000
     if (this.state === GoldMinerState.AIMING) {
       const speed = this.round < 2 ? 42 : this.round < 8 ? 49 : 55
@@ -145,7 +145,7 @@ export class GoldMinerScene extends Phaser.Scene {
     this.claw = this.add.image(0, 0, 'golden-claw')
       .setDisplaySize(88, 118)
       .setOrigin(.5, .1)
-    this.hook = this.add.container(ANCHOR.x, ANCHOR.y + this.ropeLength, [this.claw]).setDepth(20)
+    this.hook = this.add.container(ANCHOR.x, ANCHOR.y, [this.claw]).setDepth(20).setAlpha(0)
   }
 
   private setClawClosed(closed: boolean) {
@@ -201,7 +201,7 @@ export class GoldMinerScene extends Phaser.Scene {
   }
 
   private dropHook(pointer: Phaser.Input.Pointer) {
-    if (this.paused || this.state !== GoldMinerState.AIMING || pointer.worldY < 90 || pointer.worldY > 1175) return
+    if (!this.gameStarted || this.paused || this.state !== GoldMinerState.AIMING || pointer.worldY < 90 || pointer.worldY > 1175) return
     this.setClawClosed(false)
     this.lockedAngle = this.angle
     this.state = GoldMinerState.HOOK_DOWN
@@ -438,7 +438,39 @@ export class GoldMinerScene extends Phaser.Scene {
     this.wolfState = WolfState.IDLE
   }
   private startMusic() { if (!this.sound.mute && !this.music?.isPlaying) this.music?.play() }
-  private setMuted(value: boolean) { this.sound.mute = value; if (!value) this.startMusic() }
+  private startGameplay() {
+    if (this.gameStarted) return
+    this.gameStarted = true
+    this.game.registry.set('game-ui:started', true)
+    if (this.wolfRounds.size === 0) this.prepareWolfRounds()
+    this.startMusic()
+    this.playHookEntrance()
+  }
+  private playHookEntrance() {
+    const extension = { length: 0 }
+    this.ropeLength = 0
+    this.rope.clear()
+    this.hook.setPosition(ANCHOR.x, ANCHOR.y).setAlpha(0)
+    this.tweens.add({
+      targets: extension,
+      length: 105,
+      duration: 850,
+      ease: 'Sine.Out',
+      onUpdate: () => {
+        this.ropeLength = extension.length
+        this.hook.setAlpha(Phaser.Math.Clamp(extension.length / 38, 0, 1))
+        this.positionHook(0, extension.length)
+      },
+      onComplete: () => {
+        this.ropeLength = 105
+        this.angle = 0
+        this.direction = 1
+        this.hook.setAlpha(1)
+        this.startRound()
+      },
+    })
+  }
+  private setMuted(value: boolean) { this.sound.mute = value; if (!value && this.gameStarted) this.startMusic() }
   private setPaused(value: boolean) { this.paused = value; value ? this.tweens.pauseAll() : this.tweens.resumeAll() }
   private restart() {
     this.cancelWolf()
@@ -462,10 +494,10 @@ export class GoldMinerScene extends Phaser.Scene {
   private cleanup() {
     this.cancelWolf()
     this.input.off('pointerdown', this.dropHook, this)
-    this.input.off('pointerdown', this.startMusic, this)
     this.game.events.off('game-ui:mute', this.setMuted, this)
     this.game.events.off('game-ui:pause', this.setPaused, this)
     this.game.events.off('game-ui:restart', this.restart, this)
+    this.game.events.off('game-ui:start', this.startGameplay, this)
     this.music?.destroy()
   }
 }

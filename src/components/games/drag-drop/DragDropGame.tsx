@@ -31,6 +31,7 @@ export default function DragDropGame() {
   const [gameCompleted, setGameCompleted] = useState(false)
   const [gamePaused, setGamePaused] = useState(false)
   const [isReady, setIsReady] = useState(false)
+  const [gameStarted, setGameStarted] = useState(false)
   const [loadProgress, setLoadProgress] = useState(0)
   const [drag, setDrag] = useState<DragState>(null)
   const [wrongTarget, setWrongTarget] = useState<string | null>(null)
@@ -39,7 +40,7 @@ export default function DragDropGame() {
   const [numberTray, setNumberTray] = useState<NumberValue[]>(INITIAL_NUMBER_TRAY)
   const level = levels[currentLevel]
   const density = level.groups && level.groups.length >= 4 ? 'dense' : level.groups && level.groups.length === 1 ? 'simple' : 'standard'
-  useBackgroundMusic(soundEnabled, isReady)
+  const startMusic = useBackgroundMusic(soundEnabled, isReady && gameStarted)
 
   useEffect(() => {
     let cancelled = false
@@ -90,10 +91,10 @@ export default function DragDropGame() {
 
   useEffect(() => {
     const targetCount = Object.keys(level.answers).length
-    if (gamePaused || isTransitioning || Object.keys(completedTargets).length !== targetCount) return
+    if (!gameStarted || gamePaused || isTransitioning || Object.keys(completedTargets).length !== targetCount) return
     setIsTransitioning(true)
     setScore((current) => current + 10)
-  }, [completedTargets, gamePaused, isTransitioning, level.answers])
+  }, [completedTargets, gamePaused, gameStarted, isTransitioning, level.answers])
 
   useEffect(() => {
     if (!isTransitioning || gamePaused) return
@@ -105,7 +106,7 @@ export default function DragDropGame() {
   }, [currentLevel, gamePaused, isTransitioning, levels.length])
 
   const beginDrag = (event: ReactPointerEvent, value: NumberValue) => {
-    if (isTransitioning || gameCompleted) return
+    if (!gameStarted || isTransitioning || gameCompleted) return
     event.preventDefault()
     event.currentTarget.setPointerCapture(event.pointerId)
     setDrag({ value, x: event.clientX, y: event.clientY, pointerId: event.pointerId })
@@ -125,7 +126,7 @@ export default function DragDropGame() {
 
   return (
     <GameShell score={score} currentRound={level.id} muted={!soundEnabled} onMutedChange={(muted) => setSoundEnabled(!muted)} onPauseChange={(paused) => { setGamePaused(paused); if (paused) setDrag(null) }} onRestart={restart}>
-      {!isReady && <GameLoadingScreen progress={loadProgress} />}
+      <GameLoadingScreen progress={loadProgress} ready={isReady} unlockAudio={startMusic} onStart={() => setGameStarted(true)} />
       <div className="relative h-full touch-none overflow-hidden bg-sky-300 bg-cover bg-center" style={{ backgroundImage: "url('/games/drag-drop/images/farm-background.png')" }}>
         <div className={styles.gameplayPanel} data-density={density}>
           <div className={styles.questionArea}>

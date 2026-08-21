@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { GameCompletion, GameLoadingScreen, GameShell } from '../general'
+import { GameCompletion, GameLoadingScreen, GameShell, unlockGameAudio } from '../general'
 
 export default function RacingGame() {
   const host = useRef<HTMLDivElement>(null)
@@ -35,7 +35,7 @@ export default function RacingGame() {
   return <GameShell score={score} currentRound={round} muted={muted}
     onMutedChange={(value) => { setMuted(value); emit('game-ui:mute', value) }}
     onPauseChange={(value) => emit('game-ui:pause', value)} onRestart={restart}>
-    {!ready && <GameLoadingScreen progress={loadProgress} />}
+    <GameLoadingScreen progress={loadProgress} ready={ready} unlockAudio={() => unlockGameAudio(game.current)} onStart={() => { emit('game-ui:start') }} />
     <div ref={host} className={`h-full w-full touch-none [&_canvas]:block ${ready ? 'opacity-100' : 'opacity-0'}`}
       role="application" aria-label="Trò chơi đua xe nhận biết số từ 0 đến 5" aria-hidden={!ready} />
     {complete && <GameCompletion score={score} onRestart={restart} />}

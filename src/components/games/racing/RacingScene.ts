@@ -26,6 +26,7 @@ export class RacingScene extends Phaser.Scene {
   private questionText!: Phaser.GameObjects.Text
   private hint!: Phaser.GameObjects.Container
   private paused = false
+  private gameStarted = false
   private pointerStartX?: number
   private questionStartedAt = 0
   private music?: Phaser.Sound.BaseSound
@@ -51,19 +52,17 @@ export class RacingScene extends Phaser.Scene {
     this.game.events.on('game-ui:mute', this.setMuted, this)
     this.game.events.on('game-ui:pause', this.setPaused, this)
     this.game.events.on('game-ui:restart', this.restart, this)
+    this.game.events.on('game-ui:start', this.startGameplay, this)
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.cleanup, this)
     this.music = this.sound.add('racing-background', { loop: true, volume: .16 })
-    this.input.once('pointerdown', this.startMusic, this)
     this.game.events.emit('game-ui:score', 0)
     this.game.events.emit('game-ui:round', 1)
-    this.renderQuestion(false)
-    this.time.delayedCall(700, () => this.spawnGates())
-    this.time.delayedCall(2600, () => this.tweens.add({ targets: this.hint, alpha: 0, duration: 500 }))
     this.game.events.emit('racing:ready')
+    if (this.game.registry.get('game-ui:started')) this.startGameplay()
   }
 
   update(_: number, delta: number) {
-    if (this.paused) return
+    if (!this.gameStarted || this.paused) return
     this.road.update(delta, this.currentSpeed)
     if (this.state === RacingState.RUNNING && this.gates.length) {
       this.gateY += delta * .105 * this.currentSpeed
@@ -98,7 +97,6 @@ export class RacingScene extends Phaser.Scene {
       .fillStyle(0xffd33d).fillCircle(-42, 51, 10).fillCircle(42, 51, 10)
     const driver = this.add.circle(0, -57, 31, 0x176fc0).setStrokeStyle(7, 0xffffff)
     this.car = this.add.container(laneX(this.currentLane), CAR_Y, [shadow, body, driver]).setDepth(30)
-    this.tweens.add({ targets: this.car, y: CAR_Y + 4, duration: 160, yoyo: true, repeat: -1, ease: 'Sine.InOut' })
   }
 
   private createControls() {
@@ -229,14 +227,14 @@ export class RacingScene extends Phaser.Scene {
   }
 
   private changeLane(direction: -1 | 1) {
-    if (this.paused || this.state !== RacingState.RUNNING) return
+    if (!this.gameStarted || this.paused || this.state !== RacingState.RUNNING) return
     const next = Phaser.Math.Clamp(this.currentLane + direction, LANES.left, LANES.right) as Lane
     if (next === this.currentLane) return
     this.currentLane = next
     this.tweens.add({ targets: this.car, x: laneX(next), angle: direction * 4, duration: 190, ease: 'Sine.InOut', onComplete: () => this.tweens.add({ targets: this.car, angle: 0, duration: 80 }) })
   }
 
-  private onPointerDown(pointer: Phaser.Input.Pointer) { this.pointerStartX = pointer.x }
+  private onPointerDown(pointer: Phaser.Input.Pointer) { if (this.gameStarted) this.pointerStartX = pointer.x }
   private onPointerUp(pointer: Phaser.Input.Pointer) {
     if (this.pointerStartX === undefined) return
     const distance = pointer.x - this.pointerStartX
@@ -271,7 +269,17 @@ export class RacingScene extends Phaser.Scene {
 
   private clearGates() { this.gates.forEach((gate) => gate.destroy()); this.gates = [] }
   private startMusic() { if (!this.sound.mute && !this.music?.isPlaying) this.music?.play() }
-  private setMuted(value: boolean) { this.sound.mute = value; if (!value) this.startMusic() }
+  private startGameplay() {
+    if (this.gameStarted) return
+    this.gameStarted = true
+    this.game.registry.set('game-ui:started', true)
+    this.startMusic()
+    this.tweens.add({ targets: this.car, y: CAR_Y + 4, duration: 160, yoyo: true, repeat: -1, ease: 'Sine.InOut' })
+    this.renderQuestion(false)
+    this.time.delayedCall(700, () => this.spawnGates())
+    this.time.delayedCall(2600, () => this.tweens.add({ targets: this.hint, alpha: 0, duration: 500 }))
+  }
+  private setMuted(value: boolean) { this.sound.mute = value; if (!value && this.gameStarted) this.startMusic() }
   private setPaused(value: boolean) { this.paused = value; value ? this.tweens.pauseAll() : this.tweens.resumeAll() }
   private restart() { this.scene.restart() }
   private cleanup() {
@@ -280,6 +288,7 @@ export class RacingScene extends Phaser.Scene {
     this.game.events.off('game-ui:mute', this.setMuted, this)
     this.game.events.off('game-ui:pause', this.setPaused, this)
     this.game.events.off('game-ui:restart', this.restart, this)
+    this.game.events.off('game-ui:start', this.startGameplay, this)
     this.music?.destroy()
   }
 }

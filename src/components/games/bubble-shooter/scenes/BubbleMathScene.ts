@@ -41,6 +41,7 @@ export class BubbleMathScene extends Phaser.Scene {
   private transitionTimers = new Set<Phaser.Time.TimerEvent>()
   private transitionLabel?: Phaser.GameObjects.Text
   private isPauseMenuOpen = false
+  private gameStarted = false
   private backgroundMusic?: Phaser.Sound.BaseSound
 
   constructor() {
@@ -74,6 +75,7 @@ export class BubbleMathScene extends Phaser.Scene {
     this.game.events.on('game-ui:mute', this.setMuted, this)
     this.game.events.on('game-ui:pause', this.setPaused, this)
     this.game.events.on('game-ui:restart', this.restartGame, this)
+    this.game.events.on('game-ui:start', this.startGameplay, this)
     this.bubbles = this.add.group({ runChildUpdate: false })
     this.projectiles = this.physics.add.group({ maxSize: 8, allowGravity: false })
 
@@ -122,12 +124,12 @@ export class BubbleMathScene extends Phaser.Scene {
     this.input.on('pointerup', this.shoot, this)
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.cleanup, this)
 
-    this.startQuestion()
     this.game.events.emit('bubble-shooter:ready')
+    if (this.game.registry.get('game-ui:started')) this.startGameplay()
   }
 
   update(time: number, delta: number) {
-    if (this.isPauseMenuOpen) return
+    if (!this.gameStarted || this.isPauseMenuOpen) return
 
     this.bubbles.getChildren().forEach((item) => {
       const bubble = item as Bubble
@@ -156,7 +158,7 @@ export class BubbleMathScene extends Phaser.Scene {
 
   private setMuted(muted: boolean) {
     this.sound.mute = muted
-    if (!muted) this.ensureBackgroundMusic()
+    if (!muted && this.gameStarted) this.ensureBackgroundMusic()
   }
 
   private setPaused(paused: boolean) {
@@ -182,11 +184,14 @@ export class BubbleMathScene extends Phaser.Scene {
       volume: 0.28,
     })
 
-    // Phaser sẽ tự unlock Web Audio ở thao tác người dùng đầu tiên. Việc gọi play
-    // khi còn locked giúp bài nhạc được xếp hàng và phát ngay sau khi unlock.
-    this.sound.once(Phaser.Sound.Events.UNLOCKED, this.ensureBackgroundMusic, this)
-    this.input.once('pointerdown', this.ensureBackgroundMusic, this)
+  }
+
+  private startGameplay() {
+    if (this.gameStarted) return
+    this.gameStarted = true
+    this.game.registry.set('game-ui:started', true)
     this.ensureBackgroundMusic()
+    this.startQuestion()
   }
 
   private ensureBackgroundMusic() {
@@ -285,6 +290,7 @@ export class BubbleMathScene extends Phaser.Scene {
   }
 
   private selectAmmo(frame: number) {
+    if (!this.gameStarted) return
     this.selectedAmmo = frame
     this.ammoSelectionRings.forEach((ring, index) => {
       ring.setStrokeStyle(index === frame ? 5 : 2, index === frame ? 0xffd43b : 0x9bdcff)
@@ -354,11 +360,12 @@ export class BubbleMathScene extends Phaser.Scene {
   }
 
   private aim(pointer: Phaser.Input.Pointer) {
+    if (!this.gameStarted) return
     this.shooter.setAim(pointer.worldX, pointer.worldY)
   }
 
   private shoot(pointer: Phaser.Input.Pointer) {
-    if (this.isPauseMenuOpen || pointer.worldY >= HUD_TOP) return
+    if (!this.gameStarted || this.isPauseMenuOpen || pointer.worldY >= HUD_TOP) return
     if (pointer.worldY <= 82 && pointer.worldX >= WIDTH - 140) return
     this.aim(pointer)
     if (this.roundState !== 'PLAYING' || this.time.now - this.lastShotAt < 320 || this.projectiles.countActive(true) >= 8) return
@@ -636,7 +643,6 @@ export class BubbleMathScene extends Phaser.Scene {
     this.transitionLabel?.destroy()
     this.transitionLabel = undefined
     this.sound.off(Phaser.Sound.Events.UNLOCKED, this.ensureBackgroundMusic, this)
-    this.input.off('pointerdown', this.ensureBackgroundMusic, this)
     this.backgroundMusic?.destroy()
     this.backgroundMusic = undefined
     this.bubbleSpawner?.destroy()
@@ -647,5 +653,6 @@ export class BubbleMathScene extends Phaser.Scene {
     this.game.events.off('game-ui:mute', this.setMuted, this)
     this.game.events.off('game-ui:pause', this.setPaused, this)
     this.game.events.off('game-ui:restart', this.restartGame, this)
+    this.game.events.off('game-ui:start', this.startGameplay, this)
   }
 }

@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { GameCompletion, GameLoadingScreen, GameShell } from '../general'
+import { GameCompletion, GameLoadingScreen, GameShell, unlockGameAudio } from '../general'
 
 export default function PhaserGame() {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -56,7 +56,7 @@ export default function PhaserGame() {
       onPauseChange={(value) => sendToGame('game-ui:pause', value)}
       onRestart={() => { setGameCompleted(false); setScore(0); setCurrentRound(1); sendToGame('game-ui:restart') }}
     >
-      {!isReady && <GameLoadingScreen progress={progress} />}
+      <GameLoadingScreen progress={progress} ready={isReady} unlockAudio={() => unlockGameAudio(gameRef.current)} onStart={() => { sendToGame('game-ui:start') }} />
       <div
         ref={containerRef}
         className={`h-full w-full touch-none [&_canvas]:block ${isReady ? 'opacity-100' : 'opacity-0'}`}
