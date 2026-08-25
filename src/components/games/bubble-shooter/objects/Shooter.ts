@@ -11,13 +11,23 @@ export class Shooter extends Phaser.GameObjects.Container {
     const barrelLength = 75
     const pivotY = -33
     const aimGuide = scene.add.graphics()
+    // Ổ tối nằm sau barrel, chỉ lộ trong khoảng trống của miệng nối.
+    const socketBack = scene.add.graphics()
+    socketBack.fillStyle(0x073b86, 1)
+    socketBack.fillEllipse(0, pivotY, 58, 16)
+
     const barrel = scene.add.image(0, pivotY, 'cannon-barrel')
-      .setOrigin(0.5, 0.9)
-      .setDisplaySize(55, 85)
+      // Hạ artwork thêm 5px quanh cùng pivot, để 30px chân barrel nằm sâu sau
+      // vành trước và không còn hở khi nghiêng trái/phải.
+      .setOrigin(0.5, 0.7)
+      .setDisplaySize(55, 100)
+
+    // Base được vẽ sau barrel để artwork vành vàng gốc trở thành lớp che khớp
+    // phía trước. Không còn nét Graphics thủ công nằm trên bề mặt pháo.
     const base = scene.add.image(0, 14, 'cannon-base')
       .setDisplaySize(188, 125)
 
-    super(scene, x, y, [aimGuide, barrel, base])
+    super(scene, x, y, [aimGuide, socketBack, barrel, base])
     this.barrelLength = barrelLength
     this.pivotY = pivotY
     this.aimAngle = -Math.PI / 2
@@ -31,8 +41,13 @@ export class Shooter extends Phaser.GameObjects.Container {
   setAim(worldX: number, worldY: number) {
     const pivotWorldY = this.y + this.pivotY
     const raw = Math.atan2(worldY - pivotWorldY, worldX - this.x)
-    this.aimAngle = Phaser.Math.Clamp(raw, Phaser.Math.DegToRad(-170), Phaser.Math.DegToRad(-10))
-    this.barrel.rotation = this.aimAngle + Math.PI / 2
+    const barrelRotation = Phaser.Math.Clamp(
+      raw + Math.PI / 2,
+      Phaser.Math.DegToRad(-55),
+      Phaser.Math.DegToRad(55),
+    )
+    this.aimAngle = barrelRotation - Math.PI / 2
+    this.barrel.rotation = barrelRotation
     this.drawAimGuide(worldX, worldY)
   }
 
