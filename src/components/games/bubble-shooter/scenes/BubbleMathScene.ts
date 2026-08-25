@@ -7,6 +7,7 @@ import { BubbleSpawner } from '../systems/BubbleSpawner'
 import { BUBBLE_CONFIG } from '../config/bubble'
 import type { MathQuestion } from '../types/game'
 import { GAME_BACKGROUND_MUSIC } from '../../general/audio'
+import { GameVoiceManager, type VoicePriority } from '../../general/GameVoiceManager'
 
 const WIDTH = 720
 const HEIGHT = 1280
@@ -43,6 +44,13 @@ export class BubbleMathScene extends Phaser.Scene {
   private isPauseMenuOpen = false
   private gameStarted = false
   private backgroundMusic?: Phaser.Sound.BaseSound
+  private voiceManager?: GameVoiceManager
+  private wolf?: Phaser.GameObjects.Sprite
+  private wolfShotTimer?: Phaser.Time.TimerEvent
+  private wolfArrow?: Phaser.GameObjects.Triangle
+  private wolfBusy = false
+  private wolfActionTimers = new Set<Phaser.Time.TimerEvent>()
+  private winVoiceTimer?: ReturnType<typeof setTimeout>
 
   constructor() {
     super('BubbleMathScene')
@@ -59,14 +67,29 @@ export class BubbleMathScene extends Phaser.Scene {
     this.load.image('cannon-barrel', '/games/bubble-shooter/images/cannon-barrel.png')
     this.load.image('question-panel', '/games/bubble-shooter/images/question-panel.png')
     this.load.image('balloon', '/games/bubble-shooter/images/balloon.png')
+    this.load.image('cappy', '/games/bubble-shooter/images/cappy.png')
     this.load.spritesheet('ammo', '/games/bubble-shooter/images/ammo.png', {
       frameWidth: 724,
       frameHeight: 724,
+    })
+    this.load.spritesheet('wolf', '/games/bubble-shooter/images/wolf.png', {
+      frameWidth: 512,
+      frameHeight: 512,
     })
     this.load.audio('voice-background', GAME_BACKGROUND_MUSIC)
     this.load.audio('voice-bullet-rocket', '/games/bubble-shooter/voices/bullet-rocket.mp3')
     this.load.audio('voice-bullet-bomb', '/games/bubble-shooter/voices/bullet-bomb.mp3')
     this.load.audio('voice-bullet-bubble', '/games/bubble-shooter/voices/bullet-bubble.mp3')
+    this.load.audio('voice-bubble-pop', '/games/bubble-shooter/voices/bubble-pop.mp3')
+    this.load.audio('voice-intro', '/games/bubble-shooter/voices/intro.mp3')
+    this.load.audio('voice-true-1', '/games/bubble-shooter/voices/true-1.mp3')
+    this.load.audio('voice-true-2', '/games/bubble-shooter/voices/true-2.mp3')
+    this.load.audio('voice-true-3', '/games/bubble-shooter/voices/true-3.mp3')
+    this.load.audio('voice-true-4', '/games/bubble-shooter/voices/true-4.mp3')
+    this.load.audio('voice-false-1', '/games/bubble-shooter/voices/false-1.mp3')
+    this.load.audio('voice-false-2', '/games/bubble-shooter/voices/false-2.mp3')
+    this.load.audio('voice-win', '/games/bubble-shooter/voices/win.mp3')
+    this.load.audio('voice-wolf-haha', '/games/bubble-shooter/voices/wolf-haha.mp3')
   }
 
   create() {
@@ -112,12 +135,17 @@ export class BubbleMathScene extends Phaser.Scene {
     this.nextButton.on('pointerdown', this.goToNextQuestion, this)
 
     this.shooter = new Shooter(this, WIDTH / 2, HUD_TOP - 57)
+    this.add.image(282, HUD_TOP + 20, 'cappy')
+      .setOrigin(0.5, 1)
+      .setDisplaySize(165, 160)
+      .setDepth(19)
     this.bubbleSpawner = new BubbleSpawner(this, {
       width: WIDTH,
       height: HEIGHT,
       getActiveBubbles: () => this.bubbles.getChildren() as Bubble[],
       addBubble: (bubble) => this.bubbles.add(bubble),
     })
+    this.createWolf()
 
     this.input.on('pointermove', this.aim, this)
     this.input.on('pointerdown', this.aim, this)
@@ -183,7 +211,17 @@ export class BubbleMathScene extends Phaser.Scene {
       loop: true,
       volume: 0.28,
     })
-
+    this.voiceManager = new GameVoiceManager(this.sound, [
+      { key: 'voice-intro' },
+      { key: 'voice-true-1' },
+      { key: 'voice-true-2' },
+      { key: 'voice-true-3' },
+      { key: 'voice-true-4' },
+      { key: 'voice-false-1' },
+      { key: 'voice-false-2' },
+      { key: 'voice-win', volume: 0.9 },
+      { key: 'voice-wolf-haha', volume: 0.9 },
+    ])
   }
 
   private startGameplay() {
@@ -191,6 +229,9 @@ export class BubbleMathScene extends Phaser.Scene {
     this.gameStarted = true
     this.game.registry.set('game-ui:started', true)
     this.ensureBackgroundMusic()
+    this.scheduleTransition(500, () => {
+      this.voiceManager?.playOnce('intro', 'voice-intro', 'intro')
+    })
     this.startQuestion()
   }
 
@@ -309,6 +350,154 @@ export class BubbleMathScene extends Phaser.Scene {
     this.nextButton.setVisible(false)
     this.locked = false
     this.bubbleSpawner.start(this.currentQuestion)
+    this.beginWolfRound()
+  }
+
+  private createWolf() {
+    if (!this.anims.exists('bubble-wolf-peek')) {
+      this.anims.create({
+        key: 'bubble-wolf-peek',
+        frames: this.anims.generateFrameNumbers('wolf', { frames: [0, 1] }),
+        frameRate: 2,
+        repeat: 0,
+        yoyo: true,
+      })
+    }
+    this.wolf = this.add.sprite(WIDTH + 150, 1100, 'wolf', 0)
+      .setDisplaySize(300, 300)
+      .setDepth(13)
+      .setVisible(false)
+  }
+
+  private beginWolfRound() {
+    this.clearWolfAction()
+    if (!this.wolf) return
+    this.wolf.setPosition(WIDTH - 72, 1100).setVisible(false)
+    this.wolfShotTimer = this.time.delayedCall(4000, () => {
+      this.wolfShotTimer = undefined
+      if (this.roundState !== 'PLAYING' || !this.wolf) return
+      this.wolf.setVisible(true).play('bubble-wolf-peek', true)
+      this.scheduleWolfShot(3000)
+    })
+  }
+
+  private scheduleWolfShot(delay = Phaser.Math.Between(4500, 8000)) {
+    this.wolfShotTimer?.remove(false)
+    this.wolfShotTimer = this.time.delayedCall(delay, () => {
+      this.wolfShotTimer = undefined
+      this.fireWolfArrow()
+    })
+  }
+
+  private fireWolfArrow() {
+    if (this.roundState !== 'PLAYING' || this.isPauseMenuOpen) return
+    const targets = (this.bubbles.getChildren() as Bubble[]).filter((bubble) => bubble.active)
+    const target = Phaser.Utils.Array.GetRandom(targets)
+    if (!target) {
+      this.scheduleWolfShot(1000)
+      return
+    }
+
+    this.wolfBusy = true
+    this.wolf?.stop()
+    this.wolf?.setFrame(2)
+    const targetX = target.x
+    const targetY = target.y
+    this.scheduleWolfAction(450, () => {
+      if (this.roundState !== 'PLAYING' || !target.active) {
+        this.wolfBusy = false
+        this.wolf?.setFrame(0)
+        if (this.roundState === 'PLAYING') this.scheduleWolfShot(1000)
+        return
+      }
+
+      this.wolf?.setFrame(4)
+      const startX = WIDTH - 180
+      const startY = 1010
+      const angle = Phaser.Math.Angle.Between(startX, startY, targetX, targetY)
+      this.wolfArrow?.destroy()
+      this.wolfArrow = this.add.triangle(startX, startY, 0, -7, 30, 0, 0, 7, 0xef4444)
+        .setStrokeStyle(3, 0x7f1d1d)
+        .setRotation(angle)
+        .setDepth(24)
+
+      this.tweens.add({
+        targets: this.wolfArrow,
+        x: targetX,
+        y: targetY,
+        duration: 520,
+        ease: 'Linear',
+        onComplete: () => {
+          this.wolfArrow?.destroy()
+          this.wolfArrow = undefined
+          if (this.roundState !== 'PLAYING' || !target.active) {
+            this.wolfBusy = false
+            this.wolf?.setFrame(0)
+            this.scheduleWolfShot(1000)
+            return
+          }
+          this.pop(target, false)
+          this.wolf?.setFrame(5)
+          this.voiceManager?.play('voice-wolf-haha', 'true')
+          this.showWolfLaugh()
+          this.scheduleWolfAction(1100, () => {
+            this.wolfBusy = false
+            if (this.roundState !== 'PLAYING' || !this.wolf) return
+            this.tweens.add({
+              targets: this.wolf,
+              x: WIDTH + 150,
+              duration: 450,
+              ease: 'Cubic.In',
+              onComplete: () => this.wolf?.setVisible(false),
+            })
+          })
+        },
+      })
+    })
+  }
+
+  private showWolfLaugh() {
+    const laugh = this.add.text(WIDTH - 120, 915, 'HA HA!', {
+      fontFamily: 'Arial Black, Arial, sans-serif',
+      fontSize: '34px',
+      color: '#facc15',
+      stroke: '#7c2d12',
+      strokeThickness: 7,
+    }).setOrigin(0.5).setDepth(60)
+    this.tweens.add({
+      targets: laugh,
+      y: laugh.y - 55,
+      alpha: 0,
+      duration: 1000,
+      ease: 'Cubic.Out',
+      onComplete: () => laugh.destroy(),
+    })
+  }
+
+  private scheduleWolfAction(delay: number, callback: () => void) {
+    let timer!: Phaser.Time.TimerEvent
+    timer = this.time.delayedCall(delay, () => {
+      this.wolfActionTimers.delete(timer)
+      callback()
+    })
+    this.wolfActionTimers.add(timer)
+  }
+
+  private clearWolfAction() {
+    this.wolfBusy = false
+    this.wolfShotTimer?.remove(false)
+    this.wolfShotTimer = undefined
+    this.wolfActionTimers.forEach((timer) => timer.remove(false))
+    this.wolfActionTimers.clear()
+    if (this.wolfArrow?.active) {
+      this.tweens.killTweensOf(this.wolfArrow)
+      this.wolfArrow.destroy()
+    }
+    this.wolfArrow = undefined
+    if (this.wolf?.active && this.wolf.anims) {
+      this.tweens.killTweensOf(this.wolf)
+      this.wolf.stop().setFrame(0).setVisible(false)
+    }
   }
 
   private renderQuestion(question: string, showCheck = false) {
@@ -381,6 +570,10 @@ export class BubbleMathScene extends Phaser.Scene {
     this.sound.play(shotVoices[this.selectedAmmo], { volume: 0.55 })
   }
 
+  private playRandomVoice(keys: string[], priority: VoicePriority) {
+    this.voiceManager?.play(Phaser.Utils.Array.GetRandom(keys), priority)
+  }
+
   private handleHitFlow(projectileObject: unknown, bubbleObject: unknown) {
     const projectile = projectileObject as Phaser.Physics.Arcade.Image
     const bubble = bubbleObject as Bubble
@@ -391,6 +584,7 @@ export class BubbleMathScene extends Phaser.Scene {
     const hitY = bubble.y
 
     if (bubble.value !== this.currentQuestion.answer) {
+      this.playRandomVoice(['voice-false-1', 'voice-false-2'], 'false')
       const { score, deducted } = this.score.wrong()
       this.emitScore()
       this.scoreText.setText(`★  ${score}`)
@@ -403,6 +597,12 @@ export class BubbleMathScene extends Phaser.Scene {
     this.locked = true
     this.bubbleSpawner.pause()
     this.projectiles.clear(true, true)
+    if (this.questionNumber !== TOTAL_QUESTIONS) {
+      this.playRandomVoice(
+        ['voice-true-1', 'voice-true-2', 'voice-true-3', 'voice-true-4'],
+        'true',
+      )
+    }
     const score = this.score.correct()
     this.emitScore()
     this.scoreText.setText(`★  ${score}`)
@@ -445,6 +645,7 @@ export class BubbleMathScene extends Phaser.Scene {
   private beginRoundTransition() {
     if (this.roundState !== 'SHOW_RESULT') return
     this.roundState = 'ROUND_TRANSITION'
+    this.clearWolfAction()
     this.fadeOldRound()
     this.tweens.add({
       targets: this.questionText,
@@ -502,6 +703,7 @@ export class BubbleMathScene extends Phaser.Scene {
         this.roundState = 'PLAYING'
         this.locked = false
         this.bubbleSpawner.start(this.currentQuestion)
+        this.beginWolfRound()
       },
     })
   }
@@ -551,6 +753,10 @@ export class BubbleMathScene extends Phaser.Scene {
     this.feedbackText.setAlpha(0).setScale(0.9)
     this.tweens.add({ targets: this.feedbackText, alpha: 1, scale: 1, duration: 350, ease: 'Back.Out' })
     this.game.events.emit('game-ui:complete', this.score.current)
+    this.winVoiceTimer = setTimeout(() => {
+      this.winVoiceTimer = undefined
+      this.voiceManager?.playOnce('win', 'voice-win', 'win')
+    }, 500)
   }
 
   private scheduleTransition(delay: number, callback: () => void) {
@@ -616,6 +822,7 @@ export class BubbleMathScene extends Phaser.Scene {
   }
 
   private pop(bubble: Bubble, correct: boolean) {
+    this.sound.play('voice-bubble-pop', { volume: 0.65 })
     const color = correct ? 0xfacc15 : 0xfb7185
     for (let index = 0; index < (correct ? 12 : 7); index += 1) {
       const dot = this.add.circle(bubble.x, bubble.y, Phaser.Math.Between(5, 10), color).setDepth(25)
@@ -639,6 +846,10 @@ export class BubbleMathScene extends Phaser.Scene {
   }
 
   private cleanup() {
+    if (this.winVoiceTimer) clearTimeout(this.winVoiceTimer)
+    this.winVoiceTimer = undefined
+    this.clearWolfAction()
+    this.wolf = undefined
     this.transitionTimers.forEach((timer) => timer.remove(false))
     this.transitionTimers.clear()
     this.transitionLabel?.destroy()
@@ -646,6 +857,8 @@ export class BubbleMathScene extends Phaser.Scene {
     this.sound.off(Phaser.Sound.Events.UNLOCKED, this.ensureBackgroundMusic, this)
     this.backgroundMusic?.destroy()
     this.backgroundMusic = undefined
+    this.voiceManager?.destroy()
+    this.voiceManager = undefined
     this.bubbleSpawner?.destroy()
     this.input.off('pointermove', this.aim, this)
     this.input.off('pointerdown', this.aim, this)
