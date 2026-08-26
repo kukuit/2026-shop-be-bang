@@ -1,18 +1,20 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { Activity, BookOpenCheck, Gamepad2, ListChecks } from 'lucide-react'
+import AdminShell from './AdminShell'
 
 export const metadata: Metadata = { title: 'Quản trị theo dõi học tập', robots: { index: false, follow: false } }
 export const dynamic = 'force-dynamic'
 
 const links = [
+  { href: '/game/admin/dashboard', label: 'Dashboard học tập', icon: BookOpenCheck },
   { href: '/game/admin/tracking', label: 'Tổng quan', icon: Activity },
   { href: '/game/admin/session', label: 'Phiên chơi', icon: ListChecks },
   { href: '/game/admin/danh-gia', label: 'Đánh giá bài học', icon: BookOpenCheck },
 ]
 
 export default function GameAdminLayout({ children }: { children: React.ReactNode }) {
-  return <div className="min-h-screen bg-slate-100 text-slate-900">
+  const legacy = <div className="min-h-screen bg-slate-100 text-slate-900">
     <header className="border-b border-slate-200 bg-white">
       <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-5 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex items-center gap-3">
@@ -27,5 +29,6 @@ export default function GameAdminLayout({ children }: { children: React.ReactNod
     <div className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-center text-xs font-semibold text-amber-800">Trang quản trị hiện chưa có xác thực và sẽ công khai nếu deploy.</div>
     <main className="mx-auto max-w-7xl px-4 py-7">{children}</main>
   </div>
+  return <AdminShell dashboard={children} legacy={legacy} />
 }
 
