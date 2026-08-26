@@ -2,6 +2,7 @@ import * as Phaser from 'phaser'
 import { GAME_BACKGROUND_MUSIC } from '../general/audio'
 import { GOLD_MINER_LEVELS, TASK_EMOJI } from './levels'
 import { GoldMinerState, WolfState, type GoldMinerQuestion } from './types'
+import { createGameTracker, GAME_IDS, getCurrentGameUserId, getRecognizeNumberKey, LESSON_IDS, type GameTracker } from '../general/tracking'
 
 const W = 720
 const H = 1280
@@ -53,6 +54,7 @@ export class GoldMinerScene extends Phaser.Scene {
   private paused = false
   private gameStarted = false
   private music?: Phaser.Sound.BaseSound
+  private tracker?: GameTracker
 
   constructor() { super('GoldMinerScene') }
 
@@ -160,6 +162,7 @@ export class GoldMinerScene extends Phaser.Scene {
   private startRound() {
     this.clearRound()
     this.question = GOLD_MINER_LEVELS[this.round]
+    this.tracker?.startQuestion({ learningKey: getRecognizeNumberKey(this.question.correctAnswer), expectedAnswer: this.question.correctAnswer })
     this.state = GoldMinerState.ROUND_START
     this.wolfAppeared = false
     this.taskItems.setText(Array.from({ length: this.question.count }, () => TASK_EMOJI[this.question.objectType]).join(' '))
@@ -252,6 +255,12 @@ export class GoldMinerScene extends Phaser.Scene {
     this.state = GoldMinerState.CHECK_ANSWER
     const item = this.grabbed
     this.grabbed = undefined
+    this.tracker?.recordAnswer({
+      learningKey: getRecognizeNumberKey(this.question.correctAnswer),
+      expectedAnswer: this.question.correctAnswer,
+      selectedAnswer: item.value,
+      correct: item.value === this.question.correctAnswer,
+    })
     if (item.value === this.question.correctAnswer) this.correct(item)
     else this.wrong(item)
   }
@@ -268,6 +277,7 @@ export class GoldMinerScene extends Phaser.Scene {
     this.time.delayedCall(850, () => {
       if (this.round === GOLD_MINER_LEVELS.length - 1) {
         this.state = GoldMinerState.GAME_COMPLETE
+        void this.tracker?.finishSession(this.score)
         this.game.events.emit('game-ui:complete', this.score)
       } else { this.round += 1; this.cappyFace.setText('•ᴗ•'); this.startRound() }
     })
@@ -441,6 +451,8 @@ export class GoldMinerScene extends Phaser.Scene {
   private startGameplay() {
     if (this.gameStarted) return
     this.gameStarted = true
+    const userId = getCurrentGameUserId()
+    if (userId) this.tracker = createGameTracker({ userId, lessonId: LESSON_IDS.TOAN_1_BAI_1, gameId: GAME_IDS.GOLD_MINING })
     this.game.registry.set('game-ui:started', true)
     if (this.wolfRounds.size === 0) this.prepareWolfRounds()
     this.startMusic()

@@ -1,11 +1,12 @@
 'use client'
 
-import { PointerEvent as ReactPointerEvent, useCallback, useEffect, useState } from 'react'
+import { PointerEvent as ReactPointerEvent, useCallback, useEffect, useRef, useState } from 'react'
 import { GameCompletion, GameLoadingScreen, GameShell, preloadAssets, useBackgroundMusic } from '../general'
 import { GAME_BACKGROUND_MUSIC } from '../general/audio'
 import { createRandomizedLevels, DRAG_DROP_LEVELS, NUMBER_COLORS } from './levels'
 import type { CountGroup, NumberValue, SequenceCell } from './types'
 import styles from './DragDropGame.module.css'
+import { createGameTracker, GAME_IDS, getCurrentGameUserId, getRecognizeNumberKey, LESSON_IDS, type GameTracker } from '../general/tracking'
 
 type DragState = { value: NumberValue; x: number; y: number; pointerId: number } | null
 type FloatingScore = { id: number; x: number; y: number; value: '+10' | '-2' | '0'; correct: boolean } | null
@@ -22,6 +23,9 @@ const shuffleNumbers = () => {
 const INITIAL_NUMBER_TRAY: NumberValue[] = [0, 1, 2, 3, 4, 5]
 
 export default function DragDropGame() {
+  const trackerRef = useRef<GameTracker | undefined>(undefined)
+  const targetStartedAtRef = useRef<Record<string, number>>({})
+  const targetAttemptsRef = useRef<Record<string, number>>({})
   const [currentLevel, setCurrentLevel] = useState(0)
   const [levels, setLevels] = useState(DRAG_DROP_LEVELS)
   const [score, setScore] = useState(0)
@@ -61,20 +65,43 @@ export default function DragDropGame() {
 
   useEffect(() => {
     setNumberTray(shuffleNumbers())
-  }, [currentLevel])
+    const now = Date.now()
+    targetStartedAtRef.current = Object.fromEntries(Object.keys(level.answers).map((targetId) => [targetId, now]))
+    targetAttemptsRef.current = {}
+  }, [currentLevel, level.answers])
+
+  const startTracking = useCallback(() => {
+    const userId = getCurrentGameUserId()
+    trackerRef.current = userId
+      ? createGameTracker({ userId, lessonId: LESSON_IDS.TOAN_1_BAI_1, gameId: GAME_IDS.DRAG_DROP })
+      : undefined
+    const now = Date.now()
+    targetStartedAtRef.current = Object.fromEntries(Object.keys(level.answers).map((targetId) => [targetId, now]))
+    targetAttemptsRef.current = {}
+  }, [level.answers])
 
   const restart = useCallback(() => {
     setLevels((current) => createRandomizedLevels(current))
     setNumberTray(shuffleNumbers())
     setCurrentLevel(0); setScore(0); setCompletedTargets({}); setIsTransitioning(false)
     setGameCompleted(false); setGamePaused(false); setGameStarted(true); setDrag(null)
-  }, [])
+    startTracking()
+  }, [startTracking])
 
   const finishDrop = useCallback((clientX: number, clientY: number, value: NumberValue) => {
     const target = document.elementFromPoint(clientX, clientY)?.closest<HTMLElement>('[data-target-id]')
     const targetId = target?.dataset.targetId
     if (!targetId || completedTargets[targetId] !== undefined || isTransitioning) return setDrag(null)
-    if (level.answers[targetId] === value) {
+    const expectedAnswer = level.answers[targetId]
+    const correct = expectedAnswer === value
+    const attempt = (targetAttemptsRef.current[targetId] ?? 0) + 1
+    trackerRef.current?.recordAnswer({
+      learningKey: getRecognizeNumberKey(expectedAnswer), expectedAnswer, selectedAnswer: value, correct,
+      attempt, responseTime: Math.max(0, Date.now() - (targetStartedAtRef.current[targetId] ?? Date.now())),
+    })
+    targetAttemptsRef.current[targetId] = attempt
+    targetStartedAtRef.current[targetId] = Date.now()
+    if (correct) {
       setCompletedTargets((current) => ({ ...current, [targetId]: value }))
       setCorrectTarget(targetId)
       setFloatingScore({ id: Date.now(), x: clientX, y: clientY, value: '+10', correct: true })
@@ -88,6 +115,10 @@ export default function DragDropGame() {
     window.setTimeout(() => setFloatingScore(null), 700)
     setDrag(null)
   }, [completedTargets, isTransitioning, level.answers, score])
+
+  useEffect(() => {
+    if (gameCompleted) void trackerRef.current?.finishSession(score)
+  }, [gameCompleted, score])
 
   useEffect(() => {
     const targetCount = Object.keys(level.answers).length
@@ -126,7 +157,7 @@ export default function DragDropGame() {
 
   return (
     <GameShell score={score} currentRound={level.id} muted={!soundEnabled} onMutedChange={(muted) => setSoundEnabled(!muted)} onPauseChange={(paused) => { setGamePaused(paused); if (paused) setDrag(null) }} onRestart={restart}>
-      <GameLoadingScreen progress={loadProgress} ready={isReady} unlockAudio={startMusic} onStart={() => setGameStarted(true)} />
+      <GameLoadingScreen progress={loadProgress} ready={isReady} unlockAudio={startMusic} onStart={() => { startTracking(); setGameStarted(true) }} />
       <div className="relative h-full touch-none overflow-hidden bg-sky-300 bg-cover bg-center" style={{ backgroundImage: "url('/games/drag-drop/images/farm-background.png')" }}>
         <div className={styles.gameplayPanel} data-density={density}>
           <div className={styles.questionArea}>

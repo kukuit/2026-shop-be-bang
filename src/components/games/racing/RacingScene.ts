@@ -4,6 +4,7 @@ import { BOOST_SPEED, CAR_Y, CHECK_Y, GAME_HEIGHT, GAME_WIDTH, HIT_SPEED, HORIZO
 import { RoadController } from './core/RoadController'
 import { createRacingQuestions } from './lessons/toan-1-bai-1'
 import { RacingState, type Lane, type RacingQuestion, type RacingTrackingEvent } from './types'
+import { createGameTracker, GAME_IDS, getCurrentGameUserId, getRecognizeNumberKey, LESSON_IDS, type GameTracker } from '../general/tracking'
 
 type AnswerGate = Phaser.GameObjects.Container & { answer: number; lane: Lane }
 
@@ -30,6 +31,7 @@ export class RacingScene extends Phaser.Scene {
   private pointerStartX?: number
   private questionStartedAt = 0
   private music?: Phaser.Sound.BaseSound
+  private tracker?: GameTracker
 
   constructor() { super('RacingScene') }
 
@@ -115,6 +117,7 @@ export class RacingScene extends Phaser.Scene {
 
   private renderQuestion(animate = true) {
     const question = this.questions[this.questionIndex]
+    this.tracker?.startQuestion({ learningKey: getRecognizeNumberKey(question.answer), expectedAnswer: question.answer })
     const content = question.type === 'count'
       ? (question.quantity === 0 ? question.object : this.arrangeObjects(question.object, question.quantity))
       : question.type === 'numberToQuantity'
@@ -222,7 +225,10 @@ export class RacingScene extends Phaser.Scene {
     this.tweens.add({ targets: finish, y: 855, scale: 1, duration: 1500, ease: 'Sine.In', onComplete: () => {
       this.sparkles(GAME_WIDTH / 2, 650, 32)
       this.tweens.add({ targets: this.car, y: 680, scale: .7, duration: 650, ease: 'Sine.In' })
-      this.time.delayedCall(1200, () => this.game.events.emit('game-ui:complete', this.score))
+      this.time.delayedCall(1200, () => {
+        void this.tracker?.finishSession(this.score)
+        this.game.events.emit('game-ui:complete', this.score)
+      })
     } })
   }
 
@@ -258,12 +264,16 @@ export class RacingScene extends Phaser.Scene {
 
   private trackAnswer(selectedAnswer: number, isCorrect: boolean) {
     const question = this.questions[this.questionIndex]
+    this.tracker?.recordAnswer({
+      learningKey: getRecognizeNumberKey(question.answer), expectedAnswer: question.answer,
+      selectedAnswer, correct: isCorrect,
+    })
     const event: RacingTrackingEvent = {
       game: 'racing', lesson: 'toan-1-bai-1-so-0-5', questionIndex: this.questionIndex,
       skill: question.skill, target: question.answer, selectedAnswer, correctAnswer: question.answer,
       isCorrect, attempt: this.attemptCount, responseTime: Math.round(this.time.now - this.questionStartedAt),
     }
-    console.info('[racing:answer]', event)
+    if (process.env.NODE_ENV === 'development') console.info('[racing:answer]', event)
     this.game.events.emit('racing:answer', event)
   }
 
@@ -272,6 +282,8 @@ export class RacingScene extends Phaser.Scene {
   private startGameplay() {
     if (this.gameStarted) return
     this.gameStarted = true
+    const userId = getCurrentGameUserId()
+    if (userId) this.tracker = createGameTracker({ userId, lessonId: LESSON_IDS.TOAN_1_BAI_1, gameId: GAME_IDS.RACING })
     this.game.registry.set('game-ui:started', true)
     this.startMusic()
     this.tweens.add({ targets: this.car, y: CAR_Y + 4, duration: 160, yoyo: true, repeat: -1, ease: 'Sine.InOut' })
