@@ -8,8 +8,9 @@ export default function SiteShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   // Trang /game vẫn là trang danh sách; mọi route con là màn chơi toàn màn hình.
   const isGameRoute = pathname.startsWith('/game/')
+  const isAdminRoute = pathname.startsWith('/admin/')
 
-  if (isGameRoute) return <>{children}</>
+  if (isGameRoute || isAdminRoute) return <>{children}</>
 
   return (
     <>
