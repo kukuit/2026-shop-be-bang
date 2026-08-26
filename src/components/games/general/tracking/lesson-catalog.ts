@@ -17,6 +17,8 @@ export const getLessonDefinition = (lessonId: string): LessonDefinition | undefi
 
 export const isLessonId = (lessonId: string): lessonId is LessonId => Boolean(getLessonDefinition(lessonId))
 
-export const isLearningKeyForLesson = (lessonId: string, learningKey: string): learningKey is LearningKey =>
-  getLessonDefinition(lessonId)?.learningGoals.some((goal) => goal.key === learningKey) ?? false
-
+export const isLearningKeyForLesson = (lessonId: string, learningKey: string): learningKey is LearningKey => {
+  const lesson = getLessonDefinition(lessonId)
+  if (!lesson) return false
+  return (lesson.learningGoals as readonly { key: string }[]).some((goal) => goal.key === learningKey)
+}

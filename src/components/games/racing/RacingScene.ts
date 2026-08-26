@@ -269,7 +269,7 @@ export class RacingScene extends Phaser.Scene {
       selectedAnswer, correct: isCorrect,
     })
     const event: RacingTrackingEvent = {
-      game: 'racing', lesson: 'toan-1-bai-1-so-0-5', questionIndex: this.questionIndex,
+      game: 'racing', lesson: LESSON_IDS.TOAN_1_BAI_1, questionIndex: this.questionIndex,
       skill: question.skill, target: question.answer, selectedAnswer, correctAnswer: question.answer,
       isCorrect, attempt: this.attemptCount, responseTime: Math.round(this.time.now - this.questionStartedAt),
     }
