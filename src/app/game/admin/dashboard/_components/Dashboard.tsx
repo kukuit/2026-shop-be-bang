@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import Link from 'next/link'
 import {
   Activity,
   ArrowLeft,
@@ -17,6 +18,7 @@ import {
   Sparkles,
   Target,
   TrendingUp,
+  Users,
   X,
 } from 'lucide-react'
 import { createDashboardService, dashboardService } from '../_data/dashboard.service'
@@ -250,6 +252,10 @@ function Sidebar({
           <TrendingUp size={18} />
           Tiến bộ
         </button>
+        <Link href="/admin/users" className="mt-1 flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-bold text-slate-600 hover:bg-slate-50">
+          <Users size={18} />
+          Users
+        </Link>
       </aside>
     </>
   )
