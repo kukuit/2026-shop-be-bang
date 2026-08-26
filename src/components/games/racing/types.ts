@@ -1,3 +1,5 @@
+import type { LessonId } from '../general/tracking'
+
 export type Lane = 0 | 1 | 2
 
 export type RacingQuestion =
@@ -14,7 +16,7 @@ export enum RacingState {
 
 export type RacingTrackingEvent = {
   game: 'racing'
-  lesson: 'toan-1-bai-1-so-0-5'
+  lesson: LessonId
   questionIndex: number
   skill: RacingQuestion['skill']
   target: number

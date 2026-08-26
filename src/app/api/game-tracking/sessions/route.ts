@@ -2,16 +2,13 @@ import { NextResponse } from 'next/server'
 import { FieldValue, Timestamp } from 'firebase-admin/firestore'
 import { z } from 'zod'
 import { getAdminDb } from '@/lib/firebaseAdmin'
+import { GAME_IDS } from '@/components/games/general/tracking/constants'
+import { getLessonDefinition, isLearningKeyForLesson, isLessonId } from '@/components/games/general/tracking/lesson-catalog'
 
 export const runtime = 'nodejs'
 
-const learningKeys = [
-  'recognize-number-0', 'recognize-number-1', 'recognize-number-2',
-  'recognize-number-3', 'recognize-number-4', 'recognize-number-5',
-] as const
-
 const resultSchema = z.object({
-  learningKey: z.enum(learningKeys),
+  learningKey: z.string().min(1).max(100),
   correct: z.boolean(),
   expectedAnswer: z.union([z.string(), z.number()]).optional(),
   selectedAnswer: z.union([z.string(), z.number()]).optional(),
@@ -22,8 +19,8 @@ const resultSchema = z.object({
 const sessionSchema = z.object({
   sessionId: z.string().uuid(),
   userId: z.string().min(1).max(128),
-  lessonId: z.enum(['toan-1-bai-1']),
-  gameId: z.enum(['drag-drop', 'gold-mining', 'racing']),
+  lessonId: z.string().refine(isLessonId, 'Unknown lessonId'),
+  gameId: z.enum([GAME_IDS.DRAG_DROP, GAME_IDS.GOLD_MINING, GAME_IDS.RACING]),
   score: z.number().int().min(0).max(100000),
   totalQuestions: z.number().int().min(0).max(1000),
   correctCount: z.number().int().min(0).max(1000),
@@ -31,6 +28,14 @@ const sessionSchema = z.object({
   duration: z.number().int().min(0).max(24 * 60 * 60 * 1000),
   startedAt: z.number().int().positive(),
   results: z.array(resultSchema).max(1000),
+}).superRefine((session, context) => {
+  const lesson = getLessonDefinition(session.lessonId)
+  if (!lesson) return
+  session.results.forEach((result, index) => {
+    if (!isLearningKeyForLesson(session.lessonId, result.learningKey)) {
+      context.addIssue({ code: z.ZodIssueCode.custom, path: ['results', index, 'learningKey'], message: `Learning key does not belong to ${session.lessonId}` })
+    }
+  })
 })
 
 type Aggregate = { correct: number; wrong: number; attempts: number; responseTime: number; sessions: number }
