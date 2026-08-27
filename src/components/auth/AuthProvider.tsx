@@ -9,6 +9,12 @@ async function readJson<T>(response: Response): Promise<T> {
   const contentType = response.headers.get('content-type') ?? ''
 
   if (!contentType.toLowerCase().includes('application/json')) {
+    const responseText = await response.text()
+
+    if (responseText.includes('Deployment has failed')) {
+      throw new Error('Bản triển khai Vercel đã bị lỗi. Vui lòng kiểm tra Build Logs và redeploy.')
+    }
+
     if (response.redirected && new URL(response.url).hostname.endsWith('vercel.com')) {
       throw new Error(
         'Ứng dụng đang bị Vercel Deployment Protection chặn. Vui lòng dùng domain production công khai hoặc tắt Deployment Protection.'
