@@ -5,16 +5,32 @@ import type { SafeAuthUser } from '@/lib/auth/types'
 type AuthContextValue = { user: SafeAuthUser | null; authenticated: boolean; loading: boolean; login(username: string, password: string): Promise<void>; logout(): Promise<void>; refreshUser(): Promise<void> }
 const AuthContext = createContext<AuthContextValue | null>(null)
 
+async function readJson<T>(response: Response): Promise<T> {
+  const contentType = response.headers.get('content-type') ?? ''
+
+  if (!contentType.toLowerCase().includes('application/json')) {
+    if (response.redirected && new URL(response.url).hostname.endsWith('vercel.com')) {
+      throw new Error(
+        'Ứng dụng đang bị Vercel Deployment Protection chặn. Vui lòng dùng domain production công khai hoặc tắt Deployment Protection.'
+      )
+    }
+
+    throw new Error(`Máy chủ trả về dữ liệu không hợp lệ (HTTP ${response.status}).`)
+  }
+
+  return response.json() as Promise<T>
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<SafeAuthUser | null>(null)
   const [loading, setLoading] = useState(true)
   const refreshUser = useCallback(async () => {
     try {
       let response = await fetch('/api/auth/me', { cache: 'no-store' })
-      let body = await response.json() as { authenticated?: boolean; user?: SafeAuthUser | null }
+      let body = await readJson<{ authenticated?: boolean; user?: SafeAuthUser | null }>(response)
       if (!body.authenticated) {
         const refreshed = await fetch('/api/auth/refresh', { method: 'POST' })
-        if (refreshed.ok) { response = await fetch('/api/auth/me', { cache: 'no-store' }); body = await response.json() }
+        if (refreshed.ok) { response = await fetch('/api/auth/me', { cache: 'no-store' }); body = await readJson(response) }
       }
       setUser(body.authenticated ? body.user ?? null : null)
     } catch { setUser(null) } finally { setLoading(false) }
@@ -22,7 +38,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => { void refreshUser() }, [refreshUser])
   const login = useCallback(async (username: string, password: string) => {
     const response = await fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password }) })
-    const body = await response.json() as { user?: SafeAuthUser; message?: string }
+    const body = await readJson<{ user?: SafeAuthUser; message?: string }>(response)
     if (!response.ok || !body.user) throw new Error(body.message ?? 'Đăng nhập thất bại.')
     setUser(body.user)
   }, [])
