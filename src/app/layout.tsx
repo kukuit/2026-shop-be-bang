@@ -7,7 +7,16 @@ import GoogleAnalytics from '@/components/analytics/GoogleAnalytics'
 
 const inter = Inter({ subsets: ['latin'] })
 
+const siteUrl =
+  process.env.NEXT_PUBLIC_SITE_URL ??
+  process.env.VERCEL_PROJECT_PRODUCTION_URL ??
+  process.env.VERCEL_URL ??
+  'http://localhost:3000'
+
+const metadataBase = new URL(siteUrl.startsWith('http') ? siteUrl : `https://${siteUrl}`)
+
 export const metadata: Metadata = {
+  metadataBase,
   title: {
     default: 'Shop Bé Băng | Quần Áo Trẻ Em',
     template: '%s | Shop Bé Băng',
