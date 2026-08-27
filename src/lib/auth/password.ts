@@ -1,5 +1,5 @@
 import 'server-only'
-import bcrypt from 'bcrypt'
+import bcrypt from 'bcryptjs'
 
 const ROUNDS = 12
 export const hashPassword = (password: string) => bcrypt.hash(password, ROUNDS)

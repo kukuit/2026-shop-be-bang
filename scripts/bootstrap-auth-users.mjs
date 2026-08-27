@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import nextEnv from '@next/env'
-import bcrypt from 'bcrypt'
+import bcrypt from 'bcryptjs'
 import { cert, getApps, initializeApp } from 'firebase-admin/app'
 import { FieldValue, getFirestore } from 'firebase-admin/firestore'
 
