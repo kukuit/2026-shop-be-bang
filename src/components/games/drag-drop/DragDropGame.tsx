@@ -6,7 +6,7 @@ import { GAME_BACKGROUND_MUSIC } from '../general/audio'
 import { createRandomizedLevels, DRAG_DROP_LEVELS, NUMBER_COLORS } from './levels'
 import type { CountGroup, NumberValue, SequenceCell } from './types'
 import styles from './DragDropGame.module.css'
-import { createGameTracker, GAME_IDS, getCurrentGameUserId, getRecognizeNumberKey, LESSON_IDS, type GameTracker } from '../general/tracking'
+import { createGameTracker, GAME_IDS, getRecognizeNumberKey, LESSON_IDS, type GameTracker } from '../general/tracking'
 
 type DragState = { value: NumberValue; x: number; y: number; pointerId: number } | null
 type FloatingScore = { id: number; x: number; y: number; value: '+10' | '-2' | '0'; correct: boolean } | null
@@ -71,10 +71,7 @@ export default function DragDropGame() {
   }, [currentLevel, level.answers])
 
   const startTracking = useCallback(() => {
-    const userId = getCurrentGameUserId()
-    trackerRef.current = userId
-      ? createGameTracker({ userId, lessonId: LESSON_IDS.TOAN_1_BAI_1, gameId: GAME_IDS.DRAG_DROP })
-      : undefined
+    trackerRef.current = createGameTracker({ lessonId: LESSON_IDS.TOAN_1_BAI_1, gameId: GAME_IDS.DRAG_DROP })
     const now = Date.now()
     targetStartedAtRef.current = Object.fromEntries(Object.keys(level.answers).map((targetId) => [targetId, now]))
     targetAttemptsRef.current = {}

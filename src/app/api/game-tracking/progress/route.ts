@@ -2,23 +2,22 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { getAdminDb } from '@/lib/firebaseAdmin'
 import { isLessonId } from '@/components/games/general/tracking/lesson-catalog'
+import { getCurrentUser } from '@/lib/auth/current-user'
 
 export const runtime = 'nodejs'
 
 const querySchema = z.object({
-  userId: z.literal('be-bang-test'),
   lessonId: z.string().refine(isLessonId, 'Unknown lessonId'),
 })
 
 export async function GET(request: Request) {
-  if (process.env.NODE_ENV !== 'development') {
-    return NextResponse.json({ message: 'Learning progress requires authentication in production.' }, { status: 503 })
-  }
+  const user = await getCurrentUser()
+  if (!user) return NextResponse.json({ keys: {}, totalSessions: 0 })
   const url = new URL(request.url)
   const parsed = querySchema.safeParse(Object.fromEntries(url.searchParams))
   if (!parsed.success) return NextResponse.json({ message: 'Invalid query.' }, { status: 400 })
 
-  const id = `${parsed.data.userId}_${parsed.data.lessonId}`
+  const id = `${user.id}_${parsed.data.lessonId}`
   const snapshot = await getAdminDb().collection('shopbebangcom').doc('game').collection('learning_progress').doc(id).get()
-  return NextResponse.json(snapshot.exists ? snapshot.data() : { userId: parsed.data.userId, lessonId: parsed.data.lessonId, keys: {}, totalSessions: 0 })
+  return NextResponse.json(snapshot.exists ? snapshot.data() : { userId: user.id, lessonId: parsed.data.lessonId, keys: {}, totalSessions: 0 })
 }

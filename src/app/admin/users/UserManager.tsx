@@ -1,0 +1,502 @@
+'use client'
+
+import { FormEvent, useMemo, useState } from 'react'
+import Image, { type ImageLoaderProps } from 'next/image'
+import { Check, ChevronRight, Gamepad2, Pencil, Plus, Search, UserRound, X } from 'lucide-react'
+import type {
+  CreateUserInput,
+  UpdateUserInput,
+  User,
+  UserRole,
+  UserStatus,
+} from '@/lib/users/user.types'
+import { fetchWithAuthRetry } from '@/lib/auth/client-fetch'
+
+const avatarLoader = ({ src }: ImageLoaderProps) => src
+
+const statusMap: Record<UserStatus, { label: string; style: string }> = {
+  active: { label: 'Hoạt động', style: 'bg-emerald-50 text-emerald-700' },
+  inactive: { label: 'Ngừng hoạt động', style: 'bg-slate-100 text-slate-600' },
+  blocked: { label: 'Đã khóa', style: 'bg-rose-50 text-rose-700' },
+}
+const dateText = (value: string | null) =>
+  value
+    ? new Intl.DateTimeFormat('vi-VN', { dateStyle: 'short', timeZone: 'Asia/Bangkok' }).format(
+        new Date(value)
+      )
+    : '—'
+const statusBadge = (status: UserStatus) => (
+  <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${statusMap[status].style}`}>
+    {statusMap[status].label}
+  </span>
+)
+const gameBadge = (active: boolean) => (
+  <span
+    className={`rounded-full px-2.5 py-1 text-xs font-bold ${active ? 'bg-sky-50 text-sky-700' : 'bg-slate-100 text-slate-500'}`}
+  >
+    Game: {active ? 'Bật' : 'Tắt'}
+  </span>
+)
+
+type FormState = {
+  name: string
+  username: string
+  password: string
+  role: UserRole
+  email: string
+  phone: string
+  avatar: string
+  grade: string
+  activeGame: boolean
+  status: UserStatus
+}
+const blankForm: FormState = {
+  name: '',
+  username: '',
+  password: '',
+  role: 'user',
+  email: '',
+  phone: '',
+  avatar: '',
+  grade: '',
+  activeGame: true,
+  status: 'active',
+}
+
+export default function UserManager({ initialUsers }: { initialUsers: User[] }) {
+  const [users, setUsers] = useState(initialUsers)
+  const [query, setQuery] = useState('')
+  const [selected, setSelected] = useState<User | null>(null)
+  const [mode, setMode] = useState<'create' | 'view' | 'edit' | null>(null)
+  const [form, setForm] = useState<FormState>(blankForm)
+  const [busy, setBusy] = useState(false)
+  const [message, setMessage] = useState<string | null>(null)
+  const visible = useMemo(() => {
+    const value = query.trim().toLowerCase()
+    return users.filter(
+      (user) =>
+        !value ||
+        [user.name, user.username, user.email, user.phone, user.userId].some((item) =>
+          item?.toLowerCase().includes(value)
+        )
+    )
+  }, [query, users])
+
+  const openCreate = () => {
+    setForm(blankForm)
+    setSelected(null)
+    setMessage(null)
+    setMode('create')
+  }
+  const openView = (user: User) => {
+    setSelected(user)
+    setMessage(null)
+    setMode('view')
+  }
+  const openEdit = (user: User) => {
+    setSelected(user)
+    setForm({
+      name: user.name,
+      username: user.username,
+      password: '',
+      role: user.role,
+      email: user.email ?? '',
+      phone: user.phone ?? '',
+      avatar: user.avatar ?? '',
+      grade: user.grade?.toString() ?? '',
+      activeGame: user.activeGame,
+      status: user.status,
+    })
+    setMessage(null)
+    setMode('edit')
+  }
+  const close = () => {
+    if (!busy) setMode(null)
+  }
+  const set = <K extends keyof FormState>(key: K, value: FormState[K]) =>
+    setForm((current) => ({ ...current, [key]: value }))
+
+  async function submit(event: FormEvent) {
+    event.preventDefault()
+    setBusy(true)
+    setMessage(null)
+    const base = {
+      name: form.name,
+      email: form.email || null,
+      phone: form.phone || null,
+      avatar: form.avatar || null,
+      grade: form.grade ? Number(form.grade) : null,
+      activeGame: form.activeGame,
+    }
+    const editing = mode === 'edit' && selected
+    const body: CreateUserInput | UpdateUserInput = editing
+      ? { ...base, status: form.status }
+      : { ...base, username: form.username, password: form.password, role: form.role }
+    const response = await fetchWithAuthRetry(
+      editing ? `/api/admin/users/${selected.userId}` : '/api/admin/users',
+      {
+        method: editing ? 'PATCH' : 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(body),
+      }
+    )
+    const result = (await response.json()) as { user?: User; message?: string }
+    setBusy(false)
+    if (!response.ok || !result.user) {
+      setMessage(result.message ?? 'Có lỗi xảy ra.')
+      return
+    }
+    setUsers((current) =>
+      editing
+        ? current.map((user) => (user.userId === result.user?.userId ? result.user : user))
+        : [result.user as User, ...current]
+    )
+    setSelected(result.user)
+    setMode('view')
+    setMessage(editing ? 'Đã cập nhật user.' : 'Đã tạo user thành công.')
+  }
+
+  return (
+    <div className="mx-auto max-w-7xl">
+      <div className="my-7 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+        <div>
+          <p className="text-xs font-black uppercase tracking-[.18em] text-pink-500">
+            Quản trị hệ thống
+          </p>
+          <h2 className="mt-1 text-3xl font-black">Quản lý user</h2>
+          <p className="mt-1 text-sm text-slate-500">
+            {users.length} người dùng dùng chung trên toàn hệ thống
+          </p>
+        </div>
+        <button
+          onClick={openCreate}
+          className="flex items-center justify-center gap-2 rounded-xl bg-pink-500 px-5 py-3 text-sm font-bold text-white shadow-sm hover:bg-pink-600"
+        >
+          <Plus size={18} />
+          Thêm user
+        </button>
+      </div>
+      <div className="rounded-3xl border border-slate-200 bg-white shadow-sm">
+        <div className="border-b border-slate-100 p-4">
+          <label className="flex max-w-lg items-center gap-2 rounded-xl border border-slate-200 px-3 py-2.5">
+            <Search size={18} className="text-slate-400" />
+            <input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              className="w-full text-sm outline-none"
+              placeholder="Tìm theo tên / email / số điện thoại..."
+            />
+          </label>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[850px] text-left text-sm">
+            <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+              <tr>
+                {['User', 'Email / Phone', 'Lớp', 'Game', 'Status', 'Ngày tạo', 'Action'].map(
+                  (item) => (
+                    <th key={item} className="px-5 py-4">
+                      {item}
+                    </th>
+                  )
+                )}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {visible.map((user) => (
+                <tr key={user.userId} className="hover:bg-slate-50/70">
+                  <td className="px-5 py-4">
+                    <div className="flex items-center gap-3">
+                      <span className="grid h-10 w-10 place-items-center overflow-hidden rounded-full bg-pink-50 font-black text-pink-600">
+                        {user.avatar ? (
+                          <Image
+                            loader={avatarLoader}
+                            src={user.avatar}
+                            alt=""
+                            width={40}
+                            height={40}
+                            unoptimized
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          user.name.charAt(0).toUpperCase()
+                        )}
+                      </span>
+                      <div>
+                        <b className="block">{user.name}</b>
+                        <span className="text-xs text-slate-400">{user.userId}</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-5 py-4 text-slate-600">
+                    <span className="block">{user.email ?? '—'}</span>
+                    <span className="block">{user.phone ?? '—'}</span>
+                  </td>
+                  <td className="px-5 py-4">{user.grade ? `Lớp ${user.grade}` : '—'}</td>
+                  <td className="px-5 py-4">{gameBadge(user.activeGame)}</td>
+                  <td className="px-5 py-4">{statusBadge(user.status)}</td>
+                  <td className="px-5 py-4 text-slate-500">{dateText(user.createdAt)}</td>
+                  <td className="px-5 py-4">
+                    <button
+                      onClick={() => openView(user)}
+                      className="flex items-center gap-1 font-bold text-pink-600"
+                    >
+                      Xem <ChevronRight size={15} />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {!visible.length && (
+            <div className="px-5 py-14 text-center text-sm text-slate-500">
+              {users.length
+                ? 'Không tìm thấy user phù hợp.'
+                : 'Chưa có user. Hãy tạo user đầu tiên.'}
+            </div>
+          )}
+        </div>
+      </div>
+      {mode && (
+        <>
+          <button
+            onClick={close}
+            aria-label="Đóng"
+            className="fixed inset-0 z-40 bg-slate-900/30"
+          />
+          <aside className="fixed inset-y-0 right-0 z-50 w-full max-w-lg overflow-y-auto bg-white p-6 shadow-2xl">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xl font-black">
+                {mode === 'create'
+                  ? 'Thêm user'
+                  : mode === 'edit'
+                    ? 'Chỉnh sửa user'
+                    : 'Chi tiết user'}
+              </h3>
+              <button onClick={close} className="rounded-lg p-2 hover:bg-slate-100">
+                <X />
+              </button>
+            </div>
+            {message && (
+              <p className="mt-4 rounded-xl bg-emerald-50 p-3 text-sm font-semibold text-emerald-700">
+                <Check className="mr-2 inline" size={16} />
+                {message}
+              </p>
+            )}
+            {mode === 'view' && selected ? (
+              <UserDetail user={selected} onEdit={() => openEdit(selected)} />
+            ) : (
+              <UserForm
+                form={form}
+                editing={mode === 'edit'}
+                busy={busy}
+                error={message}
+                set={set}
+                onSubmit={submit}
+                onCancel={close}
+              />
+            )}
+          </aside>
+        </>
+      )}
+    </div>
+  )
+}
+
+function UserDetail({ user, onEdit }: { user: User; onEdit: () => void }) {
+  const rows = [
+    ['User ID', user.userId],
+    ['Username', user.username],
+    ['Lớp', user.grade ? `Lớp ${user.grade}` : '—'],
+    ['Email', user.email ?? '—'],
+    ['Điện thoại', user.phone ?? '—'],
+    ['Role', user.role],
+    ['Ngày tạo', dateText(user.createdAt)],
+    ['Cập nhật', dateText(user.updatedAt)],
+    ['Đăng nhập cuối', user.lastLoginAt ? dateText(user.lastLoginAt) : 'Chưa đăng nhập'],
+  ]
+  return (
+    <div className="mt-7">
+      <div className="flex items-center gap-4">
+        <span className="grid h-16 w-16 place-items-center rounded-2xl bg-pink-50 text-2xl font-black text-pink-600">
+          <UserRound />
+        </span>
+        <div>
+          <h4 className="text-2xl font-black">{user.name}</h4>
+          <div className="mt-2 flex gap-2">
+            {statusBadge(user.status)}
+            {gameBadge(user.activeGame)}
+          </div>
+        </div>
+      </div>
+      <dl className="mt-7 divide-y divide-slate-100">
+        {rows.map(([label, value]) => (
+          <div key={label} className="grid grid-cols-[9rem_1fr] gap-3 py-3">
+            <dt className="text-sm text-slate-500">{label}</dt>
+            <dd className="break-all text-sm font-semibold">{value}</dd>
+          </div>
+        ))}
+      </dl>
+      <button
+        onClick={onEdit}
+        className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-pink-500 px-5 py-3 font-bold text-white"
+      >
+        <Pencil size={17} />
+        Chỉnh sửa
+      </button>
+    </div>
+  )
+}
+
+function UserForm({
+  form,
+  editing,
+  busy,
+  error,
+  set,
+  onSubmit,
+  onCancel,
+}: {
+  form: FormState
+  editing: boolean
+  busy: boolean
+  error: string | null
+  set: <K extends keyof FormState>(key: K, value: FormState[K]) => void
+  onSubmit: (event: FormEvent) => void
+  onCancel: () => void
+}) {
+  return (
+    <form onSubmit={onSubmit} className="mt-7 space-y-4">
+      {error && (
+        <p className="rounded-xl bg-rose-50 p-3 text-sm font-semibold text-rose-700">{error}</p>
+      )}
+      <Field label="Tên *">
+        <input
+          required
+          value={form.name}
+          onChange={(event) => set('name', event.target.value)}
+          className="input"
+        />
+      </Field>
+      <Field label="Username *">
+        <input
+          required={!editing}
+          disabled={editing}
+          value={form.username}
+          onChange={(event) => set('username', event.target.value)}
+          className="input disabled:bg-slate-100"
+          autoComplete="off"
+        />
+      </Field>
+      {!editing && (
+        <Field label="Mật khẩu *">
+          <input
+            required
+            minLength={10}
+            type="password"
+            value={form.password}
+            onChange={(event) => set('password', event.target.value)}
+            className="input"
+            autoComplete="new-password"
+          />
+        </Field>
+      )}
+      {!editing && (
+        <Field label="Vai trò">
+          <select
+            value={form.role}
+            onChange={(event) => set('role', event.target.value as UserRole)}
+            className="input"
+          >
+            <option value="user">User</option>
+            <option value="admin">Admin</option>
+          </select>
+        </Field>
+      )}
+      <Field label="Email">
+        <input
+          type="email"
+          value={form.email}
+          onChange={(event) => set('email', event.target.value)}
+          className="input"
+        />
+      </Field>
+      <Field label="Số điện thoại">
+        <input
+          value={form.phone}
+          onChange={(event) => set('phone', event.target.value)}
+          className="input"
+        />
+      </Field>
+      <Field label="Avatar URL">
+        <input
+          type="url"
+          value={form.avatar}
+          onChange={(event) => set('avatar', event.target.value)}
+          className="input"
+        />
+      </Field>
+      <Field label="Lớp">
+        <select
+          value={form.grade}
+          onChange={(event) => set('grade', event.target.value)}
+          className="input"
+        >
+          <option value="">Chưa chọn</option>
+          {[1, 2, 3, 4, 5].map((grade) => (
+            <option key={grade} value={grade}>
+              Lớp {grade}
+            </option>
+          ))}
+        </select>
+      </Field>
+      {editing && (
+        <Field label="Trạng thái">
+          <select
+            value={form.status}
+            onChange={(event) => set('status', event.target.value as UserStatus)}
+            className="input"
+          >
+            <option value="active">Hoạt động</option>
+            <option value="inactive">Ngừng hoạt động</option>
+            <option value="blocked">Đã khóa</option>
+          </select>
+        </Field>
+      )}
+      <label className="flex items-center justify-between rounded-2xl border border-slate-200 p-4">
+        <span>
+          <b className="block text-sm">Quyền chơi game</b>
+          <span className="text-xs text-slate-500">Cho phép user sử dụng hệ thống game</span>
+        </span>
+        <input
+          type="checkbox"
+          checked={form.activeGame}
+          onChange={(event) => set('activeGame', event.target.checked)}
+          className="h-5 w-5 accent-pink-500"
+        />
+      </label>
+      <div className="flex gap-3 pt-3">
+        <button
+          type="button"
+          onClick={onCancel}
+          className="flex-1 rounded-xl border border-slate-200 px-4 py-3 font-bold"
+        >
+          Hủy
+        </button>
+        <button
+          disabled={busy}
+          className="flex-1 rounded-xl bg-pink-500 px-4 py-3 font-bold text-white disabled:opacity-50"
+        >
+          {busy ? 'Đang lưu...' : editing ? 'Lưu thay đổi' : 'Tạo user'}
+        </button>
+      </div>
+    </form>
+  )
+}
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <label className="block">
+      <span className="mb-1.5 block text-sm font-bold text-slate-700">{label}</span>
+      {children}
+    </label>
+  )
+}

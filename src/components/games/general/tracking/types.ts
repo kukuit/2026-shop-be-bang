@@ -17,7 +17,6 @@ export interface GameQuestionResult {
 
 export interface CompletedGameSession {
   sessionId: string
-  userId: string
   lessonId: LessonId
   gameId: GameId
   score: number
@@ -40,5 +39,5 @@ export type LearningProgress = Record<LearningKey, LearningKeyProgress>
 
 export interface GameTrackingRepository {
   saveSession(session: CompletedGameSession): Promise<{ sessionId: string }>
-  getLearningProgress(userId: string, lessonId: LessonId): Promise<Partial<LearningProgress>>
+  getLearningProgress(lessonId: LessonId): Promise<Partial<LearningProgress>>
 }

@@ -5,6 +5,7 @@ import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { useState } from 'react'
 import { Info, FolderKanban, ShoppingCart, BookOpen } from 'lucide-react'
+import AuthMenu from '@/components/auth/AuthMenu'
 
 type Item = { label: string; href: string; icon: React.ReactNode }
 
@@ -55,9 +56,7 @@ function NavItem({
         isActive ? (isMobile ? mobileActive : desktopActive) : '',
       ].join(' ')}
     >
-      <span className={isActive ? 'text-[var(--shop-primary)]' : 'text-gray-500'}>
-        {icon}
-      </span>
+      <span className={isActive ? 'text-[var(--shop-primary)]' : 'text-gray-500'}>{icon}</span>
       <span className={isActive ? 'text-[var(--shop-primary)]' : ''}>{label}</span>
     </Link>
   )
@@ -91,11 +90,15 @@ export default function HeaderTop() {
           />
         </Link>
 
+        <div className="ml-auto sm:hidden">
+          <AuthMenu />
+        </div>
+
         <button
           aria-label="Open menu"
           aria-expanded={open}
           onClick={() => setOpen((v) => !v)}
-          className="sm:hidden ml-auto inline-grid place-items-center w-10 h-10 hover:bg-gray-100"
+          className="sm:hidden inline-grid place-items-center w-10 h-10 hover:bg-gray-100"
         >
           <svg viewBox="0 0 24 24" className="w-5 h-5 text-gray-700">
             <path fill="currentColor" d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2z" />
@@ -115,6 +118,9 @@ export default function HeaderTop() {
             ))}
           </div>
         </nav>
+        <div className="ml-auto hidden sm:block">
+          <AuthMenu />
+        </div>
       </div>
 
       {open && (

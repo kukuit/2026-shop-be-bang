@@ -13,14 +13,23 @@
     "vercel-build": "prisma generate && prisma migrate deploy && next build",
     "typecheck": "tsc --noEmit",
     "build:local": "prisma generate && npm run typecheck && next build",
-    "start:local": "NODE_ENV=production next start -p 3000"
+    "start:local": "NODE_ENV=production next start -p 3000",
+    "auth:context": "node scripts/auth-ai-context.mjs",
+    "auth:set-password": "node scripts/set-user-password.mjs",
+    "auth:map-legacy-game": "node scripts/map-legacy-game-user.mjs",
+    "auth:bootstrap-users": "node scripts/bootstrap-auth-users.mjs",
+    "auth:cleanup-sessions": "node scripts/cleanup-auth-sessions.mjs",
+    "game:normalize-sessions": "node scripts/normalize-game-sessions.mjs",
+    "game:migrate-session-storage": "node scripts/migrate-game-session-storage.mjs"
   },
   "dependencies": {
     "@next/third-parties": "^16.1.1",
     "@prisma/client": "^6.17.0",
     "@tanstack/react-query": "^5.90.5",
+    "bcrypt": "^6.0.0",
     "firebase-admin": "^13.6.0",
     "framer-motion": "^12.23.24",
+    "jsonwebtoken": "^9.0.3",
     "lucide-react": "^0.545.0",
     "next": "14.2.3",
     "phaser": "^3.90.0",
@@ -32,6 +41,8 @@
   },
   "devDependencies": {
     "@tanstack/react-query-devtools": "^5.90.2",
+    "@types/bcrypt": "^6.0.0",
+    "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",

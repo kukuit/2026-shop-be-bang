@@ -45,14 +45,23 @@ export type AdminLearningProgress = {
 const trackingRoot = () => getAdminDb().collection('shopbebangcom').doc('game')
 
 const dateValue = (value: unknown): string | undefined => {
-  if (value && typeof value === 'object' && 'toDate' in value && typeof value.toDate === 'function') {
+  if (
+    value &&
+    typeof value === 'object' &&
+    'toDate' in value &&
+    typeof value.toDate === 'function'
+  ) {
     return value.toDate().toISOString()
   }
   return undefined
 }
 
 export async function getAdminGameSessions(maximum = 100): Promise<AdminGameSession[]> {
-  const snapshot = await trackingRoot().collection('session').orderBy('completedAt', 'desc').limit(maximum).get()
+  const snapshot = await getAdminDb()
+    .collectionGroup('sessions')
+    .orderBy('completedAt', 'desc')
+    .limit(maximum)
+    .get()
   return snapshot.docs.map((document) => {
     const data = document.data()
     return {
@@ -67,7 +76,7 @@ export async function getAdminGameSessions(maximum = 100): Promise<AdminGameSess
       duration: Number(data.duration ?? 0),
       startedAt: dateValue(data.startedAt),
       completedAt: dateValue(data.completedAt),
-      results: Array.isArray(data.results) ? data.results as AdminSessionResult[] : [],
+      results: Array.isArray(data.results) ? (data.results as AdminSessionResult[]) : [],
     }
   })
 }
@@ -86,4 +95,3 @@ export async function getAdminLearningProgress(): Promise<AdminLearningProgress[
     }
   })
 }
-

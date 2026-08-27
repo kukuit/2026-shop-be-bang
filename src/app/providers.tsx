@@ -3,6 +3,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { useState } from 'react'
+import { AuthProvider } from '@/components/auth/AuthProvider'
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   // Tạo 1 client cho mỗi mount (safe cho Fast Refresh)
@@ -21,9 +22,9 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   )
 
   return (
-    <QueryClientProvider client={queryClient}>
+    <AuthProvider><QueryClientProvider client={queryClient}>
       {children}
       {process.env.NODE_ENV !== 'production' && <ReactQueryDevtools />}
-    </QueryClientProvider>
+    </QueryClientProvider></AuthProvider>
   )
 }

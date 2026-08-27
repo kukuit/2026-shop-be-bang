@@ -43,7 +43,7 @@ export default function HomePage() {
         <div className="shop-container flex items-center justify-between gap-4 text-[11px] font-medium">
           <span>Welcome to Shop Bé Băng</span>
           <span className="hidden sm:inline">Hotline: 0923 456 789</span>
-          <span>Register / Login</span>
+          <span>Tài khoản học tập cho bé</span>
         </div>
       </section>
 

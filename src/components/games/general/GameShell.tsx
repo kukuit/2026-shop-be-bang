@@ -5,6 +5,7 @@ import { ArrowLeft, Gamepad2, Play, RotateCcw, Store, Volume2, VolumeX, X } from
 import { ReactNode, useState } from 'react'
 import StarIcon from './StarIcon'
 import GameProgress from './GameProgress'
+import GameAuthHeader from '@/components/auth/GameAuthHeader'
 
 type GameShellProps = {
   children: ReactNode
@@ -46,6 +47,7 @@ export default function GameShell({
   return (
     <section className={`relative aspect-[9/16] max-h-dvh w-full max-w-[calc(100dvh*0.5625)] overflow-hidden bg-sky-200 [container-type:inline-size] ${className}`}>
       {children}
+      <GameAuthHeader overlay />
 
       <div className="pointer-events-none absolute inset-x-0 top-0 z-40 flex items-start justify-between p-[1.7%]">
         <div className="flex h-10 items-center gap-1.5 rounded-2xl border-2 border-white/80 bg-blue-600/90 py-0.5 pl-0.5 pr-3 text-white shadow-lg">

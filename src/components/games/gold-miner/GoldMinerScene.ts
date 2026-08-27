@@ -2,7 +2,7 @@ import * as Phaser from 'phaser'
 import { GAME_BACKGROUND_MUSIC } from '../general/audio'
 import { GOLD_MINER_LEVELS, TASK_EMOJI } from './levels'
 import { GoldMinerState, WolfState, type GoldMinerQuestion } from './types'
-import { createGameTracker, GAME_IDS, getCurrentGameUserId, getRecognizeNumberKey, LESSON_IDS, type GameTracker } from '../general/tracking'
+import { createGameTracker, GAME_IDS, getRecognizeNumberKey, LESSON_IDS, type GameTracker } from '../general/tracking'
 
 const W = 720
 const H = 1280
@@ -451,8 +451,7 @@ export class GoldMinerScene extends Phaser.Scene {
   private startGameplay() {
     if (this.gameStarted) return
     this.gameStarted = true
-    const userId = getCurrentGameUserId()
-    if (userId) this.tracker = createGameTracker({ userId, lessonId: LESSON_IDS.TOAN_1_BAI_1, gameId: GAME_IDS.GOLD_MINING })
+    this.tracker = createGameTracker({ lessonId: LESSON_IDS.TOAN_1_BAI_1, gameId: GAME_IDS.GOLD_MINING })
     this.game.registry.set('game-ui:started', true)
     if (this.wolfRounds.size === 0) this.prepareWolfRounds()
     this.startMusic()

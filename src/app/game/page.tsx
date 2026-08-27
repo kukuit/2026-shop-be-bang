@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Image from 'next/image'
 import Link from 'next/link'
 import { Gamepad2, Play } from 'lucide-react'
+import GameAuthHeader from '@/components/auth/GameAuthHeader'
 
 export const metadata: Metadata = {
   title: 'Trò chơi học tập',
@@ -45,7 +46,7 @@ const games = [
 
 export default function GamePage() {
   return (
-    <main className="relative overflow-hidden bg-gradient-to-b from-sky-50 to-pink-50 px-3 py-7 md:py-10">
+    <><GameAuthHeader /><main className="relative overflow-hidden bg-gradient-to-b from-sky-50 to-pink-50 px-3 py-7 md:py-10">
       <section className="relative mx-auto max-w-3xl">
         <div className="flex items-center justify-center gap-3 text-center">
           <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-sky-500 text-white shadow-lg shadow-sky-200">
@@ -85,6 +86,6 @@ export default function GamePage() {
           ))}
         </div>
       </section>
-    </main>
+    </main></>
   )
 }

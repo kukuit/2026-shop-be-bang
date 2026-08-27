@@ -4,7 +4,7 @@ import { BOOST_SPEED, CAR_Y, CHECK_Y, GAME_HEIGHT, GAME_WIDTH, HIT_SPEED, HORIZO
 import { RoadController } from './core/RoadController'
 import { createRacingQuestions } from './lessons/toan-1-bai-1'
 import { RacingState, type Lane, type RacingQuestion, type RacingTrackingEvent } from './types'
-import { createGameTracker, GAME_IDS, getCurrentGameUserId, getRecognizeNumberKey, LESSON_IDS, type GameTracker } from '../general/tracking'
+import { createGameTracker, GAME_IDS, getRecognizeNumberKey, LESSON_IDS, type GameTracker } from '../general/tracking'
 
 type AnswerGate = Phaser.GameObjects.Container & { answer: number; lane: Lane }
 
@@ -282,8 +282,7 @@ export class RacingScene extends Phaser.Scene {
   private startGameplay() {
     if (this.gameStarted) return
     this.gameStarted = true
-    const userId = getCurrentGameUserId()
-    if (userId) this.tracker = createGameTracker({ userId, lessonId: LESSON_IDS.TOAN_1_BAI_1, gameId: GAME_IDS.RACING })
+    this.tracker = createGameTracker({ lessonId: LESSON_IDS.TOAN_1_BAI_1, gameId: GAME_IDS.RACING })
     this.game.registry.set('game-ui:started', true)
     this.startMusic()
     this.tweens.add({ targets: this.car, y: CAR_Y + 4, duration: 160, yoyo: true, repeat: -1, ease: 'Sine.InOut' })
