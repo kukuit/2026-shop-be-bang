@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { Suspense, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 
 function safeDestination(value: string | null) {
@@ -9,7 +9,7 @@ function safeDestination(value: string | null) {
   return '/game'
 }
 
-export default function ContinueAuthPage() {
+function ContinueAuthContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
 
@@ -24,5 +24,19 @@ export default function ContinueAuthPage() {
     <main className="grid min-h-screen place-items-center bg-slate-50 p-6 text-slate-700">
       <p className="font-semibold">Đang khôi phục phiên đăng nhập…</p>
     </main>
+  )
+}
+
+export default function ContinueAuthPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="grid min-h-screen place-items-center bg-slate-50 p-6 text-slate-700">
+          <p className="font-semibold">Đang khôi phục phiên đăng nhập…</p>
+        </main>
+      }
+    >
+      <ContinueAuthContent />
+    </Suspense>
   )
 }
