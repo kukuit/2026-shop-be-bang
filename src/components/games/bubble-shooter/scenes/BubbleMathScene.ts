@@ -50,6 +50,7 @@ export class BubbleMathScene extends Phaser.Scene {
   private wolfArrow?: Phaser.GameObjects.Triangle
   private wolfBusy = false
   private wolfActionTimers = new Set<Phaser.Time.TimerEvent>()
+  private wolfRounds = new Set<number>()
   private winVoiceTimer?: ReturnType<typeof setTimeout>
 
   constructor() {
@@ -81,15 +82,19 @@ export class BubbleMathScene extends Phaser.Scene {
     this.load.audio('voice-bullet-bomb', '/games/bubble-shooter/voices/bullet-bomb.mp3')
     this.load.audio('voice-bullet-bubble', '/games/bubble-shooter/voices/bullet-bubble.mp3')
     this.load.audio('voice-bubble-pop', '/games/bubble-shooter/voices/bubble-pop.mp3')
-    this.load.audio('voice-intro', '/games/bubble-shooter/voices/intro.mp3')
-    this.load.audio('voice-true-1', '/games/bubble-shooter/voices/true-1.mp3')
-    this.load.audio('voice-true-2', '/games/bubble-shooter/voices/true-2.mp3')
-    this.load.audio('voice-true-3', '/games/bubble-shooter/voices/true-3.mp3')
-    this.load.audio('voice-true-4', '/games/bubble-shooter/voices/true-4.mp3')
-    this.load.audio('voice-false-1', '/games/bubble-shooter/voices/false-1.mp3')
-    this.load.audio('voice-false-2', '/games/bubble-shooter/voices/false-2.mp3')
-    this.load.audio('voice-win', '/games/bubble-shooter/voices/win.mp3')
-    this.load.audio('voice-wolf-haha', '/games/bubble-shooter/voices/wolf-haha.mp3')
+    this.load.audio('voice-intro', '/games/lessons/lop-1/toan/bai-1/bubble-shooter/voices/intro.mp3')
+    this.load.audio('voice-true-1', '/games/general/voices/true-1.mp3')
+    this.load.audio('voice-true-2', '/games/general/voices/true-2.mp3')
+    this.load.audio('voice-true-3', '/games/general/voices/true-3.mp3')
+    this.load.audio('voice-true-4', '/games/general/voices/true-4.mp3')
+    this.load.audio('voice-true-5', '/games/general/voices/true-5.mp3')
+    this.load.audio('voice-false-1', '/games/general/voices/false-1.mp3')
+    this.load.audio('voice-false-2', '/games/general/voices/false-2.mp3')
+    this.load.audio('voice-false-3', '/games/general/voices/false-3.mp3')
+    this.load.audio('voice-false-4', '/games/general/voices/false-4.mp3')
+    this.load.audio('voice-false-5', '/games/general/voices/false-5.mp3')
+    this.load.audio('voice-win', '/games/general/voices/win.mp3')
+    this.load.audio('voice-wolf-haha', '/games/general/voices/wolf-haha.mp3')
   }
 
   create() {
@@ -217,8 +222,12 @@ export class BubbleMathScene extends Phaser.Scene {
       { key: 'voice-true-2' },
       { key: 'voice-true-3' },
       { key: 'voice-true-4' },
+      { key: 'voice-true-5' },
       { key: 'voice-false-1' },
       { key: 'voice-false-2' },
+      { key: 'voice-false-3' },
+      { key: 'voice-false-4' },
+      { key: 'voice-false-5' },
       { key: 'voice-win', volume: 0.9 },
       { key: 'voice-wolf-haha', volume: 0.9 },
     ])
@@ -228,6 +237,7 @@ export class BubbleMathScene extends Phaser.Scene {
     if (this.gameStarted) return
     this.gameStarted = true
     this.game.registry.set('game-ui:started', true)
+    this.prepareWolfRounds()
     this.ensureBackgroundMusic()
     this.scheduleTransition(500, () => {
       this.voiceManager?.playOnce('intro', 'voice-intro', 'intro')
@@ -248,6 +258,7 @@ export class BubbleMathScene extends Phaser.Scene {
     this.score.reset()
     this.emitScore()
     this.questionNumber = 1
+    this.wolfRounds.clear()
     this.selectedAmmo = 0
     this.isPauseMenuOpen = false
     this.scene.restart()
@@ -371,7 +382,7 @@ export class BubbleMathScene extends Phaser.Scene {
 
   private beginWolfRound() {
     this.clearWolfAction()
-    if (!this.wolf) return
+    if (!this.wolf || !this.wolfRounds.has(this.questionNumber)) return
     this.wolf.setPosition(WIDTH - 72, 1100).setVisible(false)
     this.wolfShotTimer = this.time.delayedCall(4000, () => {
       this.wolfShotTimer = undefined
@@ -379,6 +390,11 @@ export class BubbleMathScene extends Phaser.Scene {
       this.wolf.setVisible(true).play('bubble-wolf-peek', true)
       this.scheduleWolfShot(3000)
     })
+  }
+
+  private prepareWolfRounds() {
+    const eligibleRounds = Phaser.Utils.Array.Shuffle([3, 4, 5, 6, 7, 8, 9, 10])
+    this.wolfRounds = new Set(eligibleRounds.slice(0, 4))
   }
 
   private scheduleWolfShot(delay = Phaser.Math.Between(4500, 8000)) {
@@ -584,7 +600,10 @@ export class BubbleMathScene extends Phaser.Scene {
     const hitY = bubble.y
 
     if (bubble.value !== this.currentQuestion.answer) {
-      this.playRandomVoice(['voice-false-1', 'voice-false-2'], 'false')
+      this.playRandomVoice(
+        ['voice-false-1', 'voice-false-2', 'voice-false-3', 'voice-false-4', 'voice-false-5'],
+        'false',
+      )
       const { score, deducted } = this.score.wrong()
       this.emitScore()
       this.scoreText.setText(`★  ${score}`)
@@ -599,7 +618,7 @@ export class BubbleMathScene extends Phaser.Scene {
     this.projectiles.clear(true, true)
     if (this.questionNumber !== TOTAL_QUESTIONS) {
       this.playRandomVoice(
-        ['voice-true-1', 'voice-true-2', 'voice-true-3', 'voice-true-4'],
+        ['voice-true-1', 'voice-true-2', 'voice-true-3', 'voice-true-4', 'voice-true-5'],
         'true',
       )
     }

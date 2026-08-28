@@ -1,11 +1,8 @@
 import type { Metadata, Viewport } from 'next'
-import { Inter } from 'next/font/google'
 import './globals.css'
 import Providers from './providers'
 import SiteShell from '@/components/SiteShell'
 import GoogleAnalytics from '@/components/analytics/GoogleAnalytics'
-
-const inter = Inter({ subsets: ['latin'] })
 
 const siteUrl =
   process.env.NEXT_PUBLIC_SITE_URL ??
@@ -84,7 +81,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="color-scheme" content="light" />
         <meta name="supported-color-schemes" content="light" />
       </head>
-      <body className={`${inter.className} bg-gray-50`}>
+      <body className="bg-gray-50 font-sans">
         <Providers>
           <SiteShell>{children}</SiteShell>
         </Providers>

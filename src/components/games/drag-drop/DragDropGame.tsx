@@ -3,10 +3,12 @@
 import { PointerEvent as ReactPointerEvent, useCallback, useEffect, useRef, useState } from 'react'
 import { GameCompletion, GameLoadingScreen, GameShell, preloadAssets, useBackgroundMusic } from '../general'
 import { GAME_BACKGROUND_MUSIC } from '../general/audio'
-import { createRandomizedLevels, DRAG_DROP_LEVELS, NUMBER_COLORS } from './levels'
+import { createDragDropLevelForTarget, createRandomizedLevels, DRAG_DROP_LEVELS, DRAG_DROP_SUPPORTED_TARGETS, NUMBER_COLORS } from './levels'
 import type { CountGroup, NumberValue, SequenceCell } from './types'
 import styles from './DragDropGame.module.css'
 import { createGameTracker, GAME_IDS, getRecognizeNumberKey, LESSON_IDS, type GameTracker } from '../general/tracking'
+import { buildAdaptiveQuestions } from '../general/adaptive'
+import { useGameVoices } from '../general/useGameVoices'
 
 type DragState = { value: NumberValue; x: number; y: number; pointerId: number } | null
 type FloatingScore = { id: number; x: number; y: number; value: '+10' | '-2' | '0'; correct: boolean } | null
@@ -21,6 +23,16 @@ const shuffleNumbers = () => {
 }
 
 const INITIAL_NUMBER_TRAY: NumberValue[] = [0, 1, 2, 3, 4, 5]
+const TRUE_VOICES = ['voice-true-1', 'voice-true-2', 'voice-true-3', 'voice-true-4', 'voice-true-5']
+const FALSE_VOICES = ['voice-false-1', 'voice-false-2', 'voice-false-3', 'voice-false-4', 'voice-false-5']
+const DRAG_DROP_VOICES = [
+  { key: 'drag-intro', src: '/games/lessons/lop-1/toan/bai-1/drag-drop/voices/intro.mp3' },
+  { key: 'drag-ting', src: '/games/drag-drop/voices/ting.mp3', volume: 0.8 },
+  { key: 'drag-buzzer', src: '/games/drag-drop/voices/buzzer.mp3', volume: 0.75 },
+  ...TRUE_VOICES.map((key, index) => ({ key, src: `/games/general/voices/true-${index + 1}.mp3` })),
+  ...FALSE_VOICES.map((key, index) => ({ key, src: `/games/general/voices/false-${index + 1}.mp3` })),
+  { key: 'voice-win', src: '/games/general/voices/win.mp3', volume: 0.9 },
+] as const
 
 export default function DragDropGame() {
   const trackerRef = useRef<GameTracker | undefined>(undefined)
@@ -33,6 +45,7 @@ export default function DragDropGame() {
   const [isTransitioning, setIsTransitioning] = useState(false)
   const [soundEnabled, setSoundEnabled] = useState(true)
   const [gameCompleted, setGameCompleted] = useState(false)
+  const [trackingTask, setTrackingTask] = useState<Promise<unknown>>()
   const [gamePaused, setGamePaused] = useState(false)
   const [isReady, setIsReady] = useState(false)
   const [gameStarted, setGameStarted] = useState(false)
@@ -45,20 +58,30 @@ export default function DragDropGame() {
   const level = levels[currentLevel]
   const density = level.groups && level.groups.length >= 4 ? 'dense' : level.groups && level.groups.length === 1 ? 'simple' : 'standard'
   const startMusic = useBackgroundMusic(soundEnabled, isReady && gameStarted)
+  const voices = useGameVoices(DRAG_DROP_VOICES, soundEnabled)
 
   useEffect(() => {
     let cancelled = false
-    setLevels((current) => createRandomizedLevels(current))
-    void preloadAssets({
+    const randomizedLevels = createRandomizedLevels()
+    const adaptiveLevels = buildAdaptiveQuestions({
+      lessonId: LESSON_IDS.TOAN_1_BAI_1,
+      gameId: GAME_IDS.DRAG_DROP,
+      supportedTargets: DRAG_DROP_SUPPORTED_TARGETS,
+      totalRounds: DRAG_DROP_LEVELS.length,
+      generateRandomQuestion: (index) => randomizedLevels[index],
+      generateQuestionForTarget: createDragDropLevelForTarget,
+    })
+    const assets = preloadAssets({
       images: [
         '/games/drag-drop/images/farm-background.png',
         '/games/general/images/player-avatar.png',
       ],
-      audio: [GAME_BACKGROUND_MUSIC],
+      audio: [GAME_BACKGROUND_MUSIC, ...DRAG_DROP_VOICES.map((voice) => voice.src)],
     }, (progress) => {
       if (!cancelled) setLoadProgress(progress)
-    }).then(() => {
-      if (!cancelled) setIsReady(true)
+    })
+    void Promise.all([adaptiveLevels, assets]).then(([nextLevels]) => {
+      if (!cancelled) { setLevels(nextLevels); setIsReady(true) }
     })
     return () => { cancelled = true }
   }, [])
@@ -78,12 +101,14 @@ export default function DragDropGame() {
   }, [level.answers])
 
   const restart = useCallback(() => {
+    voices.reset()
+    window.setTimeout(() => voices.playOnce('intro', 'drag-intro', 'intro'), 500)
     setLevels((current) => createRandomizedLevels(current))
     setNumberTray(shuffleNumbers())
     setCurrentLevel(0); setScore(0); setCompletedTargets({}); setIsTransitioning(false)
-    setGameCompleted(false); setGamePaused(false); setGameStarted(true); setDrag(null)
+    setGameCompleted(false); setGamePaused(false); setGameStarted(true); setDrag(null); setTrackingTask(undefined)
     startTracking()
-  }, [startTracking])
+  }, [startTracking, voices])
 
   const finishDrop = useCallback((clientX: number, clientY: number, value: NumberValue) => {
     const target = document.elementFromPoint(clientX, clientY)?.closest<HTMLElement>('[data-target-id]')
@@ -99,11 +124,15 @@ export default function DragDropGame() {
     targetAttemptsRef.current[targetId] = attempt
     targetStartedAtRef.current[targetId] = Date.now()
     if (correct) {
+      voices.playEffect('drag-ting')
+      voices.play(TRUE_VOICES[Math.floor(Math.random() * TRUE_VOICES.length)], 'true')
       setCompletedTargets((current) => ({ ...current, [targetId]: value }))
       setCorrectTarget(targetId)
       setFloatingScore({ id: Date.now(), x: clientX, y: clientY, value: '+10', correct: true })
       window.setTimeout(() => setCorrectTarget(null), 500)
     } else {
+      voices.playEffect('drag-buzzer')
+      voices.play(FALSE_VOICES[Math.floor(Math.random() * FALSE_VOICES.length)], 'false')
       setScore((current) => Math.max(0, current - 2))
       setWrongTarget(targetId)
       setFloatingScore({ id: Date.now(), x: clientX, y: clientY, value: score > 0 ? '-2' : '0', correct: false })
@@ -111,11 +140,15 @@ export default function DragDropGame() {
     }
     window.setTimeout(() => setFloatingScore(null), 700)
     setDrag(null)
-  }, [completedTargets, isTransitioning, level.answers, score])
+  }, [completedTargets, isTransitioning, level.answers, score, voices])
 
   useEffect(() => {
-    if (gameCompleted) void trackerRef.current?.finishSession(score)
+    if (gameCompleted) setTrackingTask(() => trackerRef.current?.finishSession(score))
   }, [gameCompleted, score])
+
+  useEffect(() => {
+    if (gameCompleted) voices.playOnce('win', 'voice-win', 'win')
+  }, [gameCompleted, voices])
 
   useEffect(() => {
     const targetCount = Object.keys(level.answers).length
@@ -154,7 +187,10 @@ export default function DragDropGame() {
 
   return (
     <GameShell score={score} currentRound={level.id} muted={!soundEnabled} onMutedChange={(muted) => setSoundEnabled(!muted)} onPauseChange={(paused) => { setGamePaused(paused); if (paused) setDrag(null) }} onRestart={restart}>
-      <GameLoadingScreen progress={loadProgress} ready={isReady} unlockAudio={startMusic} onStart={() => { startTracking(); setGameStarted(true) }} />
+      <GameLoadingScreen progress={loadProgress} ready={isReady} unlockAudio={startMusic} onStart={() => {
+        startTracking(); setGameStarted(true)
+        window.setTimeout(() => voices.playOnce('intro', 'drag-intro', 'intro'), 500)
+      }} />
       <div className="relative h-full touch-none overflow-hidden bg-sky-300 bg-cover bg-center" style={{ backgroundImage: "url('/games/drag-drop/images/farm-background.png')" }}>
         <div className={styles.gameplayPanel} data-density={density}>
           <div className={styles.questionArea}>
@@ -168,7 +204,7 @@ export default function DragDropGame() {
         {drag && <div className="pointer-events-none fixed z-[100] grid h-14 w-14 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-2xl border-[3px] border-white text-3xl font-black text-white shadow-2xl" style={{ left: drag.x, top: drag.y, backgroundColor: NUMBER_COLORS[drag.value], transform: 'translate(-50%, -50%) scale(1.08)' }}>{drag.value}</div>}
         {floatingScore && <div key={floatingScore.id} className={`pointer-events-none fixed z-[110] text-xl font-black ${styles.floatingScore} ${floatingScore.correct ? 'text-emerald-600' : 'text-red-500'}`} style={{ left: floatingScore.x, top: floatingScore.y, textShadow: '0 2px 0 white, 0 -2px 0 white, 2px 0 0 white, -2px 0 0 white' }}>{floatingScore.value}</div>}
         {isTransitioning && !gameCompleted && <div className="pointer-events-none absolute inset-0 z-30" aria-hidden="true"><div className={styles.fireworks}>{Array.from({ length: 12 }, (_, index) => <span key={index} className={styles.fireworkParticle} />)}</div></div>}
-        {gameCompleted && <GameCompletion score={score} onRestart={restart} />}
+        {gameCompleted && trackingTask && <GameCompletion score={score} trackingTask={trackingTask} onRestart={restart} />}
       </div>
     </GameShell>
   )

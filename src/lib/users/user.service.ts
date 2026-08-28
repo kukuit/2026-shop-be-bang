@@ -78,7 +78,11 @@ export async function updateUser(userId: string, input: UpdateUserInput): Promis
   const data = updateUserSchema.parse(input)
   const reference = usersCollection().doc(userId)
   if (!(await reference.get()).exists) return null
-  await reference.update({ ...data, updatedAt: FieldValue.serverTimestamp() })
+  await reference.update({
+    ...data,
+    ...(data.name ? { displayName: data.name } : {}),
+    updatedAt: FieldValue.serverTimestamp(),
+  })
   return getUserById(userId)
 }
 
