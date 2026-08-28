@@ -2,9 +2,10 @@ import * as Phaser from 'phaser'
 import { GAME_BACKGROUND_MUSIC } from '../general/audio'
 import { BOOST_SPEED, CAR_Y, CHECK_Y, GAME_HEIGHT, GAME_WIDTH, HIT_SPEED, HORIZON_Y, LANES, NORMAL_SPEED, laneX } from './constants'
 import { RoadController } from './core/RoadController'
-import { createRacingQuestions } from './lessons/toan-1-bai-1'
+import { createRacingQuestionForTarget, createRacingQuestions, RACING_SUPPORTED_TARGETS } from './lessons/toan-1-bai-1'
 import { RacingState, type Lane, type RacingQuestion, type RacingTrackingEvent } from './types'
 import { createGameTracker, GAME_IDS, getRecognizeNumberKey, LESSON_IDS, type GameTracker } from '../general/tracking'
+import { buildAdaptiveQuestions } from '../general/adaptive'
 
 type AnswerGate = Phaser.GameObjects.Container & { answer: number; lane: Lane }
 
@@ -59,8 +60,10 @@ export class RacingScene extends Phaser.Scene {
     this.music = this.sound.add('racing-background', { loop: true, volume: .16 })
     this.game.events.emit('game-ui:score', 0)
     this.game.events.emit('game-ui:round', 1)
-    this.game.events.emit('racing:ready')
-    if (this.game.registry.get('game-ui:started')) this.startGameplay()
+    void this.loadAdaptiveQuestions().then(() => {
+      this.game.events.emit('racing:ready')
+      if (this.game.registry.get('game-ui:started')) this.startGameplay()
+    })
   }
 
   update(_: number, delta: number) {
@@ -226,8 +229,8 @@ export class RacingScene extends Phaser.Scene {
       this.sparkles(GAME_WIDTH / 2, 650, 32)
       this.tweens.add({ targets: this.car, y: 680, scale: .7, duration: 650, ease: 'Sine.In' })
       this.time.delayedCall(1200, () => {
-        void this.tracker?.finishSession(this.score)
-        this.game.events.emit('game-ui:complete', this.score)
+        const trackingTask = this.tracker?.finishSession(this.score)
+        this.game.events.emit('game-ui:complete', this.score, trackingTask)
       })
     } })
   }
@@ -279,6 +282,17 @@ export class RacingScene extends Phaser.Scene {
 
   private clearGates() { this.gates.forEach((gate) => gate.destroy()); this.gates = [] }
   private startMusic() { if (!this.sound.mute && !this.music?.isPlaying) this.music?.play() }
+  private async loadAdaptiveQuestions() {
+    const randomQuestions = createRacingQuestions()
+    this.questions = await buildAdaptiveQuestions({
+      lessonId: LESSON_IDS.TOAN_1_BAI_1,
+      gameId: GAME_IDS.RACING,
+      supportedTargets: RACING_SUPPORTED_TARGETS,
+      totalRounds: randomQuestions.length,
+      generateRandomQuestion: (index) => randomQuestions[index],
+      generateQuestionForTarget: createRacingQuestionForTarget,
+    })
+  }
   private startGameplay() {
     if (this.gameStarted) return
     this.gameStarted = true

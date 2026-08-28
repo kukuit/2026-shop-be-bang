@@ -1,4 +1,6 @@
 import type { DragDropLevel, NumberValue, SequenceCell } from './types'
+import type { LearningKey } from '../general/tracking'
+import { getRecognizeNumberKey } from '../general/tracking'
 
 const sequence = (targets: NumberValue[]): SequenceCell[] =>
   ([0, 1, 2, 3, 4, 5] as NumberValue[]).map((value) => ({ id: `sequence-${value}`, value, target: targets.includes(value) }))
@@ -63,5 +65,21 @@ export const createRandomizedLevels = (previousLevels: DragDropLevel[] = DRAG_DR
 
   return { ...template, groups, sequence: randomizedSequence, answers }
 })
+
+export const DRAG_DROP_SUPPORTED_TARGETS = VALUES.map(getRecognizeNumberKey)
+
+export function createDragDropLevelForTarget(targetId: LearningKey, index: number): DragDropLevel {
+  const value = DRAG_DROP_SUPPORTED_TARGETS.indexOf(targetId) as NumberValue
+  const level = createRandomizedLevels()[index % DRAG_DROP_LEVELS.length]
+  if (value < 0) return level
+  const groups = level.groups?.map((group, groupIndex) =>
+    groupIndex === 0 && group.count !== 0 ? { ...group, count: value } : group)
+  const changedGroup = groups?.[0]?.count === value && level.groups?.[0]?.count !== 0
+  const sequenceCells = level.sequence?.map((cell) => ({ ...cell, target: cell.value === value || (!changedGroup && cell.target) }))
+  const answers: Record<string, NumberValue> = {}
+  groups?.forEach((group) => { answers[group.id] = group.count })
+  sequenceCells?.forEach((cell) => { if (cell.target) answers[cell.id] = cell.value })
+  return { ...level, groups, sequence: sequenceCells, answers }
+}
 
 export const NUMBER_COLORS = ['#ec4899', '#f59e0b', '#22c55e', '#06b6d4', '#6366f1', '#a855f7']

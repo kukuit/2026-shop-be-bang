@@ -1,4 +1,6 @@
 import type { RacingQuestion } from '../types'
+import type { LearningKey } from '../../general/tracking'
+import { getRecognizeNumberKey } from '../../general/tracking'
 
 export const createRacingQuestions = (): RacingQuestion[] => {
   const finals: RacingQuestion[] = [
@@ -18,4 +20,17 @@ export const createRacingQuestions = (): RacingQuestion[] => {
     { type: 'missingNumber', sequence: [2, 3, 4, null], options: [3, 4, 5], answer: 5, skill: 'missing_number' },
     finals[Math.floor(Math.random() * finals.length)],
   ]
+}
+
+export const RACING_SUPPORTED_TARGETS = [0, 1, 2, 3, 4, 5].map(getRecognizeNumberKey)
+
+export function createRacingQuestionForTarget(targetId: LearningKey, index: number): RacingQuestion {
+  const answer = RACING_SUPPORTED_TARGETS.indexOf(targetId)
+  if (answer < 0) return createRacingQuestions()[index % 10]
+  const candidates = [0, 1, 2, 3, 4, 5].filter((value) => value !== answer)
+  return {
+    type: 'count', object: ['⭐', '🍎', '🐟'][index % 3], quantity: answer,
+    options: [answer, candidates[index % candidates.length], candidates[(index + 2) % candidates.length]],
+    answer, skill: answer === 0 ? 'recognize_zero' : 'recognize_quantity',
+  }
 }

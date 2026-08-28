@@ -1,4 +1,6 @@
 import type { GoldMinerQuestion, TaskObject } from './types'
+import type { LearningKey } from '../general/tracking'
+import { getRecognizeNumberKey } from '../general/tracking'
 
 const objects: TaskObject[] = ['apple', 'chicken', 'cow', 'fish', 'star', 'flower', 'ball', 'butterfly']
 const counts = [3, 4, 2, 5, 1, 4, 5, 3, 2, 4]
@@ -18,6 +20,16 @@ export const GOLD_MINER_LEVELS: GoldMinerQuestion[] = counts.map((count, index) 
     choices: [...choices.slice(shift), ...choices.slice(0, shift)],
   }
 })
+
+export const GOLD_MINER_SUPPORTED_TARGETS = [0, 1, 2, 3, 4, 5].map(getRecognizeNumberKey)
+
+export function createGoldMinerQuestionForTarget(targetId: LearningKey, index: number): GoldMinerQuestion {
+  const count = GOLD_MINER_SUPPORTED_TARGETS.indexOf(targetId)
+  const template = GOLD_MINER_LEVELS[index % GOLD_MINER_LEVELS.length]
+  if (count < 0) return { ...template, choices: [...template.choices] }
+  const distractors = [0, 1, 2, 3, 4, 5].filter((value) => value !== count)
+  return { ...template, count, correctAnswer: count, choices: [count, ...distractors].slice(0, template.choices.length) }
+}
 
 export const TASK_EMOJI: Record<TaskObject, string> = {
   apple: '🍎', chicken: '🐔', cow: '🐮', fish: '🐟',

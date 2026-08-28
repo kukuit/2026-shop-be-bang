@@ -4,6 +4,7 @@ import type { SafeAuthUser } from '@/lib/auth/types'
 
 type AuthContextValue = { user: SafeAuthUser | null; authenticated: boolean; loading: boolean; login(username: string, password: string): Promise<void>; logout(): Promise<void>; refreshUser(): Promise<void> }
 const AuthContext = createContext<AuthContextValue | null>(null)
+let authRequest: Promise<SafeAuthUser | null> | null = null
 
 async function readJson<T>(response: Response): Promise<T> {
   const contentType = response.headers.get('content-type') ?? ''
@@ -27,18 +28,33 @@ async function readJson<T>(response: Response): Promise<T> {
   return response.json() as Promise<T>
 }
 
+function loadAuthenticatedUser() {
+  if (authRequest) return authRequest
+  authRequest = (async () => {
+    let response = await fetch('/api/auth/me', { cache: 'no-store' })
+    let body = await readJson<{
+      authenticated?: boolean
+      refreshAvailable?: boolean
+      user?: SafeAuthUser | null
+    }>(response)
+    if (!body.authenticated && body.refreshAvailable) {
+      const refreshed = await fetch('/api/auth/refresh', { method: 'POST' })
+      if (refreshed.ok) {
+        response = await fetch('/api/auth/me', { cache: 'no-store' })
+        body = await readJson(response)
+      }
+    }
+    return body.authenticated ? body.user ?? null : null
+  })().finally(() => { authRequest = null })
+  return authRequest
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<SafeAuthUser | null>(null)
   const [loading, setLoading] = useState(true)
   const refreshUser = useCallback(async () => {
     try {
-      let response = await fetch('/api/auth/me', { cache: 'no-store' })
-      let body = await readJson<{ authenticated?: boolean; user?: SafeAuthUser | null }>(response)
-      if (!body.authenticated) {
-        const refreshed = await fetch('/api/auth/refresh', { method: 'POST' })
-        if (refreshed.ok) { response = await fetch('/api/auth/me', { cache: 'no-store' }); body = await readJson(response) }
-      }
-      setUser(body.authenticated ? body.user ?? null : null)
+      setUser(await loadAuthenticatedUser())
     } catch { setUser(null) } finally { setLoading(false) }
   }, [])
   useEffect(() => { void refreshUser() }, [refreshUser])

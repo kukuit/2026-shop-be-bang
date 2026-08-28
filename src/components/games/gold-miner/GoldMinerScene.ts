@@ -1,8 +1,10 @@
 import * as Phaser from 'phaser'
 import { GAME_BACKGROUND_MUSIC } from '../general/audio'
-import { GOLD_MINER_LEVELS, TASK_EMOJI } from './levels'
+import { createGoldMinerQuestionForTarget, GOLD_MINER_LEVELS, GOLD_MINER_SUPPORTED_TARGETS, TASK_EMOJI } from './levels'
 import { GoldMinerState, WolfState, type GoldMinerQuestion } from './types'
 import { createGameTracker, GAME_IDS, getRecognizeNumberKey, LESSON_IDS, type GameTracker } from '../general/tracking'
+import { buildAdaptiveQuestions } from '../general/adaptive'
+import { GameVoiceManager, type VoicePriority } from '../general/GameVoiceManager'
 
 const W = 720
 const H = 1280
@@ -55,6 +57,8 @@ export class GoldMinerScene extends Phaser.Scene {
   private gameStarted = false
   private music?: Phaser.Sound.BaseSound
   private tracker?: GameTracker
+  private questions: GoldMinerQuestion[] = GOLD_MINER_LEVELS
+  private voiceManager?: GameVoiceManager
 
   constructor() { super('GoldMinerScene') }
 
@@ -77,9 +81,25 @@ export class GoldMinerScene extends Phaser.Scene {
       frameHeight: 512,
     })
     this.load.image('wolf-caught-icon', '/games/gold-mining/images/wolf-caught-icon.png')
+    this.load.audio('gold-voice-intro', '/games/lessons/lop-1/toan/bai-1/gold-mining/voices/intro.mp3')
+    this.load.audio('gold-voice-reel', '/games/gold-mining/voices/reel.mp3')
+    this.load.audio('gold-voice-ting', '/games/gold-mining/voices/ting.mp3')
+    this.load.audio('voice-true-1', '/games/general/voices/true-1.mp3')
+    this.load.audio('voice-true-2', '/games/general/voices/true-2.mp3')
+    this.load.audio('voice-true-3', '/games/general/voices/true-3.mp3')
+    this.load.audio('voice-true-4', '/games/general/voices/true-4.mp3')
+    this.load.audio('voice-true-5', '/games/general/voices/true-5.mp3')
+    this.load.audio('voice-false-1', '/games/general/voices/false-1.mp3')
+    this.load.audio('voice-false-2', '/games/general/voices/false-2.mp3')
+    this.load.audio('voice-false-3', '/games/general/voices/false-3.mp3')
+    this.load.audio('voice-false-4', '/games/general/voices/false-4.mp3')
+    this.load.audio('voice-false-5', '/games/general/voices/false-5.mp3')
+    this.load.audio('voice-win', '/games/general/voices/win.mp3')
+    this.load.audio('voice-wolf-haha', '/games/general/voices/wolf-haha.mp3')
   }
 
   create() {
+    this.setupVoice()
     this.drawMine()
     this.createTopScene()
     this.createHook()
@@ -96,8 +116,10 @@ export class GoldMinerScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.cleanup, this)
     this.music = this.sound.add('gold-background', { loop: true, volume: 0.22 })
     this.game.events.emit('game-ui:score', this.score)
-    this.game.events.emit('gold-miner:ready')
-    if (this.game.registry.get('game-ui:started')) this.startGameplay()
+    void this.loadAdaptiveQuestions().then(() => {
+      this.game.events.emit('gold-miner:ready')
+      if (this.game.registry.get('game-ui:started')) this.startGameplay()
+    })
   }
 
   update(_: number, delta: number) {
@@ -161,7 +183,7 @@ export class GoldMinerScene extends Phaser.Scene {
 
   private startRound() {
     this.clearRound()
-    this.question = GOLD_MINER_LEVELS[this.round]
+    this.question = this.questions[this.round]
     this.tracker?.startQuestion({ learningKey: getRecognizeNumberKey(this.question.correctAnswer), expectedAnswer: this.question.correctAnswer })
     this.state = GoldMinerState.ROUND_START
     this.wolfAppeared = false
@@ -205,6 +227,7 @@ export class GoldMinerScene extends Phaser.Scene {
 
   private dropHook(pointer: Phaser.Input.Pointer) {
     if (!this.gameStarted || this.paused || this.state !== GoldMinerState.AIMING || pointer.worldY < 90 || pointer.worldY > 1175) return
+    this.sound.play('gold-voice-reel', { volume: 0.7 })
     this.setClawClosed(false)
     this.lockedAngle = this.angle
     this.state = GoldMinerState.HOOK_DOWN
@@ -220,6 +243,7 @@ export class GoldMinerScene extends Phaser.Scene {
     const item = this.mineItems.find((candidate) => !candidate.taken && Phaser.Math.Distance.Between(this.hook.x, this.hook.y, candidate.x, candidate.y) < candidate.radius + 24)
     if (!item) return false
     item.taken = true
+    if (!item.rock) this.sound.play('gold-voice-ting', { volume: 0.8 })
     this.grabbed = item
     this.setClawClosed(true)
     this.tweens.killTweensOf(item)
@@ -273,17 +297,28 @@ export class GoldMinerScene extends Phaser.Scene {
     this.feedback.setColor('#fff59d').setText('⭐ +10')
     this.cappyFace.setText('★ᴗ★')
     this.sparkle(ANCHOR.x, ANCHOR.y + 40)
+    if (this.round !== this.questions.length - 1) {
+      this.playRandomVoice(
+        ['voice-true-1', 'voice-true-2', 'voice-true-3', 'voice-true-4', 'voice-true-5'],
+        'true',
+      )
+    }
     item.destroy()
     this.time.delayedCall(850, () => {
-      if (this.round === GOLD_MINER_LEVELS.length - 1) {
+      if (this.round === this.questions.length - 1) {
         this.state = GoldMinerState.GAME_COMPLETE
-        void this.tracker?.finishSession(this.score)
-        this.game.events.emit('game-ui:complete', this.score)
+        this.time.delayedCall(500, () => this.voiceManager?.playOnce('win', 'voice-win', 'win'))
+        const trackingTask = this.tracker?.finishSession(this.score)
+        this.game.events.emit('game-ui:complete', this.score, trackingTask)
       } else { this.round += 1; this.cappyFace.setText('•ᴗ•'); this.startRound() }
     })
   }
 
   private wrong(item: MineItem) {
+    this.playRandomVoice(
+      ['voice-false-1', 'voice-false-2', 'voice-false-3', 'voice-false-4', 'voice-false-5'],
+      'false',
+    )
     this.score = Math.max(0, this.score - 2)
     this.game.events.emit('game-ui:score', this.score)
     this.feedback.setColor('#ffb4a8').setText('-2')
@@ -360,6 +395,7 @@ export class GoldMinerScene extends Phaser.Scene {
       return
     }
     this.wolfState = WolfState.STEAL
+    this.voiceManager?.play('voice-wolf-haha', 'true')
     target.taken = true
     this.tweens.killTweensOf(target)
     this.wolfCarried = target
@@ -447,7 +483,37 @@ export class GoldMinerScene extends Phaser.Scene {
     this.wolfSprite = undefined
     this.wolfState = WolfState.IDLE
   }
+  private setupVoice() {
+    this.voiceManager = new GameVoiceManager(this.sound, [
+      { key: 'gold-voice-intro' },
+      { key: 'voice-true-1' },
+      { key: 'voice-true-2' },
+      { key: 'voice-true-3' },
+      { key: 'voice-true-4' },
+      { key: 'voice-true-5' },
+      { key: 'voice-false-1' },
+      { key: 'voice-false-2' },
+      { key: 'voice-false-3' },
+      { key: 'voice-false-4' },
+      { key: 'voice-false-5' },
+      { key: 'voice-win', volume: 0.9 },
+      { key: 'voice-wolf-haha', volume: 0.9 },
+    ])
+  }
+  private playRandomVoice(keys: string[], priority: VoicePriority) {
+    this.voiceManager?.play(Phaser.Utils.Array.GetRandom(keys), priority)
+  }
   private startMusic() { if (!this.sound.mute && !this.music?.isPlaying) this.music?.play() }
+  private async loadAdaptiveQuestions() {
+    this.questions = await buildAdaptiveQuestions({
+      lessonId: LESSON_IDS.TOAN_1_BAI_1,
+      gameId: GAME_IDS.GOLD_MINING,
+      supportedTargets: GOLD_MINER_SUPPORTED_TARGETS,
+      totalRounds: GOLD_MINER_LEVELS.length,
+      generateRandomQuestion: (index) => ({ ...GOLD_MINER_LEVELS[index], choices: [...GOLD_MINER_LEVELS[index].choices] }),
+      generateQuestionForTarget: createGoldMinerQuestionForTarget,
+    })
+  }
   private startGameplay() {
     if (this.gameStarted) return
     this.gameStarted = true
@@ -455,6 +521,7 @@ export class GoldMinerScene extends Phaser.Scene {
     this.game.registry.set('game-ui:started', true)
     if (this.wolfRounds.size === 0) this.prepareWolfRounds()
     this.startMusic()
+    this.time.delayedCall(500, () => this.voiceManager?.playOnce('intro', 'gold-voice-intro', 'intro'))
     this.playHookEntrance()
   }
   private playHookEntrance() {
@@ -511,5 +578,7 @@ export class GoldMinerScene extends Phaser.Scene {
     this.game.events.off('game-ui:restart', this.restart, this)
     this.game.events.off('game-ui:start', this.startGameplay, this)
     this.music?.destroy()
+    this.voiceManager?.destroy()
+    this.voiceManager = undefined
   }
 }

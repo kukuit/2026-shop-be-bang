@@ -5,7 +5,7 @@ import { ArrowLeft, Gamepad2, Play, RotateCcw, Store, Volume2, VolumeX, X } from
 import { ReactNode, useState } from 'react'
 import StarIcon from './StarIcon'
 import GameProgress from './GameProgress'
-import GameAuthHeader from '@/components/auth/GameAuthHeader'
+import { useAuth } from '@/components/auth/AuthProvider'
 
 type GameShellProps = {
   children: ReactNode
@@ -25,7 +25,7 @@ export default function GameShell({
   score,
   currentRound,
   totalRounds = 10,
-  playerName = 'Bé Băng',
+  playerName,
   muted,
   onMutedChange,
   onPauseChange,
@@ -33,6 +33,12 @@ export default function GameShell({
   className = '',
 }: GameShellProps) {
   const [showExit, setShowExit] = useState(false)
+  const { user, loading: authLoading } = useAuth()
+  const displayName = playerName ?? user?.displayName ?? (authLoading ? '...' : 'Khách')
+  const displayNameCharacters = Array.from(displayName)
+  const shortDisplayName = displayNameCharacters.length > 8
+    ? `${displayNameCharacters.slice(0, 8).join('')}...`
+    : displayName
 
   const setExitOpen = (open: boolean) => {
     setShowExit(open)
@@ -47,10 +53,8 @@ export default function GameShell({
   return (
     <section className={`relative aspect-[9/16] max-h-dvh w-full max-w-[calc(100dvh*0.5625)] overflow-hidden bg-sky-200 [container-type:inline-size] ${className}`}>
       {children}
-      <GameAuthHeader overlay />
-
       <div className="pointer-events-none absolute inset-x-0 top-0 z-40 flex items-start justify-between p-[1.7%]">
-        <div className="flex h-10 items-center gap-1.5 rounded-2xl border-2 border-white/80 bg-blue-600/90 py-0.5 pl-0.5 pr-3 text-white shadow-lg">
+        <div className="flex h-10 min-w-0 max-w-[42%] items-center gap-1.5 rounded-2xl border-2 border-white/80 bg-blue-600/90 py-0.5 pl-0.5 pr-3 text-white shadow-lg">
           <Image
             src="/games/general/images/player-avatar.png"
             alt="Ảnh đại diện người chơi"
@@ -60,7 +64,7 @@ export default function GameShell({
             priority
             unoptimized
           />
-          <span className="max-w-20 truncate text-xs font-black drop-shadow">{playerName}</span>
+          <span className="min-w-0 flex-1 truncate text-xs font-black drop-shadow" title={displayName}>{shortDisplayName}</span>
         </div>
 
         <div className="pointer-events-auto flex gap-1.5">
