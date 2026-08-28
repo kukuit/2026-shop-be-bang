@@ -1,6 +1,6 @@
 'use client'
 
-import { PointerEvent as ReactPointerEvent, useCallback, useEffect, useRef, useState } from 'react'
+import { PointerEvent as ReactPointerEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { GameCompletion, GameLoadingScreen, GameShell, preloadAssets, useBackgroundMusic } from '../general'
 import { GAME_BACKGROUND_MUSIC } from '../general/audio'
 import { createDragDropLevelForTarget, createRandomizedLevels, DRAG_DROP_LEVELS, DRAG_DROP_SUPPORTED_TARGETS, NUMBER_COLORS } from './levels'
@@ -9,6 +9,8 @@ import styles from './DragDropGame.module.css'
 import { createGameTracker, GAME_IDS, getRecognizeNumberKey, LESSON_IDS, type GameTracker } from '../general/tracking'
 import { buildAdaptiveQuestions } from '../general/adaptive'
 import { useGameVoices } from '../general/useGameVoices'
+import CappyCompanion, { type CappyReaction } from './CappyCompanion'
+import WolfCompanion from './WolfCompanion'
 
 type DragState = { value: NumberValue; x: number; y: number; pointerId: number } | null
 type FloatingScore = { id: number; x: number; y: number; value: '+10' | '-2' | '0'; correct: boolean } | null
@@ -23,6 +25,15 @@ const shuffleNumbers = () => {
 }
 
 const INITIAL_NUMBER_TRAY: NumberValue[] = [0, 1, 2, 3, 4, 5]
+const createWolfRounds = () => {
+  // Round 9 needs all six values, so there is no wrong tile for the wolf to steal.
+  const eligibleRounds = [2, 3, 4, 5, 6, 7, 9]
+  for (let index = eligibleRounds.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(Math.random() * (index + 1))
+    ;[eligibleRounds[index], eligibleRounds[swapIndex]] = [eligibleRounds[swapIndex], eligibleRounds[index]]
+  }
+  return new Set(eligibleRounds.slice(0, 4))
+}
 const TRUE_VOICES = ['voice-true-1', 'voice-true-2', 'voice-true-3', 'voice-true-4', 'voice-true-5']
 const FALSE_VOICES = ['voice-false-1', 'voice-false-2', 'voice-false-3', 'voice-false-4', 'voice-false-5']
 const DRAG_DROP_VOICES = [
@@ -32,6 +43,7 @@ const DRAG_DROP_VOICES = [
   ...TRUE_VOICES.map((key, index) => ({ key, src: `/games/general/voices/true-${index + 1}.mp3` })),
   ...FALSE_VOICES.map((key, index) => ({ key, src: `/games/general/voices/false-${index + 1}.mp3` })),
   { key: 'voice-win', src: '/games/general/voices/win.mp3', volume: 0.9 },
+  { key: 'voice-wolf-haha', src: '/games/general/voices/wolf-haha.mp3', volume: 0.9 },
 ] as const
 
 export default function DragDropGame() {
@@ -55,10 +67,18 @@ export default function DragDropGame() {
   const [correctTarget, setCorrectTarget] = useState<string | null>(null)
   const [floatingScore, setFloatingScore] = useState<FloatingScore>(null)
   const [numberTray, setNumberTray] = useState<NumberValue[]>(INITIAL_NUMBER_TRAY)
+  const [cappyReaction, setCappyReaction] = useState<CappyReaction>(null)
+  const [stolenNumber, setStolenNumber] = useState<NumberValue | null>(null)
+  const [wolfRounds, setWolfRounds] = useState<Set<number>>(createWolfRounds)
+  const gameAreaRef = useRef<HTMLDivElement>(null)
+  const answerTrayRef = useRef<HTMLDivElement>(null)
   const level = levels[currentLevel]
   const density = level.groups && level.groups.length >= 4 ? 'dense' : level.groups && level.groups.length === 1 ? 'simple' : 'standard'
   const startMusic = useBackgroundMusic(soundEnabled, isReady && gameStarted)
   const voices = useGameVoices(DRAG_DROP_VOICES, soundEnabled)
+  const wolfCorrectValues = useMemo(() => Array.from(new Set(Object.values(level.answers))), [level.answers])
+  const playWolfLaugh = useCallback(() => voices.playEffect('voice-wolf-haha'), [voices])
+  const handleWolfSteal = useCallback((value: NumberValue) => setStolenNumber(value), [])
 
   useEffect(() => {
     let cancelled = false
@@ -75,6 +95,8 @@ export default function DragDropGame() {
       images: [
         '/games/drag-drop/images/farm-background.png',
         '/games/general/images/player-avatar.png',
+        '/games/drag-drop/images/cappy-companion-sprites.png',
+        '/games/drag-drop/images/wolf-thief-sprites.png',
       ],
       audio: [GAME_BACKGROUND_MUSIC, ...DRAG_DROP_VOICES.map((voice) => voice.src)],
     }, (progress) => {
@@ -88,6 +110,7 @@ export default function DragDropGame() {
 
   useEffect(() => {
     setNumberTray(shuffleNumbers())
+    setStolenNumber(null)
     const now = Date.now()
     targetStartedAtRef.current = Object.fromEntries(Object.keys(level.answers).map((targetId) => [targetId, now]))
     targetAttemptsRef.current = {}
@@ -107,6 +130,9 @@ export default function DragDropGame() {
     setNumberTray(shuffleNumbers())
     setCurrentLevel(0); setScore(0); setCompletedTargets({}); setIsTransitioning(false)
     setGameCompleted(false); setGamePaused(false); setGameStarted(true); setDrag(null); setTrackingTask(undefined)
+    setCappyReaction(null)
+    setStolenNumber(null)
+    setWolfRounds(createWolfRounds())
     startTracking()
   }, [startTracking, voices])
 
@@ -124,6 +150,7 @@ export default function DragDropGame() {
     targetAttemptsRef.current[targetId] = attempt
     targetStartedAtRef.current[targetId] = Date.now()
     if (correct) {
+      setCappyReaction({ id: Date.now(), type: 'correct' })
       voices.playEffect('drag-ting')
       voices.play(TRUE_VOICES[Math.floor(Math.random() * TRUE_VOICES.length)], 'true')
       setCompletedTargets((current) => ({ ...current, [targetId]: value }))
@@ -131,6 +158,7 @@ export default function DragDropGame() {
       setFloatingScore({ id: Date.now(), x: clientX, y: clientY, value: '+10', correct: true })
       window.setTimeout(() => setCorrectTarget(null), 500)
     } else {
+      setCappyReaction({ id: Date.now(), type: 'wrong' })
       voices.playEffect('drag-buzzer')
       voices.play(FALSE_VOICES[Math.floor(Math.random() * FALSE_VOICES.length)], 'false')
       setScore((current) => Math.max(0, current - 2))
@@ -191,16 +219,21 @@ export default function DragDropGame() {
         startTracking(); setGameStarted(true)
         window.setTimeout(() => voices.playOnce('intro', 'drag-intro', 'intro'), 500)
       }} />
-      <div className="relative h-full touch-none overflow-hidden bg-sky-300 bg-cover bg-center" style={{ backgroundImage: "url('/games/drag-drop/images/farm-background.png')" }}>
+      <div ref={gameAreaRef} className="relative h-full touch-none overflow-hidden bg-sky-300 bg-cover bg-center" style={{ backgroundImage: "url('/games/drag-drop/images/farm-background.png')" }}>
         <div className={styles.gameplayPanel} data-density={density}>
           <div className={styles.questionArea}>
             {level.groups && <CountGroups groups={level.groups} completed={completedTargets} wrongTarget={wrongTarget} correctTarget={correctTarget} />}
             {level.sequence && <SequenceRow cells={level.sequence} completed={completedTargets} wrongTarget={wrongTarget} correctTarget={correctTarget} />}
           </div>
-          <div className={styles.answerTray}>
-            {numberTray.map((value) => <button key={value} type="button" onPointerDown={(event) => beginDrag(event, value)} onPointerMove={moveDrag} onPointerUp={(event) => endDrag(event, value)} onPointerCancel={() => setDrag(null)} className={styles.answerButton} style={{ backgroundColor: NUMBER_COLORS[value] }} aria-label={`Kéo số ${value}`}>{value}</button>)}
+          <div ref={answerTrayRef} className={styles.answerTray}>
+            {numberTray.map((value) => {
+              const stolen = stolenNumber === value
+              return <button key={value} data-answer-tile data-answer-value={value} type="button" disabled={stolen} onPointerDown={(event) => beginDrag(event, value)} onPointerMove={moveDrag} onPointerUp={(event) => endDrag(event, value)} onPointerCancel={() => setDrag(null)} className={`${styles.answerButton} ${stolen ? styles.answerButtonStolen : ''}`} style={{ backgroundColor: stolen ? undefined : NUMBER_COLORS[value] }} aria-label={stolen ? 'Ô số đã bị Sói lấy' : `Kéo số ${value}`}>{stolen ? '' : value}</button>
+            })}
           </div>
         </div>
+        <CappyCompanion active={gameStarted && !gamePaused} round={currentLevel} dragPosition={drag ? { x: drag.x, y: drag.y } : null} reaction={cappyReaction} celebrating={gameCompleted} finalRound={currentLevel === levels.length - 1} gameRef={gameAreaRef} trayRef={answerTrayRef} />
+        <WolfCompanion active={gameStarted && !gamePaused && !isTransitioning && !gameCompleted && wolfRounds.has(currentLevel)} round={currentLevel} correctValues={wolfCorrectValues} dragActive={drag !== null} gameRef={gameAreaRef} trayRef={answerTrayRef} onSteal={handleWolfSteal} onLaugh={playWolfLaugh} />
         {drag && <div className="pointer-events-none fixed z-[100] grid h-14 w-14 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-2xl border-[3px] border-white text-3xl font-black text-white shadow-2xl" style={{ left: drag.x, top: drag.y, backgroundColor: NUMBER_COLORS[drag.value], transform: 'translate(-50%, -50%) scale(1.08)' }}>{drag.value}</div>}
         {floatingScore && <div key={floatingScore.id} className={`pointer-events-none fixed z-[110] text-xl font-black ${styles.floatingScore} ${floatingScore.correct ? 'text-emerald-600' : 'text-red-500'}`} style={{ left: floatingScore.x, top: floatingScore.y, textShadow: '0 2px 0 white, 0 -2px 0 white, 2px 0 0 white, -2px 0 0 white' }}>{floatingScore.value}</div>}
         {isTransitioning && !gameCompleted && <div className="pointer-events-none absolute inset-0 z-30" aria-hidden="true"><div className={styles.fireworks}>{Array.from({ length: 12 }, (_, index) => <span key={index} className={styles.fireworkParticle} />)}</div></div>}
