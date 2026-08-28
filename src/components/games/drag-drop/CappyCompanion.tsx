@@ -84,7 +84,7 @@ export default function CappyCompanion({ active, round, dragPosition, reaction, 
   if (!active) return null
   return <div className={`${styles.cappy} ${styles[state.toLowerCase()]} ${state === 'SEARCHING' && round === 0 ? styles.fullSearch : ''} ${state === 'SEARCHING' && round > 0 ? styles.inPlace : ''} ${state === 'SEARCHING' && finalRound ? styles.finalHop : ''}`} style={{ left: `${position.x}%`, top: `${position.y}%` }} data-cappy-state={state} aria-hidden="true">
     <span className={styles.frame}>
-      <Image src="/games/drag-drop/images/cappy-activities-v3-transparent.png" alt="" width={1536} height={1024} draggable={false} unoptimized />
+      <Image src="/games/drag-drop/images/cappy-companion-sprites.png" alt="" width={1536} height={1024} draggable={false} unoptimized />
     </span>
   </div>
 }

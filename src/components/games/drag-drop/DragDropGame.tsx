@@ -95,8 +95,8 @@ export default function DragDropGame() {
       images: [
         '/games/drag-drop/images/farm-background.png',
         '/games/general/images/player-avatar.png',
-        '/games/drag-drop/images/cappy-activities-v3-transparent.png',
-        '/games/drag-drop/images/wolf-steal-v2-transparent.png',
+        '/games/drag-drop/images/cappy-companion-sprites.png',
+        '/games/drag-drop/images/wolf-thief-sprites.png',
       ],
       audio: [GAME_BACKGROUND_MUSIC, ...DRAG_DROP_VOICES.map((voice) => voice.src)],
     }, (progress) => {
