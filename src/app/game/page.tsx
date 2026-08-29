@@ -46,19 +46,18 @@ const games = [
 
 export default function GamePage() {
   return (
-    <><GameAuthHeader /><main className="relative overflow-hidden bg-gradient-to-b from-sky-50 to-pink-50 px-3 py-7 md:py-10">
-      <section className="relative mx-auto max-w-3xl">
+    <><GameAuthHeader /><main className="relative min-h-[calc(100dvh-4rem)] overflow-hidden bg-gradient-to-b from-sky-50 to-pink-50 px-4 py-7 md:px-6 md:py-10">
+      <section className="relative mx-auto max-w-6xl">
         <div className="flex items-center justify-center gap-3 text-center">
           <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-sky-500 text-white shadow-lg shadow-sky-200">
             <Gamepad2 size={24} aria-hidden="true" />
           </div>
           <div className="text-left">
             <h1 className="text-2xl font-black text-slate-900 md:text-3xl">Bé Băng Games</h1>
-            <p className="text-xs font-bold text-slate-500 md:text-sm">Bé muốn chơi game nào?</p>
           </div>
         </div>
 
-        <div className="mt-6 grid grid-cols-2 gap-3 md:gap-6">
+        <div className="mt-7 grid grid-cols-2 gap-3 md:gap-5 lg:grid-cols-4">
           {games.map((game) => (
             <Link
               key={game.href}
@@ -70,7 +69,7 @@ export default function GamePage() {
                 src={game.image}
                 alt={`Ảnh game ${game.title}`}
                 fill
-                sizes="(min-width: 768px) 360px, 48vw"
+                sizes="(min-width: 1024px) 270px, 48vw"
                 className="object-cover transition duration-500 group-hover:scale-105"
                 style={{ objectPosition: game.position }}
                 priority

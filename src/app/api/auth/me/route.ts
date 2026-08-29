@@ -1,14 +1,17 @@
 import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
-import { getCurrentUser } from '@/lib/auth/current-user'
+import { getCurrentAuth } from '@/lib/auth/current-user'
 import { REFRESH_COOKIE } from '@/lib/auth/config'
 
 export const runtime = 'nodejs'
 export async function GET() {
-  const user = await getCurrentUser()
-  return NextResponse.json({
-    authenticated: Boolean(user),
+  const auth = await getCurrentAuth()
+  const response = NextResponse.json({
+    authenticated: Boolean(auth),
     refreshAvailable: Boolean(cookies().get(REFRESH_COOKIE)?.value),
-    user,
+    user: auth?.user ?? null,
+    accessTokenExpiresAt: auth?.expiresAt ?? null,
   })
+  response.headers.set('Cache-Control', 'no-store')
+  return response
 }

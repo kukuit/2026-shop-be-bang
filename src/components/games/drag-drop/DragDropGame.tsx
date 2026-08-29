@@ -39,7 +39,7 @@ const FALSE_VOICES = ['voice-false-1', 'voice-false-2', 'voice-false-3', 'voice-
 const DRAG_DROP_VOICES = [
   { key: 'drag-intro', src: '/games/lessons/lop-1/toan/bai-1/drag-drop/voices/intro.mp3' },
   { key: 'drag-ting', src: '/games/drag-drop/voices/ting.mp3', volume: 0.8 },
-  { key: 'drag-buzzer', src: '/games/drag-drop/voices/buzzer.mp3', volume: 0.75 },
+  { key: 'drag-buzzer', src: '/games/drag-drop/voices/buzzer.mp3', volume: 0.25 },
   ...TRUE_VOICES.map((key, index) => ({ key, src: `/games/general/voices/true-${index + 1}.mp3` })),
   ...FALSE_VOICES.map((key, index) => ({ key, src: `/games/general/voices/false-${index + 1}.mp3` })),
   { key: 'voice-win', src: '/games/general/voices/win.mp3', volume: 0.9 },

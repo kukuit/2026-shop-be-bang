@@ -164,7 +164,7 @@ export default function ChatWidget() {
 
       <AnimatePresence>
         {isOpen && (
-          <motion.div key={context} initial={{ opacity: 0, y: 40, scale: 0.9 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 40, scale: 0.9 }} transition={{ type: 'spring', stiffness: 260, damping: 22 }} className="fixed bottom-20 right-4 z-50 flex w-80 max-w-[90vw] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+          <motion.div key={context} initial={{ opacity: 0, y: 40, scale: 0.9 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 40, scale: 0.9 }} transition={{ type: 'spring', stiffness: 260, damping: 22 }} className={`fixed bottom-20 right-4 z-50 flex w-[328px] max-w-[90vw] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl ${context === 'game' ? 'h-[min(456px,calc(100dvh-6rem))]' : ''}`}>
             <div className={`flex items-center justify-between bg-gradient-to-r px-3 py-2 text-white ${config.header}`}>
               <div className="flex items-center gap-2">
                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/20"><Bot className="h-6 w-6" /></div>
@@ -173,7 +173,7 @@ export default function ChatWidget() {
               <button onClick={() => setIsOpen(false)} className="rounded-full p-1 hover:bg-white/10" aria-label="Đóng chat"><X className="h-4 w-4" /></button>
             </div>
 
-            <div className="flex max-h-96 flex-col bg-slate-50">
+            <div className={`flex min-h-0 flex-col bg-slate-50 ${context === 'game' ? 'flex-1' : 'max-h-96'}`}>
               <div className="flex-1 space-y-2 overflow-y-auto px-3 py-3 text-sm">
                 {messages.map((message, index) => {
                   const isUser = message.role === 'user'
