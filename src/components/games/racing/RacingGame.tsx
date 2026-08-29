@@ -6,7 +6,6 @@ import { GameCompletion, GameLoadingScreen, GameShell, unlockGameAudio } from '.
 export default function RacingGame() {
   const host = useRef<HTMLDivElement>(null)
   const game = useRef<import('phaser').Game | null>(null)
-  const [testMode, setTestMode] = useState<boolean | null>(null)
   const [loadProgress, setLoadProgress] = useState(5)
   const [ready, setReady] = useState(false)
   const [score, setScore] = useState(0)
@@ -16,11 +15,6 @@ export default function RacingGame() {
   const [trackingTask, setTrackingTask] = useState<Promise<unknown>>()
 
   useEffect(() => {
-    setTestMode(new URLSearchParams(window.location.search).get('test') === '1')
-  }, [])
-
-  useEffect(() => {
-    if (testMode === null) return
     let cancelled = false
     Promise.all([import('phaser'), import('./config')]).then(([Phaser, { createRacingConfig }]) => {
       if (cancelled || !host.current || game.current) return
@@ -31,7 +25,6 @@ export default function RacingGame() {
           if (cancelled) return
           setLoadProgress(100)
           setReady(true)
-          if (testMode) phaserGame.events.emit('game-ui:start')
         },
       }))
       game.current = phaserGame
@@ -42,7 +35,7 @@ export default function RacingGame() {
       })
     })
     return () => { cancelled = true; game.current?.destroy(true); game.current = null }
-  }, [testMode])
+  }, [])
 
   const emit = (event: string, value?: boolean) => game.current?.events.emit(event, value)
   const restart = () => {
@@ -54,8 +47,8 @@ export default function RacingGame() {
   return <GameShell score={score} currentRound={round} muted={muted}
     onMutedChange={(value) => { setMuted(value); emit('game-ui:mute', value) }}
     onPauseChange={(value) => emit('game-ui:pause', value)} onRestart={restart}>
-    {testMode !== true && <GameLoadingScreen progress={loadProgress} ready={ready} unlockAudio={() => unlockGameAudio(game.current)} onStart={() => { emit('game-ui:start') }} />}
-    <div ref={host} className={`h-full w-full touch-none [&_canvas]:block ${ready || testMode === true ? 'opacity-100' : 'opacity-0'}`}
+    <GameLoadingScreen progress={loadProgress} ready={ready} unlockAudio={() => unlockGameAudio(game.current)} onStart={() => { emit('game-ui:start') }} />
+    <div ref={host} className={`h-full w-full touch-none [&_canvas]:block ${ready ? 'opacity-100' : 'opacity-0'}`}
       role="application" aria-label="Trò chơi đua xe nhận biết số từ 0 đến 5" aria-hidden={!ready} />
     {complete && <GameCompletion score={score} trackingTask={trackingTask} onRestart={restart} />}
   </GameShell>

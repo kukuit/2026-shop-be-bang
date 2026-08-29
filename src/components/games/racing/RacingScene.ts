@@ -12,6 +12,13 @@ type AnswerGate = Phaser.GameObjects.Container & { answer: number; lane: Lane }
 type WolfEventPhase = 'IDLE' | 'ENTERING' | 'APPROACHING' | 'PUSHING' | 'LAUGHING' | 'ESCAPING'
 
 const shuffle = <T>(values: T[]) => Phaser.Utils.Array.Shuffle([...values])
+const CAPPY_CAR_SIZE = 224
+// Each wolf frame contains more transparent padding than the tightly cropped
+// Cappy image. A 290px frame gives both visible car silhouettes the same size.
+const WOLF_FRAME_SIZE = 290
+const WOLF_FRAME_SOURCE_SIZE = 512
+const WOLF_BASE_SCALE = WOLF_FRAME_SIZE / WOLF_FRAME_SOURCE_SIZE
+const WOLF_CAR_Y = CAR_Y
 
 export class RacingScene extends Phaser.Scene {
   private state = RacingState.RUNNING
@@ -44,6 +51,7 @@ export class RacingScene extends Phaser.Scene {
   private wolfEventActive = false
   private wolfImpactActive = false
   private wolfEventPhase: WolfEventPhase = 'IDLE'
+  private wolfRounds = new Set<number>()
   private wolfTriggeredRounds = new Set<number>()
   private wolfTimers = new Set<Phaser.Time.TimerEvent>()
   private tracker?: GameTracker
@@ -134,6 +142,7 @@ export class RacingScene extends Phaser.Scene {
     this.wolfEventActive = false
     this.wolfImpactActive = false
     this.wolfEventPhase = 'IDLE'
+    this.wolfRounds = new Set(shuffle([2, 3, 4, 5, 6, 7, 8, 9]).slice(0, 4))
     this.wolfTriggeredRounds.clear()
     this.wolfTimers.clear()
   }
@@ -171,7 +180,7 @@ export class RacingScene extends Phaser.Scene {
 
   private createCar() {
     const shadow = this.add.ellipse(0, 93, 194, 38, 0x000000, .28)
-    const cappyCar = this.add.image(0, 0, 'racing-cappy-car').setDisplaySize(224, 224)
+    const cappyCar = this.add.image(0, 0, 'racing-cappy-car').setDisplaySize(CAPPY_CAR_SIZE, CAPPY_CAR_SIZE)
     this.car = this.add.container(carLaneX(this.currentLane), CAR_Y, [shadow, cappyCar]).setDepth(30)
   }
 
@@ -382,7 +391,7 @@ export class RacingScene extends Phaser.Scene {
   }
 
   private scheduleWolfForCurrentRound() {
-    // Test configuration: trigger exactly once in every one of the 10 rounds.
+    if (!this.wolfRounds.has(this.questionIndex)) return
     if (this.wolfTriggeredRounds.has(this.questionIndex) || this.wolfEventActive) return
     this.wolfTriggeredRounds.add(this.questionIndex)
     let timer!: Phaser.Time.TimerEvent
@@ -401,15 +410,12 @@ export class RacingScene extends Phaser.Scene {
     const side: -1 | 1 = Phaser.Math.RND.pick([-1, 1] as const)
     const startX = side < 0 ? -150 : GAME_WIDTH + 150
     const peekX = side < 0 ? 18 : GAME_WIDTH - 18
-    this.wolf = this.add.sprite(startX, CAR_Y, 'racing-wolf-states', 0)
-      // The wolf occupies more vertical space inside each frame than Cappy;
-      // 290px makes their complete visible silhouettes roughly equal in size.
-      .setDisplaySize(290, 290)
+    this.wolf = this.add.sprite(startX, WOLF_CAR_Y, 'racing-wolf-states', 0)
       .setFlipX(side < 0)
-      .setScale(.9)
+      .setScale(WOLF_BASE_SCALE * .9)
       .setDepth(31)
     this.tweens.add({
-      targets: this.wolf, x: peekX, y: CAR_Y, scale: 1,
+      targets: this.wolf, x: peekX, y: WOLF_CAR_Y, scale: WOLF_BASE_SCALE,
       duration: 480, ease: 'Cubic.Out', onComplete: () => this.wolfApproach(side),
     })
   }
@@ -420,7 +426,7 @@ export class RacingScene extends Phaser.Scene {
     this.wolf.setFrame(1)
     const approachX = Phaser.Math.Clamp(this.car.x + side * 215, 92, GAME_WIDTH - 92)
     this.tweens.add({
-      targets: this.wolf, x: approachX, y: CAR_Y, scale: 1,
+      targets: this.wolf, x: approachX, y: WOLF_CAR_Y, scale: WOLF_BASE_SCALE,
       duration: 420, ease: 'Sine.InOut', onComplete: () => this.wolfPush(side),
     })
   }
@@ -465,7 +471,10 @@ export class RacingScene extends Phaser.Scene {
     this.wolf.setFrame(4)
     if (!this.sound.mute) this.wolfLaughSound?.play()
     this.tweens.add({
-      targets: this.wolf, scaleX: 1.035, scaleY: .97, angle: side * 2,
+      targets: this.wolf,
+      scaleX: WOLF_BASE_SCALE * 1.035,
+      scaleY: WOLF_BASE_SCALE * .97,
+      angle: side * 2,
       duration: 170, yoyo: true, repeat: 1, ease: 'Sine.InOut',
       onComplete: () => this.wolfEscape(side),
     })
@@ -479,7 +488,7 @@ export class RacingScene extends Phaser.Scene {
       targets: this.wolf,
       x: GAME_WIDTH / 2 + side * 82,
       y: HORIZON_Y + 55,
-      scale: .25,
+      scale: WOLF_BASE_SCALE * .25,
       alpha: 0,
       duration: 650,
       ease: 'Cubic.In',
@@ -689,7 +698,11 @@ export class RacingScene extends Phaser.Scene {
     this.time.delayedCall(2600, () => this.tweens.add({ targets: this.hint, alpha: 0, duration: 500 }))
   }
   private setMuted(value: boolean) { this.sound.mute = value; if (!value && this.gameStarted) this.startMusic() }
-  private setPaused(value: boolean) { this.paused = value; value ? this.tweens.pauseAll() : this.tweens.resumeAll() }
+  private setPaused(value: boolean) {
+    this.paused = value
+    this.wolfTimers.forEach((timer) => { timer.paused = value })
+    value ? this.tweens.pauseAll() : this.tweens.resumeAll()
+  }
   private restart() { this.gameStarted = false; this.paused = false; this.scene.restart() }
   private cleanup() {
     this.clearWolfEvent()
