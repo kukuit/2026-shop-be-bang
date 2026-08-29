@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { refreshAccessToken } from '@/lib/auth/client-refresh'
 
 function safeDestination(value: string | null) {
   if (value === '/admin' || value?.startsWith('/admin/')) return value
@@ -15,8 +16,8 @@ function ContinueAuthContent() {
 
   useEffect(() => {
     const destination = safeDestination(searchParams.get('next'))
-    fetch('/api/auth/refresh', { method: 'POST' })
-      .then((response) => router.replace(response.ok ? destination : '/game?auth=required'))
+    refreshAccessToken()
+      .then((result) => router.replace(result.ok ? destination : '/game?auth=required'))
       .catch(() => router.replace('/game?auth=required'))
   }, [router, searchParams])
 

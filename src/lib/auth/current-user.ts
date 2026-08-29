@@ -14,6 +14,15 @@ export async function getCurrentUser() {
   return user?.status === 'active' ? user : null
 }
 
+export async function getCurrentAuth() {
+  const token = cookies().get(ACCESS_COOKIE)?.value
+  if (!token) return null
+  const payload = verifyAccessToken(token)
+  if (!payload || !(await isSessionActive(payload.sessionId, payload.sub))) return null
+  const user = await findSafeUserById(payload.sub)
+  return user?.status === 'active' ? { user, expiresAt: payload.exp * 1000 } : null
+}
+
 export async function requireAuth() {
   const user = await getCurrentUser()
   return user ? { ok: true as const, user } : { ok: false as const, status: 401 as const }

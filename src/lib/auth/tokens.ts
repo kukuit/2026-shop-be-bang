@@ -11,8 +11,8 @@ export function createAccessToken(userId: string, sessionId: string) {
 export function verifyAccessToken(token: string): AccessTokenPayload | null {
   try {
     const payload = jwt.verify(token, accessSecret(), { algorithms: ['HS256'] })
-    if (typeof payload === 'string' || payload.type !== 'access' || typeof payload.sub !== 'string' || typeof payload.sessionId !== 'string') return null
-    return { sub: payload.sub, sessionId: payload.sessionId, type: 'access' }
+    if (typeof payload === 'string' || payload.type !== 'access' || typeof payload.sub !== 'string' || typeof payload.sessionId !== 'string' || typeof payload.exp !== 'number') return null
+    return { sub: payload.sub, sessionId: payload.sessionId, type: 'access', exp: payload.exp }
   } catch { return null }
 }
 

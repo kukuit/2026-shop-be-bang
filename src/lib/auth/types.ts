@@ -10,5 +10,5 @@ export type SafeAuthUser = {
   activeGame: boolean
 }
 
-export type AccessTokenPayload = { sub: string; sessionId: string; type: 'access' }
+export type AccessTokenPayload = { sub: string; sessionId: string; type: 'access'; exp: number }
 export type RefreshTokenPayload = { sessionId: string; secret: string }

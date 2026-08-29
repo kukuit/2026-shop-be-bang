@@ -6,7 +6,7 @@ import { createAuthSession } from '@/lib/auth/session'
 import { createAccessToken } from '@/lib/auth/tokens'
 import { authUserRef, findUserByUsername } from '@/lib/auth/users'
 import { verifyPassword } from '@/lib/auth/password'
-import { accessSecret } from '@/lib/auth/config'
+import { ACCESS_TTL_SECONDS, accessSecret } from '@/lib/auth/config'
 import {
   clearLoginFailures,
   loginRateLimitStatus,
@@ -47,12 +47,16 @@ export async function POST(request: Request) {
     }
     accessSecret()
     const session = await createAuthSession(record.user.id)
-    const response = NextResponse.json({ user: record.user })
+    const response = NextResponse.json({
+      user: record.user,
+      accessTokenExpiresAt: Date.now() + ACCESS_TTL_SECONDS * 1000,
+    })
     setAuthCookies(
       response,
       createAccessToken(record.user.id, session.sessionId),
       session.refreshToken
     )
+    response.headers.set('Cache-Control', 'no-store')
     await authUserRef(record.user.id).update({
       lastLoginAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),

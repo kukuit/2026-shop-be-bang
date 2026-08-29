@@ -12,9 +12,14 @@ export default function AuthMenu({ game = false }: { game?: boolean }) {
   if (loading)
     return (
       <span
-        className="h-9 w-24 animate-pulse rounded-xl bg-slate-100"
+        className="flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-2.5 text-sm font-semibold text-slate-500"
         aria-label="Đang tải tài khoản"
-      />
+      >
+        <span className="grid h-7 w-7 shrink-0 animate-pulse place-items-center rounded-full bg-slate-200 text-slate-400">
+          <UserRound size={16} aria-hidden="true" />
+        </span>
+        <span className="hidden whitespace-nowrap sm:inline">Đang tải user...</span>
+      </span>
     )
   if (!user)
     return (
@@ -36,8 +41,10 @@ export default function AuthMenu({ game = false }: { game?: boolean }) {
         onClick={() => setMenuOpen((v) => !v)}
         className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold"
       >
-        <UserRound size={18} />
-        {user.displayName}
+        <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-blue-100 text-xs font-black uppercase text-blue-700">
+          {user.displayName.trim().charAt(0) || <UserRound size={16} />}
+        </span>
+        <span className="hidden max-w-32 truncate sm:inline">{user.displayName}</span>
       </button>
       {menuOpen && (
         <div className="absolute right-0 mt-2 w-48 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-xl">
