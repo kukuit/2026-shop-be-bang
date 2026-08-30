@@ -1,7 +1,7 @@
 'use client'
 import Link from 'next/link'
 import { useState } from 'react'
-import { LogOut, UserRound } from 'lucide-react'
+import { LogIn, LogOut, UserRound } from 'lucide-react'
 import { useAuth } from './AuthProvider'
 import LoginModal from './LoginModal'
 
@@ -27,9 +27,13 @@ export default function AuthMenu({ game = false }: { game?: boolean }) {
         <button
           type="button"
           onClick={() => setLoginOpen(true)}
-          className={`rounded-xl px-4 py-2 text-sm font-bold text-white ${game ? 'bg-blue-600' : 'bg-pink-500'}`}
+          aria-label="Đăng nhập"
+          className={`grid h-10 place-items-center rounded-xl text-sm font-bold text-white ${
+            game ? 'w-10 bg-blue-600 px-0 sm:flex sm:w-auto sm:px-4' : 'px-4'
+          } ${game ? '' : 'bg-pink-500'}`}
         >
-          Đăng nhập
+          {game && <LogIn size={20} aria-hidden="true" className="sm:hidden" />}
+          <span className={game ? 'hidden sm:inline' : ''}>Đăng nhập</span>
         </button>
         <LoginModal open={loginOpen} onClose={() => setLoginOpen(false)} />
       </>
@@ -39,7 +43,7 @@ export default function AuthMenu({ game = false }: { game?: boolean }) {
       <button
         type="button"
         onClick={() => setMenuOpen((v) => !v)}
-        className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold"
+        className="flex h-11 w-11 items-center justify-center gap-2 rounded-full border border-slate-200 bg-white p-0 text-sm font-bold sm:h-auto sm:w-auto sm:justify-start sm:px-3 sm:py-2"
       >
         <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-blue-100 text-xs font-black uppercase text-blue-700">
           {user.displayName.trim().charAt(0) || <UserRound size={16} />}
@@ -48,6 +52,12 @@ export default function AuthMenu({ game = false }: { game?: boolean }) {
       </button>
       {menuOpen && (
         <div className="absolute right-0 mt-2 w-48 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-xl">
+          <div className="flex items-center gap-2 border-b border-slate-100 px-4 py-2.5 sm:hidden">
+            <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-blue-100 text-xs font-black uppercase text-blue-700">
+              {user.displayName.trim().charAt(0) || <UserRound size={16} />}
+            </span>
+            <span className="min-w-0 truncate text-sm font-bold text-slate-800">{user.displayName}</span>
+          </div>
           {game && user.activeGame && (
             <Link href="/game/me" className="block px-4 py-2 text-sm hover:bg-slate-50">
               Tiến trình học

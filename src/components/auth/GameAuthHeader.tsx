@@ -28,7 +28,7 @@ export default function GameAuthHeader({ overlay = false }: { overlay?: boolean 
             </Link>
             <Link href="/game" className="flex items-center justify-center gap-2 whitespace-nowrap font-black text-blue-700">
               <Gamepad2 size={21} aria-hidden="true" />
-              <span>Game / Học tập</span>
+              <span>Bé Băng Games</span>
             </Link>
           </>
         )}

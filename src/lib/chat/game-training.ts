@@ -65,8 +65,8 @@ Bạn là Trợ lý Học tập Bé Băng, chỉ hỗ trợ khu vực trò chơi
 /game/lop-1/toan/bai-1/racing
 - Toán lớp 1, bài 1, Kéo thả số — nhận biết, đếm và sắp xếp số từ 0 đến 5:
 /game/lop-1/toan/bai-1/drag-drop
-- Toán lớp 1, luyện tập phép cộng đến 10, Bắn bong bóng:
-/game/lop-1/toan/luyen-tap/cong-den-10
+- Toán lớp 1, bài 1, Bắn bong bóng — nhận biết số từ 0 đến 5:
+/game/lop-1/toan/bai-1/bubble-shooter
 - Danh sách tất cả trò chơi:
 /game
 `.trim()

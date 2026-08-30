@@ -1,5 +1,6 @@
 import * as Phaser from 'phaser'
 import { BubbleMathScene } from './scenes/BubbleMathScene'
+import type { BubbleShooterGameConfig } from './types/game'
 
 type GameLoadingCallbacks = {
   onProgress: (progress: number) => void
@@ -8,6 +9,7 @@ type GameLoadingCallbacks = {
 
 export const createGameConfig = (
   parent: HTMLElement,
+  lesson: BubbleShooterGameConfig,
   { onProgress, onReady }: GameLoadingCallbacks,
 ): Phaser.Types.Core.GameConfig => ({
   type: Phaser.AUTO,
@@ -15,7 +17,7 @@ export const createGameConfig = (
   width: 720,
   height: 1280,
   backgroundColor: '#bde9ff',
-  scene: [BubbleMathScene],
+  scene: [new BubbleMathScene(lesson)],
   physics: {
     default: 'arcade',
     arcade: { gravity: { x: 0, y: 0 }, debug: false },

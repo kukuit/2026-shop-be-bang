@@ -34,7 +34,12 @@ const sessionSchema = z
   .object({
     sessionId: z.string().uuid(),
     lessonId: z.string().refine(isLessonId, 'Unknown lessonId'),
-    gameId: z.enum([GAME_IDS.DRAG_DROP, GAME_IDS.GOLD_MINING, GAME_IDS.RACING]),
+    gameId: z.enum([
+      GAME_IDS.BUBBLE_SHOOTER,
+      GAME_IDS.DRAG_DROP,
+      GAME_IDS.GOLD_MINING,
+      GAME_IDS.RACING,
+    ]),
     score: z.number().int().min(0).max(100000),
     totalQuestions: z.number().int().min(0).max(1000),
     correctCount: z.number().int().min(0).max(1000),

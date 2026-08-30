@@ -5,19 +5,19 @@ import { QuestionSystem } from '../systems/QuestionSystem'
 import { ScoreSystem } from '../systems/ScoreSystem'
 import { BubbleSpawner } from '../systems/BubbleSpawner'
 import { BUBBLE_CONFIG } from '../config/bubble'
-import type { MathQuestion } from '../types/game'
+import type { BubbleShooterGameConfig, MathQuestion } from '../types/game'
 import { GAME_BACKGROUND_MUSIC } from '../../general/audio'
 import { GameVoiceManager, type VoicePriority } from '../../general/GameVoiceManager'
+import { createGameTracker, type GameTracker } from '../../general/tracking'
 
 const WIDTH = 720
 const HEIGHT = 1280
-const TOTAL_QUESTIONS = 10
 const HUD_TOP = 1182
 const QUESTION_Y = 145
 type RoundState = 'PLAYING' | 'CORRECT' | 'SHOW_RESULT' | 'ROUND_TRANSITION' | 'NEW_QUESTION' | 'COMPLETE'
 
 export class BubbleMathScene extends Phaser.Scene {
-  private readonly questions = new QuestionSystem()
+  private questions?: QuestionSystem
   private readonly score = new ScoreSystem()
   private currentQuestion!: MathQuestion
   private bubbles!: Phaser.GameObjects.Group
@@ -52,9 +52,14 @@ export class BubbleMathScene extends Phaser.Scene {
   private wolfActionTimers = new Set<Phaser.Time.TimerEvent>()
   private wolfRounds = new Set<number>()
   private winVoiceTimer?: ReturnType<typeof setTimeout>
+  private tracker?: GameTracker
 
-  constructor() {
+  constructor(private readonly lesson: BubbleShooterGameConfig) {
     super('BubbleMathScene')
+  }
+
+  private get totalQuestions() {
+    return this.lesson.totalRounds
   }
 
   preload() {
@@ -82,7 +87,7 @@ export class BubbleMathScene extends Phaser.Scene {
     this.load.audio('voice-bullet-bomb', '/games/bubble-shooter/voices/bullet-bomb.mp3')
     this.load.audio('voice-bullet-bubble', '/games/bubble-shooter/voices/bullet-bubble.mp3')
     this.load.audio('voice-bubble-pop', '/games/bubble-shooter/voices/bubble-pop.mp3')
-    this.load.audio('voice-intro', '/games/lessons/lop-1/toan/bai-1/bubble-shooter/voices/intro.mp3')
+    this.load.audio('voice-intro', this.lesson.introVoice ?? '/games/lessons/lop-1/toan/bai-1/bubble-shooter/voices/intro.mp3')
     this.load.audio('voice-true-1', '/games/general/voices/true-1.mp3')
     this.load.audio('voice-true-2', '/games/general/voices/true-2.mp3')
     this.load.audio('voice-true-3', '/games/general/voices/true-3.mp3')
@@ -119,7 +124,7 @@ export class BubbleMathScene extends Phaser.Scene {
       fontFamily: 'Arial, sans-serif', fontSize: '34px', fontStyle: 'bold', color: '#713f12',
       backgroundColor: '#fef3c7', padding: { x: 18, y: 10 },
     }).setOrigin(0, 1).setDepth(30)
-    this.progressText = this.add.text(WIDTH - 38, HEIGHT - 58, `1/${TOTAL_QUESTIONS}`, {
+    this.progressText = this.add.text(WIDTH - 38, HEIGHT - 58, `1/${this.totalQuestions}`, {
       fontFamily: 'Arial, sans-serif', fontSize: '34px', fontStyle: 'bold', color: '#312e81',
       backgroundColor: '#ffffff', padding: { x: 18, y: 10 },
     }).setOrigin(1, 1).setDepth(30)
@@ -233,10 +238,14 @@ export class BubbleMathScene extends Phaser.Scene {
     ])
   }
 
-  private startGameplay() {
+  private async startGameplay() {
     if (this.gameStarted) return
     this.gameStarted = true
     this.game.registry.set('game-ui:started', true)
+    const loadedQuestions = await this.lesson.loadQuestions()
+    if (!this.sys.isActive()) return
+    this.questions = new QuestionSystem(loadedQuestions.slice(0, this.totalQuestions))
+    this.tracker = this.lesson.tracking ? createGameTracker(this.lesson.tracking) : undefined
     this.prepareWolfRounds()
     this.ensureBackgroundMusic()
     this.scheduleTransition(500, () => {
@@ -336,7 +345,7 @@ export class BubbleMathScene extends Phaser.Scene {
     this.add.text(WIDTH * 5 / 6, HUD_TOP + 18, 'MÀN', {
       fontFamily: 'Arial, sans-serif', fontSize: '18px', fontStyle: 'bold', color: '#ffffff',
     }).setOrigin(0.5).setDepth(46)
-    this.progressText = this.add.text(WIDTH * 5 / 6, panelY + 18, `1/${TOTAL_QUESTIONS}`, {
+    this.progressText = this.add.text(WIDTH * 5 / 6, panelY + 18, `1/${this.totalQuestions}`, {
       fontFamily: 'Arial, sans-serif', fontSize: '32px', fontStyle: 'bold', color: '#ffffff',
       stroke: '#102a55', strokeThickness: 5,
     }).setOrigin(0.5).setDepth(46)
@@ -353,10 +362,16 @@ export class BubbleMathScene extends Phaser.Scene {
   private startQuestion() {
     this.roundState = 'PLAYING'
     this.clearRound()
-    this.currentQuestion = this.questions.next()
+    this.currentQuestion = this.questions!.next()
+    if (this.currentQuestion.learningKey) {
+      this.tracker?.startQuestion({
+        learningKey: this.currentQuestion.learningKey,
+        expectedAnswer: this.currentQuestion.answer,
+      })
+    }
     this.renderQuestion(this.currentQuestion.text)
     this.feedbackText.setText('')
-    this.progressText.setText(`${this.questionNumber}/${TOTAL_QUESTIONS}`)
+    this.progressText.setText(`${this.questionNumber}/${this.totalQuestions}`)
     this.updateLevelHud()
     this.nextButton.setVisible(false)
     this.locked = false
@@ -600,6 +615,14 @@ export class BubbleMathScene extends Phaser.Scene {
     const hitY = bubble.y
 
     if (bubble.value !== this.currentQuestion.answer) {
+      if (this.currentQuestion.learningKey) {
+        this.tracker?.recordAnswer({
+          learningKey: this.currentQuestion.learningKey,
+          correct: false,
+          expectedAnswer: this.currentQuestion.answer,
+          selectedAnswer: bubble.value,
+        })
+      }
       this.playRandomVoice(
         ['voice-false-1', 'voice-false-2', 'voice-false-3', 'voice-false-4', 'voice-false-5'],
         'false',
@@ -616,7 +639,15 @@ export class BubbleMathScene extends Phaser.Scene {
     this.locked = true
     this.bubbleSpawner.pause()
     this.projectiles.clear(true, true)
-    if (this.questionNumber !== TOTAL_QUESTIONS) {
+    if (this.currentQuestion.learningKey) {
+      this.tracker?.recordAnswer({
+        learningKey: this.currentQuestion.learningKey,
+        correct: true,
+        expectedAnswer: this.currentQuestion.answer,
+        selectedAnswer: bubble.value,
+      })
+    }
+    if (this.questionNumber !== this.totalQuestions) {
       this.playRandomVoice(
         ['voice-true-1', 'voice-true-2', 'voice-true-3', 'voice-true-4', 'voice-true-5'],
         'true',
@@ -674,7 +705,7 @@ export class BubbleMathScene extends Phaser.Scene {
       ease: 'Cubic.In',
     })
 
-    if (this.questionNumber === TOTAL_QUESTIONS) {
+    if (this.questionNumber === this.totalQuestions) {
       this.scheduleTransition(650, () => this.finishGame())
       return
     }
@@ -705,7 +736,13 @@ export class BubbleMathScene extends Phaser.Scene {
     this.projectiles.clear(true, true)
     this.questionNumber += 1
     this.showLevelTransitionLabel()
-    this.currentQuestion = this.questions.next()
+    this.currentQuestion = this.questions!.next()
+    if (this.currentQuestion.learningKey) {
+      this.tracker?.startQuestion({
+        learningKey: this.currentQuestion.learningKey,
+        expectedAnswer: this.currentQuestion.answer,
+      })
+    }
     this.updateLevelHud()
     this.animateProgress()
     this.renderQuestion(this.currentQuestion.text)
@@ -771,7 +808,8 @@ export class BubbleMathScene extends Phaser.Scene {
     this.feedbackText.setColor('#047857').setText(`Hoàn thành!  ★ ${this.score.current}`)
     this.feedbackText.setAlpha(0).setScale(0.9)
     this.tweens.add({ targets: this.feedbackText, alpha: 1, scale: 1, duration: 350, ease: 'Back.Out' })
-    this.game.events.emit('game-ui:complete', this.score.current)
+    const trackingTask = this.tracker?.finishSession(this.score.current)
+    this.game.events.emit('game-ui:complete', this.score.current, trackingTask)
     this.winVoiceTimer = setTimeout(() => {
       this.winVoiceTimer = undefined
       this.voiceManager?.playOnce('win', 'voice-win', 'win')
@@ -801,7 +839,7 @@ export class BubbleMathScene extends Phaser.Scene {
       this.feedbackText.setColor('#047857').setText('Chính xác! +10 ★')
       this.pop(bubble, true)
       this.scoreText.setText(this.scoreText.text.replace(/^.*?:\s*/, '★  '))
-      this.nextButtonLabel.setText(this.questionNumber === TOTAL_QUESTIONS ? 'Chơi lại  ↻' : 'Tiếp theo  →')
+      this.nextButtonLabel.setText(this.questionNumber === this.totalQuestions ? 'Chơi lại  ↻' : 'Tiếp theo  →')
       this.nextButton.setVisible(true)
     } else {
       const { score, deducted } = this.score.wrong()
@@ -836,7 +874,7 @@ export class BubbleMathScene extends Phaser.Scene {
 
   private goToNextQuestion() {
     if (!this.locked) return
-    this.questionNumber = this.questionNumber === TOTAL_QUESTIONS ? 1 : this.questionNumber + 1
+    this.questionNumber = this.questionNumber === this.totalQuestions ? 1 : this.questionNumber + 1
     this.startQuestion()
   }
 

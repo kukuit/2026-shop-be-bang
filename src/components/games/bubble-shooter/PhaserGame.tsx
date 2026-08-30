@@ -2,8 +2,9 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { GameCompletion, GameLoadingScreen, GameShell, unlockGameAudio } from '../general'
+import type { BubbleShooterGameConfig } from './types/game'
 
-export default function PhaserGame() {
+export default function PhaserGame({ config }: { config: BubbleShooterGameConfig }) {
   const containerRef = useRef<HTMLDivElement>(null)
   const gameRef = useRef<import('phaser').Game | null>(null)
   const [progress, setProgress] = useState(5)
@@ -12,6 +13,7 @@ export default function PhaserGame() {
   const [currentRound, setCurrentRound] = useState(1)
   const [muted, setMuted] = useState(false)
   const [gameCompleted, setGameCompleted] = useState(false)
+  const [trackingTask, setTrackingTask] = useState<Promise<void> | undefined>()
 
   useEffect(() => {
     let cancelled = false
@@ -19,7 +21,7 @@ export default function PhaserGame() {
     Promise.all([import('phaser'), import('./config')]).then(([Phaser, { createGameConfig }]) => {
       if (cancelled || !containerRef.current || gameRef.current) return
       setProgress(15)
-      gameRef.current = new Phaser.Game(createGameConfig(containerRef.current, {
+      gameRef.current = new Phaser.Game(createGameConfig(containerRef.current, config, {
         onProgress: (assetProgress) => {
           if (!cancelled) setProgress(15 + assetProgress * 84)
         },
@@ -31,8 +33,9 @@ export default function PhaserGame() {
       }))
       gameRef.current.events.on('game-ui:score', setScore)
       gameRef.current.events.on('game-ui:round', setCurrentRound)
-      gameRef.current.events.on('game-ui:complete', (finalScore: number) => {
+      gameRef.current.events.on('game-ui:complete', (finalScore: number, task?: Promise<void>) => {
         setScore(finalScore)
+        setTrackingTask(task)
         setGameCompleted(true)
         gameRef.current?.events.emit('game-ui:pause', true)
       })
@@ -43,7 +46,7 @@ export default function PhaserGame() {
       gameRef.current?.destroy(true)
       gameRef.current = null
     }
-  }, [])
+  }, [config])
 
   const sendToGame = (event: string, value?: boolean) => gameRef.current?.events.emit(event, value)
   const restart = () => {
@@ -51,6 +54,7 @@ export default function PhaserGame() {
     setGameCompleted(false)
     setScore(0)
     setCurrentRound(1)
+    setTrackingTask(undefined)
     sendToGame('game-ui:restart')
   }
 
@@ -71,7 +75,7 @@ export default function PhaserGame() {
         aria-label="Game bắn bong bóng toán học"
         aria-hidden={!isReady}
       />
-      {gameCompleted && <GameCompletion score={score} onRestart={restart} />}
+      {gameCompleted && <GameCompletion score={score} trackingTask={trackingTask} onRestart={restart} />}
     </GameShell>
   )
 }
