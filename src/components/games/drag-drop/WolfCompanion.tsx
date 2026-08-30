@@ -3,7 +3,6 @@
 import Image from 'next/image'
 import { RefObject, useEffect, useRef, useState } from 'react'
 import type { NumberValue } from './types'
-import { NUMBER_COLORS } from './levels'
 import styles from './WolfCompanion.module.css'
 
 type WolfState = 'HIDDEN' | 'PEEK' | 'RUN' | 'GRAB' | 'CARRY' | 'LAUGH'
@@ -18,11 +17,11 @@ type Props = {
   trayRef: RefObject<HTMLDivElement>
   onSteal: (value: NumberValue) => void
   onLaugh: () => void
+  answerDomain: readonly NumberValue[]
+  colorFor: (value: NumberValue) => string
 }
 
-const ALL_VALUES: NumberValue[] = [0, 1, 2, 3, 4, 5]
-
-export default function WolfCompanion({ active, round, correctValues, dragActive, gameRef, trayRef, onSteal, onLaugh }: Props) {
+export default function WolfCompanion({ active, round, correctValues, dragActive, gameRef, trayRef, onSteal, onLaugh, answerDomain, colorFor }: Props) {
   const [state, setState] = useState<WolfState>('HIDDEN')
   const [position, setPosition] = useState<Point>({ x: 106, y: 73 })
   const [stolenValue, setStolenValue] = useState<NumberValue | null>(null)
@@ -35,7 +34,7 @@ export default function WolfCompanion({ active, round, correctValues, dragActive
     clearTimers(); setState('HIDDEN'); setStolenValue(null)
     if (!active) return clearTimers
 
-    const wrongValues = ALL_VALUES.filter((value) => !correctValues.includes(value))
+    const wrongValues = answerDomain.filter((value) => !correctValues.includes(value))
     if (!wrongValues.length) return clearTimers
 
     const schedule = (delay: number, action: () => void) => timers.current.push(window.setTimeout(action, delay))
@@ -60,13 +59,13 @@ export default function WolfCompanion({ active, round, correctValues, dragActive
     }
     schedule(4000, begin)
     return clearTimers
-  }, [active, correctValues, gameRef, onLaugh, onSteal, round, trayRef])
+  }, [active, answerDomain, correctValues, gameRef, onLaugh, onSteal, round, trayRef])
 
   if (state === 'HIDDEN') return null
   return <div className={`${styles.wolf} ${styles[state.toLowerCase()]}`} style={{ left: `${position.x}%`, top: `${position.y}%` }} data-wolf-state={state} aria-hidden="true">
     <span className={styles.frame}>
       <Image src="/games/drag-drop/images/wolf-thief-sprites.png" alt="" width={1536} height={1024} draggable={false} unoptimized />
     </span>
-    {stolenValue !== null && (state === 'CARRY' || state === 'LAUGH') && <span className={styles.stolenTile} style={{ backgroundColor: NUMBER_COLORS[stolenValue] }}>{stolenValue}</span>}
+    {stolenValue !== null && (state === 'CARRY' || state === 'LAUGH') && <span className={styles.stolenTile} style={{ backgroundColor: colorFor(stolenValue) }}>{stolenValue}</span>}
   </div>
 }

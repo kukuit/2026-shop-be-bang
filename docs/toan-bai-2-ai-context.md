@@ -1,5 +1,47 @@
 # Bối cảnh kỹ thuật để phân tích và phát triển Toán lớp 1 - Bài 2
 
+> [!IMPORTANT]
+> **CODEX PHẢI AUDIT VÀ LẬP PLAN TRƯỚC, TUYỆT ĐỐI CHƯA CODE BÀI 2 TRONG PHA NÀY.**
+>
+> Đây là một refactor kiến trúc cho engine dùng chung của **cả 4 game**, không phải tác vụ
+> “copy Bài 1 rồi đổi 0–5 thành 6–10”. Nếu chỉ thay dữ liệu trực tiếp trong component/scene,
+> kiến trúc sẽ tiếp tục phụ thuộc Bài 1 và phải refactor lại khi phát triển Bài 3.
+
+## Quy trình bắt buộc: hai pha có cổng duyệt
+
+### Pha 1 — chỉ audit và lập kế hoạch
+
+Trong lượt làm việc đầu tiên, Codex chỉ được thực hiện các thao tác đọc/kiểm tra và phải:
+
+1. Đọc source thực tế của cả 4 game, route Bài 1, tracking, adaptive, catalog và API validation.
+2. Tìm đầy đủ các phụ thuộc gắn cứng vào Bài 1: lesson ID, learning key, value domain,
+   question generator, imports trong Phaser scene, tracking và adaptive.
+3. Vẽ ranh giới rõ ràng giữa engine dùng chung và lesson config/data riêng cho từng game.
+4. Lập kế hoạch refactor **theo file**, bao gồm thứ tự migration để Bài 1 luôn hoạt động.
+5. Nêu risk, backward-compatibility checks và test matrix cho cả Bài 1 lẫn Bài 2.
+6. Chỉ ra thiết kế có thể nhận thêm Bài 3 bằng config/data mới mà không phải refactor engine lần nữa.
+
+**Điểm dừng bắt buộc:** Sau khi trình bày audit và plan, Codex phải dừng và chờ người dùng
+duyệt. Không tạo `lesson.ts` Bài 2, không tạo route/game Bài 2, không sửa engine, không bắt đầu
+implementation trong cùng lượt — kể cả khi Codex tự đánh giá plan đã hợp lý.
+
+### Pha 2 — chỉ triển khai sau khi được duyệt
+
+Codex chỉ được bắt đầu sửa code khi người dùng xác nhận rõ ràng rằng plan Pha 1 đã được duyệt.
+Implementation phải bám theo plan đã duyệt. Nếu audit trong lúc làm phát hiện thay đổi kiến trúc lớn
+ngoài plan, Codex phải báo lại và xin duyệt phần điều chỉnh trước khi tiếp tục.
+
+### Điều kiện kiến trúc bắt buộc
+
+- Engine của mỗi game không được biết nó đang chạy Bài 1, Bài 2 hay một bài cụ thể nào.
+- Route chỉ chọn lesson config/question provider rồi truyền vào engine.
+- Bài 1 và Bài 2 dùng chung đúng một engine cho từng gameplay.
+- Không tạo component/scene Bài 2 bằng cách sao chép component/scene Bài 1.
+- Không “generic hóa giả” bằng cách mở rộng union `0 | 1 | ... | 10` nhưng vẫn khóa engine vào
+  một miền số cụ thể; value domain phải đến từ config hoặc question data.
+- Thêm một bài học tương lai phải chủ yếu là đăng ký metadata, learning keys, config/data và route,
+  không yêu cầu sửa lõi gameplay/tracking.
+
 Tài liệu này dùng làm đầu vào cho ChatGPT/Codex trước khi viết code cho route mới:
 
 `/game/lop-1/toan/bai-2/`
@@ -265,3 +307,20 @@ Route Bài 1 và Bài 2 chỉ chọn config/dataset tương ứng rồi truyền
 - Link Bài 2 được thêm vào `/game`, sitemap nếu cần, và `src/lib/chat/game-training.ts`.
 - TypeScript/build/lint/tests của dự án đều đạt.
 
+## Quy tắc thực thi dành cho Codex
+
+Khi tài liệu này được dùng làm prompt triển khai, câu trả lời đầu tiên của Codex phải là một
+**AUDIT + REFACTOR PLAN**, không phải code diff. Báo cáo Pha 1 tối thiểu phải có:
+
+- bảng các điểm hard-code theo từng game và file;
+- interface/config boundary đề xuất cho từng engine;
+- danh sách file dùng chung cần refactor;
+- danh sách file Bài 1 cần chuyển sang config nhưng không đổi hành vi;
+- danh sách file mới dành riêng cho Bài 2;
+- thứ tự triển khai và rollback points;
+- test matrix chứng minh Bài 1 không regression và tracking Bài 2 không lẫn Bài 1.
+
+Kết thúc báo cáo bằng trạng thái rõ ràng: **“Chưa sửa code; đang chờ duyệt plan.”** Chỉ một yêu
+cầu tiếp theo có ý nghĩa xác nhận như “duyệt plan”, “implement theo plan” hoặc tương đương mới
+mở khóa Pha 2. Việc người dùng cung cấp nội dung sư phạm Bài 2 không tự động được xem là duyệt
+refactor plan.

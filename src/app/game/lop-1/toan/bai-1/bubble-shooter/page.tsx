@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 
 export default function BubbleShooterPage() {
   return (
-    <main className="fixed inset-0 flex h-dvh w-screen items-center justify-center overflow-hidden bg-sky-200 overscroll-none">
+    <main className="flex h-dvh w-full items-center justify-center overflow-hidden bg-sky-200 overscroll-none">
       <GameClient />
     </main>
   )

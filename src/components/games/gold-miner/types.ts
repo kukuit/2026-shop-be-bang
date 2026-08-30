@@ -6,7 +6,10 @@ export type GoldMinerQuestion = {
   count: number
   correctAnswer: number
   choices: number[]
+  learningKey: LearningKey
 }
+
+export type GoldMinerGameConfig = GameLessonConfig<GoldMinerQuestion>
 
 export enum GoldMinerState {
   ROUND_START = 'ROUND_START',
@@ -29,3 +32,5 @@ export enum WolfState {
   ESCAPE = 'ESCAPE',
   COOLDOWN = 'COOLDOWN',
 }
+import type { GameLessonConfig } from '../general/lesson-config'
+import type { LearningKey } from '../general/tracking'

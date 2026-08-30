@@ -5,7 +5,7 @@ export type GameNavigationItem = { title: string; href: string }
 export type GameBreadcrumb = { label: string; href?: string }
 
 type Props = {
-  title: string
+  title?: string
   description?: string
   items: readonly GameNavigationItem[]
   breadcrumbs: readonly GameBreadcrumb[]
@@ -28,10 +28,10 @@ export default function GameNavigationGrid({ title, description, items, breadcru
           ))}
         </nav>
 
-        <div className="mt-5 md:mt-7">
-          <h1 className="text-2xl font-black text-slate-800 md:text-4xl">{title}</h1>
+        {(title || description) && <div className="mt-5 md:mt-7">
+          {title && <h1 className="text-2xl font-black text-slate-800 md:text-4xl">{title}</h1>}
           {description && <p className="mt-2 font-semibold text-slate-500">{description}</p>}
-        </div>
+        </div>}
 
         <div className="mt-5 grid grid-cols-2 gap-3 md:mt-7 md:gap-5 lg:grid-cols-4">
           {items.map((item, index) => (

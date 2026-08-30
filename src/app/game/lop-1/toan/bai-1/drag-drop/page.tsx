@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import DragDropGame from '@/components/games/drag-drop/DragDropGame'
+import GameClient from './GameClient'
 
 export const metadata: Metadata = {
   title: 'Kéo thả số - Toán lớp 1',
@@ -7,5 +7,5 @@ export const metadata: Metadata = {
 }
 
 export default function DragDropPage() {
-  return <main className="fixed inset-0 flex h-dvh w-screen items-center justify-center overflow-hidden bg-sky-200 overscroll-none"><DragDropGame /></main>
+  return <main className="flex h-dvh w-full items-center justify-center overflow-hidden bg-sky-200 overscroll-none"><GameClient /></main>
 }

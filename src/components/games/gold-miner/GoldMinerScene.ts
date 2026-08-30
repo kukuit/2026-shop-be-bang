@@ -1,9 +1,8 @@
 import * as Phaser from 'phaser'
 import { GAME_BACKGROUND_MUSIC } from '../general/audio'
-import { createGoldMinerQuestionForTarget, GOLD_MINER_LEVELS, GOLD_MINER_SUPPORTED_TARGETS, TASK_EMOJI } from './levels'
-import { GoldMinerState, WolfState, type GoldMinerQuestion } from './types'
-import { createGameTracker, GAME_IDS, getRecognizeNumberKey, LESSON_IDS, type GameTracker } from '../general/tracking'
-import { buildAdaptiveQuestions } from '../general/adaptive'
+import { TASK_EMOJI } from './levels'
+import { GoldMinerState, WolfState, type GoldMinerGameConfig, type GoldMinerQuestion } from './types'
+import { createGameTracker, type GameTracker } from '../general/tracking'
 import { GameVoiceManager, type VoicePriority } from '../general/GameVoiceManager'
 
 const W = 720
@@ -57,10 +56,10 @@ export class GoldMinerScene extends Phaser.Scene {
   private gameStarted = false
   private music?: Phaser.Sound.BaseSound
   private tracker?: GameTracker
-  private questions: GoldMinerQuestion[] = GOLD_MINER_LEVELS
+  private questions: GoldMinerQuestion[] = []
   private voiceManager?: GameVoiceManager
 
-  constructor() { super('GoldMinerScene') }
+  constructor(private readonly lesson: GoldMinerGameConfig) { super('GoldMinerScene') }
 
   preload() {
     this.load.on(Phaser.Loader.Events.PROGRESS, (progress: number) => {
@@ -81,7 +80,7 @@ export class GoldMinerScene extends Phaser.Scene {
       frameHeight: 512,
     })
     this.load.image('wolf-caught-icon', '/games/gold-mining/images/wolf-caught-icon.png')
-    this.load.audio('gold-voice-intro', '/games/lessons/lop-1/toan/bai-1/gold-mining/voices/intro.mp3')
+    if (this.lesson.introVoice) this.load.audio('gold-voice-intro', this.lesson.introVoice)
     this.load.audio('gold-voice-reel', '/games/gold-mining/voices/reel.mp3')
     this.load.audio('gold-voice-ting', '/games/gold-mining/voices/ting.mp3')
     this.load.audio('voice-true-1', '/games/general/voices/true-1.mp3')
@@ -184,7 +183,7 @@ export class GoldMinerScene extends Phaser.Scene {
   private startRound() {
     this.clearRound()
     this.question = this.questions[this.round]
-    this.tracker?.startQuestion({ learningKey: getRecognizeNumberKey(this.question.correctAnswer), expectedAnswer: this.question.correctAnswer })
+    this.tracker?.startQuestion({ learningKey: this.question.learningKey, expectedAnswer: this.question.correctAnswer })
     this.state = GoldMinerState.ROUND_START
     this.wolfAppeared = false
     this.taskItems.setText(Array.from({ length: this.question.count }, () => TASK_EMOJI[this.question.objectType]).join(' '))
@@ -280,7 +279,7 @@ export class GoldMinerScene extends Phaser.Scene {
     const item = this.grabbed
     this.grabbed = undefined
     this.tracker?.recordAnswer({
-      learningKey: getRecognizeNumberKey(this.question.correctAnswer),
+      learningKey: this.question.learningKey,
       expectedAnswer: this.question.correctAnswer,
       selectedAnswer: item.value,
       correct: item.value === this.question.correctAnswer,
@@ -485,7 +484,7 @@ export class GoldMinerScene extends Phaser.Scene {
   }
   private setupVoice() {
     this.voiceManager = new GameVoiceManager(this.sound, [
-      { key: 'gold-voice-intro' },
+      ...(this.lesson.introVoice ? [{ key: 'gold-voice-intro' }] : []),
       { key: 'voice-true-1' },
       { key: 'voice-true-2' },
       { key: 'voice-true-3' },
@@ -505,23 +504,16 @@ export class GoldMinerScene extends Phaser.Scene {
   }
   private startMusic() { if (!this.sound.mute && !this.music?.isPlaying) this.music?.play() }
   private async loadAdaptiveQuestions() {
-    this.questions = await buildAdaptiveQuestions({
-      lessonId: LESSON_IDS.TOAN_1_BAI_1,
-      gameId: GAME_IDS.GOLD_MINING,
-      supportedTargets: GOLD_MINER_SUPPORTED_TARGETS,
-      totalRounds: GOLD_MINER_LEVELS.length,
-      generateRandomQuestion: (index) => ({ ...GOLD_MINER_LEVELS[index], choices: [...GOLD_MINER_LEVELS[index].choices] }),
-      generateQuestionForTarget: createGoldMinerQuestionForTarget,
-    })
+    this.questions = (await this.lesson.loadQuestions()).slice(0, this.lesson.totalRounds)
   }
   private startGameplay() {
     if (this.gameStarted) return
     this.gameStarted = true
-    this.tracker = createGameTracker({ lessonId: LESSON_IDS.TOAN_1_BAI_1, gameId: GAME_IDS.GOLD_MINING })
+    this.tracker = createGameTracker({ lessonId: this.lesson.lessonId, gameId: this.lesson.gameId })
     this.game.registry.set('game-ui:started', true)
     if (this.wolfRounds.size === 0) this.prepareWolfRounds()
     this.startMusic()
-    this.time.delayedCall(500, () => this.voiceManager?.playOnce('intro', 'gold-voice-intro', 'intro'))
+    if (this.lesson.introVoice) this.time.delayedCall(500, () => this.voiceManager?.playOnce('intro', 'gold-voice-intro', 'intro'))
     this.playHookEntrance()
   }
   private playHookEntrance() {

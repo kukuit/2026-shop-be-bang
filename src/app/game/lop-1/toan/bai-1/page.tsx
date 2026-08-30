@@ -20,7 +20,7 @@ export default function LessonOnePage() {
           <Link href="/game/lop-1/toan" className="text-blue-700 hover:text-blue-800">Toán</Link><ChevronRight size={15} />
           <span className="text-slate-800" aria-current="page">Bài 1</span>
         </nav>
-        <div className="mt-5 md:mt-7"><h1 className="text-2xl font-black text-slate-800 md:text-4xl">Toán lớp 1 - Bài 1</h1><p className="mt-2 font-semibold text-slate-500">Chọn trò chơi</p></div>
+        <div className="mt-5 md:mt-7"><h1 className="text-2xl font-black text-slate-800 md:text-4xl">Toán lớp 1 - Bài 1</h1></div>
         <div className="mt-5 grid grid-cols-2 gap-3 md:mt-7 md:gap-5 lg:grid-cols-4">
           {games.map((game) => (
             <Link key={game.href} href={game.href} className="group relative aspect-square overflow-hidden rounded-2xl border-[3px] border-white bg-white shadow-xl focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-sky-400 md:rounded-[2rem]" aria-label={`Chơi ${game.title}`}>

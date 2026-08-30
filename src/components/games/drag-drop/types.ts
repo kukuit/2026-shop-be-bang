@@ -1,4 +1,6 @@
-export type NumberValue = 0 | 1 | 2 | 3 | 4 | 5
+import type { GameId, LearningKey, LessonId } from '../general/tracking'
+
+export type NumberValue = number
 export type LevelType = 'count' | 'sequence' | 'sort' | 'mixed'
 
 export type CountGroup = { id: string; icon: string; count: NumberValue; label: string }
@@ -12,4 +14,16 @@ export type DragDropLevel = {
   groups?: CountGroup[]
   sequence?: SequenceCell[]
   answers: Record<string, NumberValue>
+  learningKeys: Record<string, LearningKey>
+}
+
+export type DragDropGameConfig = {
+  lessonId: LessonId
+  gameId: GameId
+  totalRounds: number
+  answerDomain: readonly NumberValue[]
+  supportedTargets: readonly LearningKey[]
+  initialLevels: DragDropLevel[]
+  loadLevels: (previous?: DragDropLevel[]) => DragDropLevel[] | Promise<DragDropLevel[]>
+  introVoice?: string
 }

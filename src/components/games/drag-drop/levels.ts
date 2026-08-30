@@ -5,7 +5,7 @@ import { getRecognizeNumberKey } from '../general/tracking'
 const sequence = (targets: NumberValue[]): SequenceCell[] =>
   ([0, 1, 2, 3, 4, 5] as NumberValue[]).map((value) => ({ id: `sequence-${value}`, value, target: targets.includes(value) }))
 
-export const DRAG_DROP_LEVELS: DragDropLevel[] = [
+const RAW_DRAG_DROP_LEVELS: Array<Omit<DragDropLevel, 'learningKeys'>> = [
   { id: 1, type: 'count', title: 'Đếm con vật', instruction: 'Có bao nhiêu chú gà?', groups: [{ id: 'chicken', icon: '🐔', count: 1, label: 'chú gà' }], answers: { chicken: 1 } },
   { id: 2, type: 'count', title: 'Đếm thật nhanh', instruction: 'Có bao nhiêu chú ong?', groups: [{ id: 'bee', icon: '🐝', count: 3, label: 'chú ong' }], answers: { bee: 3 } },
   { id: 3, type: 'count', title: 'Hai nhóm đáng yêu', instruction: 'Kéo số đúng vào mỗi nhóm', groups: [{ id: 'rabbit', icon: '🐰', count: 2, label: 'chú thỏ' }, { id: 'fish', icon: '🐟', count: 4, label: 'chú cá' }], answers: { rabbit: 2, fish: 4 } },
@@ -17,6 +17,11 @@ export const DRAG_DROP_LEVELS: DragDropLevel[] = [
   { id: 9, type: 'sort', title: 'Xếp đúng thứ tự', instruction: 'Xếp các số từ 0 đến 5', sequence: sequence([0, 1, 2, 3, 4, 5]), answers: { 'sequence-0': 0, 'sequence-1': 1, 'sequence-2': 2, 'sequence-3': 3, 'sequence-4': 4, 'sequence-5': 5 } },
   { id: 10, type: 'mixed', title: 'Thử thách cuối cùng!', instruction: 'Bé cố lên nhé!', groups: [{ id: 'boss-cow', icon: '🐮', count: 2, label: 'chú bò' }, { id: 'boss-duck', icon: '🦆', count: 5, label: 'chú vịt' }, { id: 'boss-empty', icon: '🐟', count: 0, label: 'bể cá trống' }], sequence: sequence([2, 4]), answers: { 'boss-cow': 2, 'boss-duck': 5, 'boss-empty': 0, 'sequence-2': 2, 'sequence-4': 4 } },
 ]
+
+export const DRAG_DROP_LEVELS: DragDropLevel[] = RAW_DRAG_DROP_LEVELS.map((level) => ({
+  ...level,
+  learningKeys: Object.fromEntries(Object.entries(level.answers).map(([id, value]) => [id, getRecognizeNumberKey(value)])),
+}))
 
 const VALUES: NumberValue[] = [0, 1, 2, 3, 4, 5]
 
@@ -63,7 +68,7 @@ export const createRandomizedLevels = (previousLevels: DragDropLevel[] = DRAG_DR
   groups?.forEach((group) => { answers[group.id] = group.count })
   randomizedSequence?.forEach((cell) => { if (cell.target) answers[cell.id] = cell.value })
 
-  return { ...template, groups, sequence: randomizedSequence, answers }
+  return { ...template, groups, sequence: randomizedSequence, answers, learningKeys: Object.fromEntries(Object.entries(answers).map(([id, value]) => [id, getRecognizeNumberKey(value)])) }
 })
 
 export const DRAG_DROP_SUPPORTED_TARGETS = VALUES.map(getRecognizeNumberKey)
@@ -79,7 +84,7 @@ export function createDragDropLevelForTarget(targetId: LearningKey, index: numbe
   const answers: Record<string, NumberValue> = {}
   groups?.forEach((group) => { answers[group.id] = group.count })
   sequenceCells?.forEach((cell) => { if (cell.target) answers[cell.id] = cell.value })
-  return { ...level, groups, sequence: sequenceCells, answers }
+  return { ...level, groups, sequence: sequenceCells, answers, learningKeys: Object.fromEntries(Object.keys(answers).map((id) => [id, targetId])) }
 }
 
 export const NUMBER_COLORS = ['#ec4899', '#f59e0b', '#22c55e', '#06b6d4', '#6366f1', '#a855f7']

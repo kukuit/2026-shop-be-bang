@@ -87,7 +87,7 @@ export class BubbleMathScene extends Phaser.Scene {
     this.load.audio('voice-bullet-bomb', '/games/bubble-shooter/voices/bullet-bomb.mp3')
     this.load.audio('voice-bullet-bubble', '/games/bubble-shooter/voices/bullet-bubble.mp3')
     this.load.audio('voice-bubble-pop', '/games/bubble-shooter/voices/bubble-pop.mp3')
-    this.load.audio('voice-intro', this.lesson.introVoice ?? '/games/lessons/lop-1/toan/bai-1/bubble-shooter/voices/intro.mp3')
+    if (this.lesson.introVoice) this.load.audio('voice-intro', this.lesson.introVoice)
     this.load.audio('voice-true-1', '/games/general/voices/true-1.mp3')
     this.load.audio('voice-true-2', '/games/general/voices/true-2.mp3')
     this.load.audio('voice-true-3', '/games/general/voices/true-3.mp3')
@@ -222,7 +222,7 @@ export class BubbleMathScene extends Phaser.Scene {
       volume: 0.28,
     })
     this.voiceManager = new GameVoiceManager(this.sound, [
-      { key: 'voice-intro' },
+      ...(this.lesson.introVoice ? [{ key: 'voice-intro' }] : []),
       { key: 'voice-true-1' },
       { key: 'voice-true-2' },
       { key: 'voice-true-3' },
@@ -248,7 +248,7 @@ export class BubbleMathScene extends Phaser.Scene {
     this.tracker = this.lesson.tracking ? createGameTracker(this.lesson.tracking) : undefined
     this.prepareWolfRounds()
     this.ensureBackgroundMusic()
-    this.scheduleTransition(500, () => {
+    if (this.lesson.introVoice) this.scheduleTransition(500, () => {
       this.voiceManager?.playOnce('intro', 'voice-intro', 'intro')
     })
     this.startQuestion()

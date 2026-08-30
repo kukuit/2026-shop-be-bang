@@ -9,5 +9,5 @@ export const metadata: Metadata = {
 }
 
 export default function GamePage() {
-  return <><GameAuthHeader /><GameNavigationGrid title="Chọn lớp" description="Bé đang học lớp mấy?" breadcrumbs={[{ label: 'Game' }]} items={gradeItems} /></>
+  return <><GameAuthHeader /><GameNavigationGrid breadcrumbs={[{ label: 'Game' }]} items={gradeItems} /></>
 }

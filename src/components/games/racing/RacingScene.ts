@@ -3,10 +3,8 @@ import { GAME_BACKGROUND_MUSIC } from '../general/audio'
 import { GameVoiceManager, type VoicePriority } from '../general/GameVoiceManager'
 import { ANSWER_PATH_OFFSETS, BOOST_SPEED, CAR_Y, CHECK_Y, GAME_HEIGHT, GAME_WIDTH, HIT_SPEED, HORIZON_Y, LANES, NORMAL_SPEED, carLaneX } from './constants'
 import { RoadController } from './core/RoadController'
-import { createRacingQuestionForTarget, createRacingQuestions, RACING_SUPPORTED_TARGETS } from './lessons/toan-1-bai-1'
-import { RacingState, type Lane, type RacingQuestion, type RacingTrackingEvent } from './types'
-import { createGameTracker, GAME_IDS, getRecognizeNumberKey, LESSON_IDS, type GameTracker } from '../general/tracking'
-import { buildAdaptiveQuestions } from '../general/adaptive'
+import { RacingState, type Lane, type RacingGameConfig, type RacingQuestion, type RacingTrackingEvent } from './types'
+import { createGameTracker, type GameTracker } from '../general/tracking'
 
 type AnswerGate = Phaser.GameObjects.Container & { answer: number; lane: Lane }
 type WolfEventPhase = 'IDLE' | 'ENTERING' | 'APPROACHING' | 'PUSHING' | 'LAUGHING' | 'ESCAPING'
@@ -57,7 +55,7 @@ export class RacingScene extends Phaser.Scene {
   private tracker?: GameTracker
   private adaptiveLoadGeneration = 0
 
-  constructor() { super('RacingScene') }
+  constructor(private readonly lesson: RacingGameConfig) { super('RacingScene') }
 
   preload() {
     this.load.on(Phaser.Loader.Events.PROGRESS, (progress: number) => this.game.events.emit('racing:progress', progress))
@@ -66,7 +64,7 @@ export class RacingScene extends Phaser.Scene {
     this.load.audio('racing-lane-whoosh', '/games/racing/voices/whoosh.mp3')
     this.load.audio('racing-ting', '/games/racing/voices/ting.mp3')
     this.load.audio('racing-buzzer', '/games/racing/voices/buzzer.mp3')
-    this.load.audio('racing-voice-intro', '/games/lessons/lop-1/toan/bai-1/racing/voices/intro.mp3')
+    if (this.lesson.introVoice) this.load.audio('racing-voice-intro', this.lesson.introVoice)
     this.load.audio('voice-true-1', '/games/general/voices/true-1.mp3')
     this.load.audio('voice-true-2', '/games/general/voices/true-2.mp3')
     this.load.audio('voice-true-3', '/games/general/voices/true-3.mp3')
@@ -91,7 +89,7 @@ export class RacingScene extends Phaser.Scene {
 
   create() {
     this.resetRuntimeState()
-    this.questions = createRacingQuestions()
+    this.questions = []
     this.road = new RoadController(this)
     this.road.create()
     this.createQuestionPanel()
@@ -243,12 +241,14 @@ export class RacingScene extends Phaser.Scene {
   private renderQuestion(animate = true) {
     const question = this.questions[this.questionIndex]
     const expectedAnswer = this.getExpectedAnswer(question)
-    this.tracker?.startQuestion({ learningKey: getRecognizeNumberKey(expectedAnswer), expectedAnswer })
+    this.tracker?.startQuestion({ learningKey: question.learningKey, expectedAnswer })
     const content = question.type === 'count'
       ? (question.quantity === 0 ? '0' : this.arrangeObjects(question.object, question.quantity))
       : question.type === 'numberToQuantity'
         ? String(question.number)
-        : question.sequence.map((value) => value ?? '?').join('   ')
+        : question.type === 'missingNumber'
+          ? question.sequence.map((value) => value ?? '?').join('   ')
+          : `${question.prompt}\n${this.arrangeObjects(question.object, question.quantity)}`
     this.tweens.killTweensOf(this.questionText)
     if (animate) {
       this.tweens.add({
@@ -361,6 +361,7 @@ export class RacingScene extends Phaser.Scene {
   private getExpectedAnswer(question: RacingQuestion) {
     if (question.type === 'count') return question.quantity
     if (question.type === 'numberToQuantity') return question.number
+    if (question.type === 'attributeCount') return question.quantity
     return question.answer
   }
 
@@ -642,11 +643,11 @@ export class RacingScene extends Phaser.Scene {
     const question = this.questions[this.questionIndex]
     const expectedAnswer = this.getExpectedAnswer(question)
     this.tracker?.recordAnswer({
-      learningKey: getRecognizeNumberKey(expectedAnswer), expectedAnswer,
+      learningKey: question.learningKey, expectedAnswer,
       selectedAnswer, correct: isCorrect,
     })
     const event: RacingTrackingEvent = {
-      game: 'racing', lesson: LESSON_IDS.TOAN_1_BAI_1, questionIndex: this.questionIndex,
+      game: 'racing', lesson: this.lesson.lessonId, questionIndex: this.questionIndex,
       skill: question.skill, target: expectedAnswer, selectedAnswer, correctAnswer: expectedAnswer,
       isCorrect, attempt: this.attemptCount, responseTime: Math.round(this.time.now - this.questionStartedAt),
     }
@@ -662,7 +663,7 @@ export class RacingScene extends Phaser.Scene {
   }
   private setupVoice() {
     this.voiceManager = new GameVoiceManager(this.sound, [
-      { key: 'racing-voice-intro' },
+      ...(this.lesson.introVoice ? [{ key: 'racing-voice-intro' }] : []),
       { key: 'voice-true-1' }, { key: 'voice-true-2' }, { key: 'voice-true-3' },
       { key: 'voice-true-4' }, { key: 'voice-true-5' },
       { key: 'voice-false-1' }, { key: 'voice-false-2' }, { key: 'voice-false-3' },
@@ -674,24 +675,16 @@ export class RacingScene extends Phaser.Scene {
     this.voiceManager?.play(Phaser.Utils.Array.GetRandom(keys), priority)
   }
   private async loadAdaptiveQuestions(loadGeneration: number) {
-    const randomQuestions = createRacingQuestions()
-    const questions = await buildAdaptiveQuestions({
-      lessonId: LESSON_IDS.TOAN_1_BAI_1,
-      gameId: GAME_IDS.RACING,
-      supportedTargets: RACING_SUPPORTED_TARGETS,
-      totalRounds: randomQuestions.length,
-      generateRandomQuestion: (index) => randomQuestions[index],
-      generateQuestionForTarget: createRacingQuestionForTarget,
-    })
+    const questions = (await this.lesson.loadQuestions()).slice(0, this.lesson.totalRounds)
     if (loadGeneration === this.adaptiveLoadGeneration) this.questions = questions
   }
   private startGameplay() {
     if (this.gameStarted) return
     this.gameStarted = true
-    this.tracker = createGameTracker({ lessonId: LESSON_IDS.TOAN_1_BAI_1, gameId: GAME_IDS.RACING })
+    this.tracker = createGameTracker({ lessonId: this.lesson.lessonId, gameId: this.lesson.gameId })
     this.game.registry.set('game-ui:started', true)
     this.startMusic()
-    this.time.delayedCall(500, () => this.voiceManager?.playOnce('intro', 'racing-voice-intro', 'intro'))
+    if (this.lesson.introVoice) this.time.delayedCall(500, () => this.voiceManager?.playOnce('intro', 'racing-voice-intro', 'intro'))
     this.tweens.add({ targets: this.car, y: CAR_Y + 4, duration: 160, yoyo: true, repeat: -1, ease: 'Sine.InOut' })
     this.renderQuestion(false)
     this.time.delayedCall(700, () => this.spawnGates())
