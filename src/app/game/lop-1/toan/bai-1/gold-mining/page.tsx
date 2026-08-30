@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import GoldMinerGame from '@/components/games/gold-miner/GoldMinerGame'
+import GameClient from './GameClient'
 
 export const metadata: Metadata = {
   title: 'Đào vàng - Toán lớp 1',
@@ -7,7 +7,7 @@ export const metadata: Metadata = {
 }
 
 export default function GoldMiningPage() {
-  return <main className="fixed inset-0 flex h-dvh w-screen items-center justify-center overflow-hidden bg-[#251008] overscroll-none">
-    <GoldMinerGame />
+  return <main className="flex h-dvh w-full items-center justify-center overflow-hidden bg-[#251008] overscroll-none">
+    <GameClient />
   </main>
 }

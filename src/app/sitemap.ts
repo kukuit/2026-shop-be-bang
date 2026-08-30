@@ -37,6 +37,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: 'monthly',
       priority: 0.6,
     },
+    ...[
+      '/game', '/game/lop-1', '/game/lop-1/toan', '/game/lop-1/toan/bai-1',
+      '/game/lop-1/toan/bai-2', '/game/lop-1/toan/bai-2/drag-drop',
+      '/game/lop-1/toan/bai-2/gold-mining', '/game/lop-1/toan/bai-2/racing',
+      '/game/lop-1/toan/bai-2/bubble-shooter',
+    ].map((path) => ({ url: `${baseUrl}${path}`, lastModified: now, changeFrequency: 'weekly' as const, priority: 0.7 })),
   ]
 
   const blogPostRoutes: MetadataRoute.Sitemap = POSTS.map((post) => ({

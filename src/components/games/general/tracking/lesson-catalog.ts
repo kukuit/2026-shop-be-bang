@@ -1,11 +1,14 @@
 import { TOAN_1_BAI_1 } from '@/app/game/lop-1/toan/bai-1/lesson'
+import { TOAN_1_BAI_2 } from '@/app/game/lop-1/toan/bai-2/lesson'
 
 export const LESSON_CATALOG = {
   [TOAN_1_BAI_1.lessonId]: TOAN_1_BAI_1,
+  [TOAN_1_BAI_2.lessonId]: TOAN_1_BAI_2,
 } as const
 
 export const LESSON_IDS = {
   TOAN_1_BAI_1: TOAN_1_BAI_1.lessonId,
+  TOAN_1_BAI_2: TOAN_1_BAI_2.lessonId,
 } as const
 
 export type LessonId = keyof typeof LESSON_CATALOG

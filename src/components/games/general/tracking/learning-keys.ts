@@ -9,3 +9,12 @@ export function getRecognizeNumberKey(value: number): LearningKey {
   }
   return TOAN_1_BAI_1_LEARNING_KEYS[`RECOGNIZE_NUMBER_${value}` as keyof typeof TOAN_1_BAI_1_LEARNING_KEYS]
 }
+
+export function getMappedLearningKey(
+  mapping: Readonly<Record<number, LearningKey>>,
+  value: number,
+): LearningKey {
+  const key = mapping[value]
+  if (!key) throw new RangeError(`No learning key is configured for answer ${value}`)
+  return key
+}

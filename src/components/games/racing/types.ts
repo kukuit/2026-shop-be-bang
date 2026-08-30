@@ -1,11 +1,16 @@
-import type { LessonId } from '../general/tracking'
+import type { GameLessonConfig } from '../general/lesson-config'
+import type { LearningKey, LessonId } from '../general/tracking'
 
 export type Lane = 0 | 1 | 2
 
+type BaseQuestion = { id: string; learningKey: LearningKey; answer: number }
 export type RacingQuestion =
-  | { type: 'count'; object: string; quantity: number; options: number[]; answer: number; skill: 'recognize_quantity' | 'recognize_zero' }
-  | { type: 'numberToQuantity'; number: number; object: string; quantities: number[]; answer: number; skill: 'number_to_quantity' }
-  | { type: 'missingNumber'; sequence: Array<number | null>; options: number[]; answer: number; skill: 'missing_number' }
+  | BaseQuestion & { type: 'count'; object: string; quantity: number; options: number[]; skill: 'recognize_quantity' | 'recognize_zero' }
+  | BaseQuestion & { type: 'numberToQuantity'; number: number; object: string; quantities: number[]; skill: 'number_to_quantity' }
+  | BaseQuestion & { type: 'missingNumber'; sequence: Array<number | null>; options: number[]; skill: 'missing_number' }
+  | BaseQuestion & { type: 'attributeCount'; prompt: string; object: string; quantity: number; options: number[]; skill: 'attribute_count' }
+
+export type RacingGameConfig = GameLessonConfig<RacingQuestion>
 
 export enum RacingState {
   RUNNING = 'RUNNING',

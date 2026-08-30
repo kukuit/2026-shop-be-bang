@@ -1,12 +1,20 @@
+import type { GameId, LearningKey, LessonId } from '../../general/tracking'
+
 export interface MathQuestion {
   text: string
   answer: number
   options: number[]
+  learningKey?: LearningKey
 }
 
-export interface LessonData {
+export interface BubbleShooterGameConfig {
   id: string
   title: string
-  type: 'math-addition'
-  questions: MathQuestion[]
+  totalRounds: number
+  loadQuestions: () => MathQuestion[] | Promise<MathQuestion[]>
+  tracking?: {
+    lessonId: LessonId
+    gameId: GameId
+  }
+  introVoice?: string
 }

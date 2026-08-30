@@ -1,4 +1,4 @@
-import type { LessonData, MathQuestion } from '../types/game'
+import type { MathQuestion } from '../types/game'
 
 const shuffle = <T,>(items: T[]) => {
   for (let index = items.length - 1; index > 0; index -= 1) {
@@ -9,11 +9,14 @@ const shuffle = <T,>(items: T[]) => {
 }
 
 export class QuestionSystem {
-  constructor(private readonly lesson?: LessonData) {}
+  private index = 0
+
+  constructor(private readonly questions: MathQuestion[]) {}
 
   next(): MathQuestion {
-    if (this.lesson?.questions.length) {
-      const source = this.lesson.questions[Math.floor(Math.random() * this.lesson.questions.length)]
+    if (this.questions.length) {
+      const source = this.questions[this.index % this.questions.length]
+      this.index += 1
       return { ...source, options: shuffle([...source.options]) }
     }
 

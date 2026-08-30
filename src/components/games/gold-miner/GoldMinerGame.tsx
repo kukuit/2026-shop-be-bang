@@ -2,8 +2,9 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { GameCompletion, GameLoadingScreen, GameShell, unlockGameAudio } from '../general'
+import type { GoldMinerGameConfig } from './types'
 
-export default function GoldMinerGame() {
+export default function GoldMinerGame({ config }: { config: GoldMinerGameConfig }) {
   const host = useRef<HTMLDivElement>(null)
   const game = useRef<import('phaser').Game | null>(null)
   const [loadProgress, setLoadProgress] = useState(5)
@@ -19,7 +20,7 @@ export default function GoldMinerGame() {
     Promise.all([import('phaser'), import('./config')]).then(([Phaser, { createGoldMinerConfig }]) => {
       if (cancelled || !host.current || game.current) return
       setLoadProgress(15)
-      game.current = new Phaser.Game(createGoldMinerConfig(host.current, {
+      game.current = new Phaser.Game(createGoldMinerConfig(host.current, config, {
         onProgress: (progress) => {
           if (!cancelled) setLoadProgress(15 + progress * 84)
         },
@@ -38,7 +39,7 @@ export default function GoldMinerGame() {
       })
     })
     return () => { cancelled = true; game.current?.destroy(true); game.current = null }
-  }, [])
+  }, [config])
 
   const emit = (name: string, value?: boolean) => game.current?.events.emit(name, value)
   const restart = () => {
