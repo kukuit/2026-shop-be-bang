@@ -5,6 +5,10 @@ export interface MathQuestion {
   answer: number
   options: number[]
   learningKey?: LearningKey
+  presentation?:
+    | { type: 'completeQuantity'; startNumber: number; targetNumber: number }
+    | { type: 'recognizeNumber'; number: number }
+    | { type: 'fitToPanel' }
 }
 
 export interface BubbleShooterGameConfig {

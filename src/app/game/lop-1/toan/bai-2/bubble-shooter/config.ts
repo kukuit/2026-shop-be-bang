@@ -31,20 +31,35 @@ const questionFor = (target: LearningKey, index: number): MathQuestion => {
   const recognized = Object.entries(RECOGNIZE).find(([, key]) => key === target)
   if (recognized) {
     const answer = Number(recognized[0])
-    return { text: `Có ${answer} đồ vật. Chọn số đúng`, answer, options: optionsAround(answer), learningKey: target }
+    return {
+      text: `Có ${answer} đồ vật. Chọn số đúng`, answer, options: optionsAround(answer), learningKey: target,
+      presentation: { type: 'recognizeNumber', number: answer },
+    }
   }
   if (target === KEYS.SEQUENCE_BACKWARD) {
     const answer = randomInt(1, 9)
-    return { text: `${answer + 1} → ? → ${answer - 1}`, answer, options: optionsAround(answer), learningKey: target }
+    return {
+      text: `${answer + 1} → ? → ${answer - 1}`, answer, options: optionsAround(answer), learningKey: target,
+      presentation: { type: 'fitToPanel' },
+    }
   }
   if (target === KEYS.COMPLETE_QUANTITY) {
     const goal = randomInt(6, 10)
     const current = randomInt(1, goal - 1)
     const answer = goal - current
-    return { text: `Có ${current}, thêm mấy để đủ ${goal}?`, answer, options: optionsAround(answer), learningKey: target }
+    return {
+      text: `Có ${current}, thêm mấy để đủ ${goal}?`,
+      answer,
+      options: optionsAround(answer),
+      learningKey: target,
+      presentation: { type: 'completeQuantity', startNumber: current, targetNumber: goal },
+    }
   }
   const answer = randomInt(1, 9)
-  return { text: `${answer - 1} → ? → ${answer + 1}`, answer, options: optionsAround(answer), learningKey: KEYS.SEQUENCE_FORWARD }
+  return {
+    text: `${answer - 1} → ? → ${answer + 1}`, answer, options: optionsAround(answer), learningKey: KEYS.SEQUENCE_FORWARD,
+    presentation: { type: 'fitToPanel' },
+  }
 }
 
 const createRandomQuestions = () => {

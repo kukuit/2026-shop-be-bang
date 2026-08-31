@@ -13,22 +13,30 @@ const shuffle = <T,>(items: readonly T[]) => {
   }
   return result
 }
-const count = (id: number, value: number, icon: string): DragDropLevel => ({
-  id, type: 'count', title: `Nhận biết số ${value}`, instruction: 'Đếm rồi kéo số đúng vào nhóm',
-  groups: [{ id: `count-${id}`, icon, count: value, label: 'đồ vật' }],
-  answers: { [`count-${id}`]: value }, learningKeys: { [`count-${id}`]: recognize[value] },
-})
-const sequence = (id: number, values: number[], missing: number, key: LearningKey): DragDropLevel => {
-  const cells: SequenceCell[] = values.map((value, index) => ({ id: `seq-${id}-${index}`, value, target: value === missing }))
-  const target = cells.find((cell) => cell.target)!
-  return { id, type: 'sequence', title: key === K.SEQUENCE_BACKWARD ? 'Dãy số ngược' : 'Dãy số xuôi', instruction: 'Kéo số còn thiếu vào đúng chỗ', sequence: cells, answers: { [target.id]: target.value }, learningKeys: { [target.id]: key } }
+const count = (id: number, targetCount: number, forcedValue?: number): DragDropLevel => {
+  const values = shuffle([6, 7, 8, 9, 10]).slice(0, targetCount)
+  if (forcedValue) values[0] = forcedValue
+  const groups = values.map((value, index) => ({ id: `count-${id}-${index}`, icon: ICONS[(id + index) % ICONS.length], count: value, label: 'đồ vật' }))
+  return {
+    id, type: 'count', title: targetCount === 1 ? `Nhận biết số ${values[0]}` : 'Đếm các nhóm đồ vật', instruction: 'Đếm rồi kéo số đúng vào mỗi nhóm', groups,
+    answers: Object.fromEntries(groups.map((group) => [group.id, group.count])), learningKeys: Object.fromEntries(groups.map((group) => [group.id, recognize[group.count]])),
+  }
 }
-const order = (id: number): DragDropLevel => {
-  const length = randomInt(4, 6)
-  const start = randomInt(0, 10 - length + 1)
-  const values = Array.from({ length }, (_, index) => start + index)
-  const cells = values.map((value, index) => ({ id: `order-${index}`, value, target: true }))
-  return { id, type: 'sort', title: 'Sắp xếp các số', instruction: 'Kéo các số theo thứ tự từ bé đến lớn', sequence: cells, answers: Object.fromEntries(cells.map((cell) => [cell.id, cell.value])), learningKeys: Object.fromEntries(cells.map((cell) => [cell.id, K.ORDER_NUMBERS])) }
+const sequence = (id: number, backward: boolean, targetCount: number): DragDropLevel => {
+  const values = backward ? [10, 9, 8, 7, 6] : [6, 7, 8, 9, 10]
+  const targetIndexes = new Set(shuffle([1, 2, 3, 4]).slice(0, targetCount))
+  const cells: SequenceCell[] = values.map((value, index) => ({ id: `seq-${id}-${index}`, value, target: targetIndexes.has(index) }))
+  const targets = cells.filter((cell) => cell.target)
+  const key = backward ? K.SEQUENCE_BACKWARD : K.SEQUENCE_FORWARD
+  return { id, type: 'sequence', title: backward ? 'Dãy số ngược' : 'Dãy số xuôi', instruction: 'Kéo các số còn thiếu vào đúng chỗ', sequence: cells, answers: Object.fromEntries(targets.map((cell) => [cell.id, cell.value])), learningKeys: Object.fromEntries(targets.map((cell) => [cell.id, key])) }
+}
+const order = (id: number, targetCount: number): DragDropLevel => {
+  const values = Math.random() < 0.5 ? [0, 1, 2, 3, 4, 5] : [6, 7, 8, 9, 10]
+  // Keep 0 or 6 visible as an anchor so children know which direction to complete the row.
+  const targetIndexes = new Set(shuffle(values.slice(1).map((_, index) => index + 1)).slice(0, targetCount))
+  const cells = values.map((value, index) => ({ id: `order-${index}`, value, target: targetIndexes.has(index) }))
+  const targets = cells.filter((cell) => cell.target)
+  return { id, type: 'sort', title: 'Sắp xếp các số', instruction: 'Kéo các số theo thứ tự từ bé đến lớn', sequence: cells, answers: Object.fromEntries(targets.map((cell) => [cell.id, cell.value])), learningKeys: Object.fromEntries(targets.map((cell) => [cell.id, K.ORDER_NUMBERS])) }
 }
 const complete = (id: number, current: number, goal: number): DragDropLevel => ({
   id, type: 'count', title: 'Thêm cho đủ', instruction: `Có ${current} cái bánh. Kéo số cần thêm để đủ ${goal}`,
@@ -37,35 +45,39 @@ const complete = (id: number, current: number, goal: number): DragDropLevel => (
 })
 
 const createRandomLevels = (): DragDropLevel[] => {
-  const forwardStart = randomInt(0, 7)
-  const forwardValues = Array.from({ length: 4 }, (_, index) => forwardStart + index)
-  const backwardStart = randomInt(3, 10)
-  const backwardValues = Array.from({ length: 4 }, (_, index) => backwardStart - index)
   const firstGoal = randomInt(6, 10)
-  const secondGoal = randomInt(6, 10)
-  const levels = [
-    ...shuffle([6, 7, 8, 9, 10]).map((value, index) => count(index + 1, value, ICONS[Math.floor(Math.random() * ICONS.length)])),
-    sequence(6, forwardValues, forwardValues[randomInt(1, 2)], K.SEQUENCE_FORWARD),
-    sequence(7, backwardValues, backwardValues[randomInt(1, 2)], K.SEQUENCE_BACKWARD),
-    order(8), complete(9, randomInt(1, firstGoal - 1), firstGoal), complete(10, randomInt(1, secondGoal - 1), secondGoal),
+  return [
+    count(1, 1),
+    sequence(2, false, 1),
+    complete(3, randomInt(1, firstGoal - 1), firstGoal),
+    sequence(4, true, 1),
+    count(5, 2),
+    sequence(6, false, 2),
+    count(7, 2),
+    order(8, 2),
+    count(9, 3),
+    sequence(10, Math.random() < 0.5, 3),
   ]
-  return shuffle(levels).map((level, index) => ({ ...level, id: index + 1 }))
 }
 const LEVELS = createRandomLevels()
 const supported = [...Object.values(recognize), K.SEQUENCE_FORWARD, K.SEQUENCE_BACKWARD, K.COMPLETE_QUANTITY, K.ORDER_NUMBERS] as LearningKey[]
 const forTarget = (target: LearningKey, index: number) => {
   const value = [6, 7, 8, 9, 10].find((candidate) => recognize[candidate] === target)
-  if (value) return count(index + 1, value, ICONS[Math.floor(Math.random() * ICONS.length)])
-  const candidates = createRandomLevels().filter((level) => Object.values(level.learningKeys).includes(target))
-  return { ...(candidates[0] ?? createRandomLevels()[index % 10]), id: index + 1 }
+  const targetCount = index < 4 ? 1 : index < 8 ? 2 : 3
+  if (value) return count(index + 1, targetCount, value)
+  if (target === K.SEQUENCE_FORWARD) return sequence(index + 1, false, targetCount)
+  if (target === K.SEQUENCE_BACKWARD) return sequence(index + 1, true, targetCount)
+  if (target === K.ORDER_NUMBERS) return order(index + 1, targetCount)
+  return createRandomLevels()[index % 10]
 }
 
 export const TOAN_1_BAI_2_DRAG_DROP_CONFIG: DragDropGameConfig = {
   lessonId: LESSON_IDS.TOAN_1_BAI_2, gameId: GAME_IDS.DRAG_DROP, totalRounds: 10,
   answerDomain: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10], supportedTargets: supported,
   initialLevels: LEVELS,
-  loadLevels: () => {
+  loadLevels: async () => {
     const random = createRandomLevels()
-    return buildAdaptiveQuestions({ lessonId: LESSON_IDS.TOAN_1_BAI_2, gameId: GAME_IDS.DRAG_DROP, supportedTargets: supported, totalRounds: 10, generateRandomQuestion: (index) => random[index], generateQuestionForTarget: forTarget })
+    const levels = await buildAdaptiveQuestions({ lessonId: LESSON_IDS.TOAN_1_BAI_2, gameId: GAME_IDS.DRAG_DROP, supportedTargets: supported, totalRounds: 10, generateRandomQuestion: (index) => random[index], generateQuestionForTarget: forTarget })
+    return levels.sort((left, right) => left.id - right.id)
   },
 }

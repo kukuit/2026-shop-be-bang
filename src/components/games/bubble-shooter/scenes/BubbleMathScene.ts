@@ -13,7 +13,10 @@ import { createGameTracker, type GameTracker } from '../../general/tracking'
 const WIDTH = 720
 const HEIGHT = 1280
 const HUD_TOP = 1182
-const QUESTION_Y = 145
+const QUESTION_Y = 170
+const QUESTION_PANEL_WIDTH = 570
+const QUESTION_PANEL_HEIGHT = 185
+const QUESTION_SAFE_WIDTH = 510
 type RoundState = 'PLAYING' | 'CORRECT' | 'SHOW_RESULT' | 'ROUND_TRANSITION' | 'NEW_QUESTION' | 'COMPLETE'
 
 export class BubbleMathScene extends Phaser.Scene {
@@ -113,10 +116,10 @@ export class BubbleMathScene extends Phaser.Scene {
     this.projectiles = this.physics.add.group({ maxSize: 8, allowGravity: false })
 
     this.add.image(WIDTH / 2, QUESTION_Y, 'question-panel')
-      .setDisplaySize(430, 151)
+      .setDisplaySize(QUESTION_PANEL_WIDTH, QUESTION_PANEL_HEIGHT)
       .setDepth(9)
     this.questionText = this.add.container(WIDTH / 2, QUESTION_Y).setDepth(10)
-    this.feedbackText = this.add.text(WIDTH / 2, QUESTION_Y + 99, '', {
+    this.feedbackText = this.add.text(WIDTH / 2, QUESTION_Y + 120, '', {
       fontFamily: 'Arial, sans-serif', fontSize: '34px', fontStyle: 'bold', color: '#047857',
       stroke: '#ffffff', strokeThickness: 7,
     }).setOrigin(0.5).setDepth(30)
@@ -369,7 +372,7 @@ export class BubbleMathScene extends Phaser.Scene {
         expectedAnswer: this.currentQuestion.answer,
       })
     }
-    this.renderQuestion(this.currentQuestion.text)
+    this.renderQuestion(this.currentQuestion)
     this.feedbackText.setText('')
     this.progressText.setText(`${this.questionNumber}/${this.totalQuestions}`)
     this.updateLevelHud()
@@ -531,10 +534,20 @@ export class BubbleMathScene extends Phaser.Scene {
     }
   }
 
-  private renderQuestion(question: string, showCheck = false) {
+  private renderQuestion(question: MathQuestion, showCheck = false) {
     this.questionText.removeAll(true)
 
-    const tokens = question.split(/\s+/).filter(Boolean)
+    if (question.presentation?.type === 'completeQuantity') {
+      this.renderCompleteQuantityQuestion(question, showCheck)
+      return
+    }
+    if (question.presentation?.type === 'recognizeNumber') {
+      this.renderRecognizeNumberQuestion(question, showCheck)
+      return
+    }
+
+    const displayText = showCheck ? question.text.replace('?', `${question.answer}`) : question.text
+    const tokens = displayText.split(/\s+/).filter(Boolean)
     const palette = Phaser.Utils.Array.Shuffle([
       '#2563eb', // xanh dương
       '#22c55e', // xanh lá
@@ -557,9 +570,12 @@ export class BubbleMathScene extends Phaser.Scene {
     })
 
     const totalWidth = labels.reduce((width, label) => width + label.width, 0) + gap * (labels.length - 1)
+    const safeWidth = showCheck ? QUESTION_SAFE_WIDTH - 45 : QUESTION_SAFE_WIDTH
+    const rowScale = question.presentation?.type === 'fitToPanel' ? Math.min(1, safeWidth / totalWidth) : 1
     let cursor = -totalWidth / 2
     labels.forEach((label) => {
-      label.setX(cursor + label.width / 2)
+      label.setX((cursor + label.width / 2) * rowScale)
+      label.setScale(rowScale)
       cursor += label.width + gap
       this.questionText.add(label)
     })
@@ -567,7 +583,7 @@ export class BubbleMathScene extends Phaser.Scene {
     // Dấu check là overlay nằm ngoài phép tính, không tham gia tính totalWidth nên
     // khi xuất hiện sẽ không đẩy toàn bộ dãy chữ sang trái.
     if (showCheck) {
-      const check = this.add.text(totalWidth / 2 + 5, 0, '✓', {
+      const check = this.add.text(totalWidth * rowScale / 2 + 5, 0, '✓', {
         fontFamily: 'Arial Black, Arial, sans-serif',
         fontSize: '44px',
         fontStyle: 'bold',
@@ -576,6 +592,84 @@ export class BubbleMathScene extends Phaser.Scene {
         strokeThickness: 4,
       }).setOrigin(0, 0.5)
       check.setShadow(0, 3, 'rgba(21, 128, 61, 0.2)', 3)
+      this.questionText.add(check)
+    }
+  }
+
+  private renderRecognizeNumberQuestion(question: MathQuestion, showCheck: boolean) {
+    const presentation = question.presentation
+    if (!presentation || presentation.type !== 'recognizeNumber') return
+    const number = presentation.number
+    const createObjectRow = (quantity: number, y: number) => {
+      const label = this.add.text(0, y, Array.from({ length: quantity }, () => '⭐').join('  '), {
+        fontFamily: 'Arial, sans-serif', fontSize: '39px', fontStyle: 'bold',
+        color: '#f59e0b', stroke: '#ffffff', strokeThickness: 2,
+      }).setOrigin(0.5)
+      label.setScale(Math.min(1, QUESTION_SAFE_WIDTH / label.width))
+      this.questionText.add(label)
+    }
+
+    const firstRow = Math.ceil(number / 2)
+    createObjectRow(firstRow, -29)
+    createObjectRow(number - firstRow, 29)
+
+    if (showCheck) {
+      const check = this.add.text(250, 0, '✓', {
+        fontFamily: 'Arial Black, Arial, sans-serif', fontSize: '36px', fontStyle: 'bold',
+        color: '#22c55e', stroke: '#ffffff', strokeThickness: 3,
+      }).setOrigin(0.5)
+      this.questionText.add(check)
+    }
+  }
+
+  private renderCompleteQuantityQuestion(question: MathQuestion, showCheck: boolean) {
+    const presentation = question.presentation
+    if (!presentation || presentation.type !== 'completeQuantity') return
+    const textColor = '#334155'
+    const startColor = '#2563eb'
+    const answerColor = '#e11d48'
+    const targetColor = '#7c3aed'
+
+    const addCenteredRow = (
+      tokens: Array<{ text: string; color?: string; scale?: number }>,
+      y: number,
+      fontSize: number,
+      gap: number,
+    ) => {
+      const labels = tokens.map(({ text, color = textColor, scale = 1 }) => this.add.text(0, y, text, {
+        fontFamily: 'Arial Black, Arial, sans-serif',
+        fontSize: `${fontSize}px`,
+        fontStyle: 'bold',
+        color,
+        stroke: '#ffffff',
+        strokeThickness: 3,
+      }).setOrigin(0.5).setScale(scale))
+      const totalWidth = labels.reduce((width, label) => width + label.displayWidth, 0) + gap * (labels.length - 1)
+      const rowScale = Math.min(1, QUESTION_SAFE_WIDTH / totalWidth)
+      let cursor = -totalWidth / 2
+      labels.forEach((label) => {
+        label.setX((cursor + label.displayWidth / 2) * rowScale)
+        label.setScale(label.scaleX * rowScale, label.scaleY * rowScale)
+        cursor += label.displayWidth / rowScale + gap
+        this.questionText.add(label)
+      })
+    }
+
+    addCenteredRow([
+      { text: String(presentation.startNumber), color: startColor },
+      { text: '⭐' },
+      { text: '+' },
+      { text: showCheck ? String(question.answer) : '❓', color: answerColor },
+      { text: '→' },
+      { text: String(presentation.targetNumber), color: targetColor },
+      { text: '⭐' },
+    ], 0, 43, 13)
+
+    if (showCheck) {
+      const check = this.add.text(250, 0, '✓', {
+        fontFamily: 'Arial Black, Arial, sans-serif', fontSize: '36px', fontStyle: 'bold',
+        color: '#22c55e', stroke: '#ffffff', strokeThickness: 3,
+      }).setOrigin(0.5)
       this.questionText.add(check)
     }
   }
@@ -681,7 +775,7 @@ export class BubbleMathScene extends Phaser.Scene {
   private showCorrectAnswer() {
     if (this.roundState !== 'CORRECT') return
     this.roundState = 'SHOW_RESULT'
-    this.renderQuestion(this.currentQuestion.text.replace('?', `${this.currentQuestion.answer}`), true)
+    this.renderQuestion(this.currentQuestion, true)
     this.questionText.setScale(1)
     this.tweens.add({
       targets: this.questionText,
@@ -745,7 +839,7 @@ export class BubbleMathScene extends Phaser.Scene {
     }
     this.updateLevelHud()
     this.animateProgress()
-    this.renderQuestion(this.currentQuestion.text)
+    this.renderQuestion(this.currentQuestion)
     this.questionText.setPosition(WIDTH / 2 + 90, QUESTION_Y).setAlpha(0).setScale(0.9)
     this.tweens.add({
       targets: this.questionText,
