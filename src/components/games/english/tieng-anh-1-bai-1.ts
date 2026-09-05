@@ -33,7 +33,9 @@ const mapDragLevels = (questions: LearningQuestion[]): DragDropLevel[] => questi
     instructionVoice: '/games/general/voices/be_hay_ghep_dung_nhe.mp3', voice: q.voice,
     groups: [{ id: target, icon: q.prompt ?? '🔊', count: 1, label: 'mục tiêu' }],
     answers: { [target]: q.answer }, learningKeys: { [target]: q.goalKey },
-    skills: { [target]: q.skill! }, inputModes: { [target]: q.inputMode! }, answerModes: { [target]: 'drag-text' },
+    answerDomain: Array.from(new Set([q.answer, ...(q.options ?? [])])),
+    skills: { [target]: q.skill! }, inputModes: { [target]: q.inputMode! },
+    answerModes: { [target]: q.answerMode === 'select-image' ? 'drag-image' : 'drag-text' },
   }
 })
 const toDragLevels = () => mapDragLevels(createEnglishQuestions())

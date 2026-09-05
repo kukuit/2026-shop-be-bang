@@ -17,6 +17,7 @@ export type DragDropLevel = {
   groups?: CountGroup[]
   sequence?: SequenceCell[]
   answers: Record<string, DragAnswerValue>
+  answerDomain?: readonly DragAnswerValue[]
   learningKeys: Record<string, LearningKey>
   skills?: Record<string, import('../general/learning-question').LearningSkill>
   inputModes?: Record<string, import('../general/learning-question').QuestionInputMode>
