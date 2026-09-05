@@ -1,2 +1,3 @@
-import ComingSoon from '@/components/games/navigation/ComingSoon'
-export default function Page() { return <ComingSoon title="Tiếng Anh lớp 1" backHref="/game/lop-1" /> }
+import Link from 'next/link'
+import GameAuthHeader from '@/components/auth/GameAuthHeader'
+export default function Page() { return <><GameAuthHeader/><main className="min-h-[calc(100dvh-4rem)] bg-sky-50 px-4 py-8"><section className="mx-auto max-w-4xl"><h1 className="text-3xl font-black text-slate-800">Tiếng Anh lớp 1</h1><Link href="/game/lop-1/tieng-anh/bai-1" className="mt-6 block rounded-3xl bg-white p-6 shadow-xl"><p className="text-sm font-bold text-sky-600">Bài 1</p><h2 className="mt-1 text-2xl font-black text-slate-800">In the school playground</h2><p className="mt-2 font-semibold text-slate-500">ball · Bill · book · bike · chào hỏi · tạm biệt</p></Link></section></main></> }

@@ -1,8 +1,10 @@
 'use client'
 
+import GameImageValue from '../general/GameImageValue'
+
 import Image from 'next/image'
 import { RefObject, useEffect, useRef, useState } from 'react'
-import type { NumberValue } from './types'
+import type { DragAnswerValue } from './types'
 import styles from './WolfCompanion.module.css'
 
 type WolfState = 'HIDDEN' | 'PEEK' | 'RUN' | 'GRAB' | 'CARRY' | 'LAUGH'
@@ -11,20 +13,20 @@ type Point = { x: number; y: number }
 type Props = {
   active: boolean
   round: number
-  correctValues: NumberValue[]
+  correctValues: DragAnswerValue[]
   dragActive: boolean
   gameRef: RefObject<HTMLDivElement>
   trayRef: RefObject<HTMLDivElement>
-  onSteal: (value: NumberValue) => void
+  onSteal: (value: DragAnswerValue) => void
   onLaugh: () => void
-  answerDomain: readonly NumberValue[]
-  colorFor: (value: NumberValue) => string
+  answerDomain: readonly DragAnswerValue[]
+  colorFor: (value: DragAnswerValue) => string
 }
 
 export default function WolfCompanion({ active, round, correctValues, dragActive, gameRef, trayRef, onSteal, onLaugh, answerDomain, colorFor }: Props) {
   const [state, setState] = useState<WolfState>('HIDDEN')
   const [position, setPosition] = useState<Point>({ x: 106, y: 73 })
-  const [stolenValue, setStolenValue] = useState<NumberValue | null>(null)
+  const [stolenValue, setStolenValue] = useState<DragAnswerValue | null>(null)
   const timers = useRef<number[]>([])
   const dragActiveRef = useRef(dragActive)
   dragActiveRef.current = dragActive
@@ -66,6 +68,6 @@ export default function WolfCompanion({ active, round, correctValues, dragActive
     <span className={styles.frame}>
       <Image src="/games/drag-drop/images/wolf-thief-sprites.png" alt="" width={1536} height={1024} draggable={false} unoptimized />
     </span>
-    {stolenValue !== null && (state === 'CARRY' || state === 'LAUGH') && <span className={styles.stolenTile} style={{ backgroundColor: colorFor(stolenValue) }}>{stolenValue}</span>}
+    {stolenValue !== null && (state === 'CARRY' || state === 'LAUGH') && <span className={styles.stolenTile} style={{ backgroundColor: colorFor(stolenValue) }}><GameImageValue value={stolenValue} size={30} /></span>}
   </div>
 }

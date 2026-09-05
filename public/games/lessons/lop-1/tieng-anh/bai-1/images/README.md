@@ -1,0 +1,11 @@
+# Lesson 1 vocabulary artwork
+
+Generated with the built-in imagegen tool using the user's illustration as a style and subject reference. `vocabulary.png` is the final transparent PNG atlas (1298 × 1212). The four illustrations are rendered independently using the frame coordinates in `src/app/game/lop-1/tieng-anh/bai-1/images.ts`; the PNG is preserved without resampling. Runtime rendering scales each frame proportionally to fit its game container.
+
+## Generation prompt
+
+Use case: illustration-story. Create ONE square 2x2 sprite sheet for a Vietnamese first-grade English learning game, inspired by the attached reference image (reference for subjects and cheerful cartoon style only). Exactly four isolated illustrations, each centered within its equal square quadrant: TOP LEFT Bill, a friendly smiling blond curly-haired little boy in a blue polo shirt waving, waist-up; TOP RIGHT one orange basketball; BOTTOM LEFT one orange child's bicycle viewed from the side; BOTTOM RIGHT one open red book with cream pages. Bold clean outlines, polished colorful children's educational clipart, soft simple shading, instantly recognizable at tiny game sizes. Genuine transparent alpha background throughout, NO white backdrop, NO checkerboard drawn into pixels, NO text, NO word labels, NO letters, NO frames, NO shadows outside subjects, NO watermark. Exact uniform 2x2 grid, no divider. Each entire illustration fits inside the central 72 percent of its own quadrant in both width and height, leaving at least 14 percent clear transparent padding on every side of EACH cell. Do not let illustrations cross quadrant boundaries. Square canvas ideally 1024x1024. This single atlas will be rendered as four separate frame images inside bubbles, gold nuggets and racing answer gates, so clean transparent padding is essential.
+
+## Final transparency edit prompt
+
+Edit this sprite sheet only to remove the gray and white checkerboard background. It must be a REAL transparent PNG with alpha zero in all background pixels, including spaces inside bicycle frame and spokes. Keep the four existing illustrations, exact positions, colors and 2x2 quadrant layout unchanged. No checkerboard pattern at all. No text. Transparent cutout output.

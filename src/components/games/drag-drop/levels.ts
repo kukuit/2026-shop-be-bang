@@ -20,7 +20,7 @@ const RAW_DRAG_DROP_LEVELS: Array<Omit<DragDropLevel, 'learningKeys'>> = [
 
 export const DRAG_DROP_LEVELS: DragDropLevel[] = RAW_DRAG_DROP_LEVELS.map((level) => ({
   ...level,
-  learningKeys: Object.fromEntries(Object.entries(level.answers).map(([id, value]) => [id, getRecognizeNumberKey(value)])),
+  learningKeys: Object.fromEntries(Object.entries(level.answers).map(([id, value]) => [id, getRecognizeNumberKey(Number(value))])),
 }))
 
 const VALUES: NumberValue[] = [0, 1, 2, 3, 4, 5]

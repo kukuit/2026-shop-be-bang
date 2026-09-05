@@ -1,3 +1,5 @@
+import { createGameImage, preloadGameImages } from '../general/phaser-game-image'
+import { playQuestionVoice, stopQuestionVoice } from '../general/scene-question-voice'
 import * as Phaser from 'phaser'
 import { GAME_BACKGROUND_MUSIC } from '../general/audio'
 import { GameVoiceManager, type VoicePriority } from '../general/GameVoiceManager'
@@ -6,7 +8,7 @@ import { RoadController } from './core/RoadController'
 import { RacingState, type Lane, type RacingGameConfig, type RacingQuestion, type RacingTrackingEvent } from './types'
 import { createGameTracker, type GameTracker } from '../general/tracking'
 
-type AnswerGate = Phaser.GameObjects.Container & { answer: number; lane: Lane }
+type AnswerGate = Phaser.GameObjects.Container & { answer: string | number; lane: Lane }
 type WolfEventPhase = 'IDLE' | 'ENTERING' | 'APPROACHING' | 'PUSHING' | 'LAUGHING' | 'ESCAPING'
 
 const shuffle = <T>(values: T[]) => Phaser.Utils.Array.Shuffle([...values])
@@ -58,6 +60,7 @@ export class RacingScene extends Phaser.Scene {
   constructor(private readonly lesson: RacingGameConfig) { super('RacingScene') }
 
   preload() {
+    preloadGameImages(this, this.lesson.images)
     this.load.on(Phaser.Loader.Events.PROGRESS, (progress: number) => this.game.events.emit('racing:progress', progress))
     this.load.audio('racing-background', GAME_BACKGROUND_MUSIC)
     this.load.audio('racing-engine-loop', '/games/racing/voices/engine-loop.mp3')
@@ -239,6 +242,15 @@ export class RacingScene extends Phaser.Scene {
   }
 
   private renderQuestion(animate = true) {
+    const current = this.questions[this.questionIndex]
+    playQuestionVoice(this, current)
+    this.questionText.off('pointerdown').disableInteractive()
+    if (current.voice) {
+      this.questionText.setSize(600, 100).setInteractive({ useHandCursor: true })
+        .off('pointerdown').on('pointerdown', () => {
+          if (this.state === RacingState.RUNNING) playQuestionVoice(this, current)
+        })
+    }
     const question = this.questions[this.questionIndex]
     const expectedAnswer = this.getExpectedAnswer(question)
     this.tracker?.startQuestion({ learningKey: question.learningKey, expectedAnswer })
@@ -248,7 +260,7 @@ export class RacingScene extends Phaser.Scene {
         ? String(question.number)
         : question.type === 'missingNumber'
           ? question.sequence.map((value) => value ?? '?').join('   ')
-          : `${question.prompt}\n${this.arrangeObjects(question.object, question.quantity)}`
+          : question.type === 'attributeCount' ? `${question.prompt}\n${this.arrangeObjects(question.object, question.quantity)}` : question.prompt
     this.tweens.killTweensOf(this.questionText)
     if (animate) {
       this.tweens.add({
@@ -279,6 +291,16 @@ export class RacingScene extends Phaser.Scene {
 
   private renderBubbleStyleQuestion(content: string) {
     this.questionText.removeAll(true)
+    const question = this.questions[this.questionIndex]
+    if (question.inputMode === 'audio' && question.voice) {
+      this.questionText.disableInteractive()
+      this.questionText.add(createVoiceButton(this, () => {
+        if (this.state === RacingState.RUNNING) playQuestionVoice(this, question)
+      }))
+      return
+    }
+    const picture = createGameImage(this, this.lesson.images?.[content], 0, 0, 145, 100)
+    if (picture) { this.questionText.add(picture); return }
     const tokens = content.split(/\s+/).filter(Boolean)
     const palette = Phaser.Utils.Array.Shuffle(['#2563eb', '#22c55e', '#a855f7', '#f59e0b', '#0891b2'])
     const gap = 14
@@ -295,9 +317,11 @@ export class RacingScene extends Phaser.Scene {
       return label
     })
     const totalWidth = labels.reduce((width, label) => width + label.width, 0) + gap * Math.max(0, labels.length - 1)
+    const rowScale = Math.min(1, 500 / Math.max(1, totalWidth))
     let cursor = -totalWidth / 2
     labels.forEach((label) => {
-      label.setX(cursor + label.width / 2)
+      label.setX((cursor + label.width / 2) * rowScale)
+      label.setScale(rowScale)
       cursor += label.width + gap
       this.questionText.add(label)
     })
@@ -332,9 +356,11 @@ export class RacingScene extends Phaser.Scene {
       plaque.fillStyle(0xfff7df, .96).fillCircle(0, 7, 43)
         .lineStyle(6, colors[index], 1).strokeCircle(0, 7, 43)
         .lineStyle(2, 0x54361f, .75).strokeCircle(0, 7, 36)
-      const label = question.type === 'numberToQuantity'
-        ? this.createQuantityLabel(question.object, answer)
-        : this.add.text(0, 7, String(answer), { fontFamily: 'Arial Rounded MT Bold, Arial', fontSize: '58px', fontStyle: 'bold', color: '#fffaf0', stroke: '#3d291d', strokeThickness: 8 }).setOrigin(.5)
+      const picture = createGameImage(this, this.lesson.images?.[String(answer)], 0, 7, 54, 54)
+      const label = picture ?? (question.type === 'numberToQuantity'
+        ? this.createQuantityLabel(question.object, Number(answer))
+        : this.add.text(0, 7, String(answer), { fontFamily: 'Arial Rounded MT Bold, Arial', fontSize: '58px', fontStyle: 'bold', color: '#fffaf0', stroke: '#3d291d', strokeThickness: 8 }).setOrigin(.5))
+      if (!picture && question.type === 'generic') label.setScale(Math.min(1, 56 / label.width, 54 / label.height))
       const gate = this.add.container(this.projectGateX(lane, 0), this.gateY, [obstacle, plaque, label]).setDepth(16).setScale(.18).setAlpha(.62) as AnswerGate
       gate.answer = answer
       gate.lane = lane
@@ -343,7 +369,8 @@ export class RacingScene extends Phaser.Scene {
     this.scheduleWolfForCurrentRound()
   }
 
-  private resolveGate(selectedAnswer: number) {
+  private resolveGate(selectedAnswer: string | number) {
+    stopQuestionVoice(this)
     this.clearWolfEvent()
     const question = this.questions[this.questionIndex]
     const isCorrect = selectedAnswer === this.getExpectedAnswer(question)
@@ -575,7 +602,7 @@ export class RacingScene extends Phaser.Scene {
       this.car.setAngle(0)
       const finish = this.add.container(GAME_WIDTH / 2, HORIZON_Y).setDepth(40).setScale(.3)
       const banner = this.add.rectangle(0, 0, 500, 90, 0xffffff).setStrokeStyle(8, 0x222222)
-      const text = this.add.text(0, 0, '🏁  FINISH  🏁', { fontFamily: 'Arial', fontSize: '46px', fontStyle: 'bold', color: '#202020' }).setOrigin(.5)
+      const text = this.add.text(0, 0, '🏁  Về đích  🏁', { fontFamily: 'Arial', fontSize: '46px', fontStyle: 'bold', color: '#202020' }).setOrigin(.5)
       finish.add([banner, text])
 
       // Once centered, Cappy drives straight toward the horizon.
@@ -639,12 +666,12 @@ export class RacingScene extends Phaser.Scene {
     }
   }
 
-  private trackAnswer(selectedAnswer: number, isCorrect: boolean) {
+  private trackAnswer(selectedAnswer: string | number, isCorrect: boolean) {
     const question = this.questions[this.questionIndex]
     const expectedAnswer = this.getExpectedAnswer(question)
     this.tracker?.recordAnswer({
       learningKey: question.learningKey, expectedAnswer,
-      selectedAnswer, correct: isCorrect,
+      selectedAnswer, correct: isCorrect, skill: question.learningSkill, inputMode: question.inputMode, answerMode: question.answerMode,
     })
     const event: RacingTrackingEvent = {
       game: 'racing', lesson: this.lesson.lessonId, questionIndex: this.questionIndex,
@@ -717,3 +744,4 @@ export class RacingScene extends Phaser.Scene {
     this.voiceManager?.destroy()
   }
 }
+import { createVoiceButton } from '../general/createVoiceButton'

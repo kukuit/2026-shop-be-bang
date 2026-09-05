@@ -1,5 +1,6 @@
 import type { GAME_IDS } from './constants'
 import type { LearningKey, LessonId } from './lesson-catalog'
+import type { LearningSkill, QuestionAnswerMode, QuestionInputMode } from '../learning-question'
 
 export type GameId = (typeof GAME_IDS)[keyof typeof GAME_IDS]
 export type { LearningKey, LessonId } from './lesson-catalog'
@@ -13,6 +14,9 @@ export interface GameQuestionResult {
   selectedAnswer?: AnswerValue
   responseTime?: number
   attempt: number
+  skill?: LearningSkill
+  inputMode?: QuestionInputMode
+  answerMode?: QuestionAnswerMode
 }
 
 export interface CompletedGameSession {

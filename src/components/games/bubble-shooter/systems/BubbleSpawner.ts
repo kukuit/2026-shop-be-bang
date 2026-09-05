@@ -97,6 +97,7 @@ export class BubbleSpawner {
       Phaser.Utils.Array.GetRandom([...BUBBLE_COLORS]),
       movement,
       this.options.width,
+      this.question.images?.[String(value)],
     )
     this.lastSpawnLane = position.lane
     this.spawnedCount += 1
