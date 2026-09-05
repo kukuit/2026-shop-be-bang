@@ -1,3 +1,5 @@
+import { createGameImage, preloadGameImages } from '../general/phaser-game-image'
+import { playQuestionVoice, stopQuestionVoice } from '../general/scene-question-voice'
 import * as Phaser from 'phaser'
 import { GAME_BACKGROUND_MUSIC } from '../general/audio'
 import { TASK_EMOJI } from './levels'
@@ -12,6 +14,8 @@ const MIN_ANGLE = -65
 const MAX_ANGLE = 65
 const MAX_LENGTH = 720
 const TASK_PANEL_CENTER = { x: 522, y: 270 }
+const MINING_AREA_TOP = ANCHOR.y + 16
+const MINING_AREA_BOTTOM = 1175
 const GOLD_SIZE_SCALES = [0.8, 0.9, 1, 1.1, 1.2]
 const CLAW_GRIP_CENTER_Y = 68
 const GOLD_LAYOUTS: Record<number, Array<{ x: number; y: number }>> = {
@@ -22,7 +26,7 @@ const GOLD_LAYOUTS: Record<number, Array<{ x: number; y: number }>> = {
   7: [{ x: 105, y: 625 }, { x: 355, y: 670 }, { x: 610, y: 625 }, { x: 175, y: 850 }, { x: 535, y: 850 }, { x: 125, y: 1060 }, { x: 575, y: 1060 }],
 }
 
-type MineItem = Phaser.GameObjects.Container & { value: number; radius: number; taken: boolean; rock: boolean }
+type MineItem = Phaser.GameObjects.Container & { value: string | number; radius: number; taken: boolean; rock: boolean }
 
 export class GoldMinerScene extends Phaser.Scene {
   private state = GoldMinerState.ROUND_START
@@ -38,6 +42,7 @@ export class GoldMinerScene extends Phaser.Scene {
   private rope!: Phaser.GameObjects.Graphics
   private hook!: Phaser.GameObjects.Container
   private claw!: Phaser.GameObjects.Image
+  private taskImage?: Phaser.GameObjects.Image | Phaser.GameObjects.Container
   private taskItems!: Phaser.GameObjects.Text
   private feedback!: Phaser.GameObjects.Text
   private cappyFace!: Phaser.GameObjects.Text
@@ -62,6 +67,7 @@ export class GoldMinerScene extends Phaser.Scene {
   constructor(private readonly lesson: GoldMinerGameConfig) { super('GoldMinerScene') }
 
   preload() {
+    preloadGameImages(this, this.lesson.images)
     this.load.on(Phaser.Loader.Events.PROGRESS, (progress: number) => {
       this.game.events.emit('gold-miner:progress', progress)
     })
@@ -156,6 +162,7 @@ export class GoldMinerScene extends Phaser.Scene {
     this.cappyFace = this.add.text(235, 327, '', { fontSize: '1px' })
     this.taskItems = this.add.text(TASK_PANEL_CENTER.x, TASK_PANEL_CENTER.y, '', {
       fontSize: '46px',
+      color: '#4a250f',
       align: 'center',
       wordWrap: { width: 230 },
     }).setPadding(0, 8, 0, 0).setOrigin(.5)
@@ -183,10 +190,26 @@ export class GoldMinerScene extends Phaser.Scene {
   private startRound() {
     this.clearRound()
     this.question = this.questions[this.round]
-    this.tracker?.startQuestion({ learningKey: this.question.learningKey, expectedAnswer: this.question.correctAnswer })
+    playQuestionVoice(this, this.question)
+    this.taskItems.off('pointerdown').disableInteractive()
+    if (this.question.voice) {
+      this.taskItems.setInteractive({ useHandCursor: true }).off('pointerdown')
+        .on('pointerdown', () => {
+          if (this.state === GoldMinerState.AIMING) playQuestionVoice(this, this.question)
+        })
+    }
+    this.tracker?.startQuestion({ learningKey: this.question.learningKey, expectedAnswer: this.question.correctAnswer, skill: this.question.skill, inputMode: this.question.inputMode, answerMode: this.question.answerMode })
     this.state = GoldMinerState.ROUND_START
     this.wolfAppeared = false
-    this.taskItems.setText(Array.from({ length: this.question.count }, () => TASK_EMOJI[this.question.objectType]).join(' '))
+    this.taskItems.setText(this.question.prompt ?? Array.from({ length: this.question.count }, () => TASK_EMOJI[this.question.objectType]).join(' '))
+    this.taskImage?.destroy()
+    this.taskImage = createGameImage(this, this.lesson.images?.[this.question.prompt ?? ''], TASK_PANEL_CENTER.x, TASK_PANEL_CENTER.y, 160, 115)
+    if (this.question.inputMode === 'audio' && this.question.voice) {
+      this.taskImage = createVoiceButton(this, () => {
+        if (this.state === GoldMinerState.AIMING) playQuestionVoice(this, this.question)
+      }).setPosition(TASK_PANEL_CENTER.x, TASK_PANEL_CENTER.y)
+    }
+    this.taskItems.setVisible(!this.taskImage)
     this.game.events.emit('game-ui:round', this.round + 1)
     const positions = Phaser.Utils.Array.Shuffle([...(GOLD_LAYOUTS[this.question.choices.length] ?? GOLD_LAYOUTS[7])])
     this.question.choices.forEach((value, index) => {
@@ -201,12 +224,15 @@ export class GoldMinerScene extends Phaser.Scene {
     })
   }
 
-  private createMineItem(x: number, y: number, value: number, rock: boolean) {
+  private createMineItem(x: number, y: number, value: string | number, rock: boolean) {
     const sizeScale = rock ? 1 : Phaser.Utils.Array.GetRandom(GOLD_SIZE_SCALES)
     const sprite = this.add.image(0, 0, rock ? 'mine-rock' : 'gold-nugget')
       .setDisplaySize(145 * sizeScale, 106 * sizeScale)
     const label = this.add.text(0, 1, String(value), { fontFamily: 'Arial', fontSize: '55px', fontStyle: 'bold', color: '#ffffff', stroke: rock ? '#343434' : '#8a4300', strokeThickness: 9 }).setOrigin(.5)
-    const item = this.add.container(x, y, [sprite, label]).setDepth(10) as MineItem
+    const picture = createGameImage(this, this.lesson.images?.[String(value)], 0, 0, 85 * sizeScale, 65 * sizeScale)
+    if (picture) label.destroy()
+    else label.setScale(Math.min(1, 90 * sizeScale / label.width, 62 * sizeScale / label.height))
+    const item = this.add.container(x, y, [sprite, picture ?? label]).setDepth(10) as MineItem
     item.value = value; item.radius = 62 * sizeScale; item.taken = false; item.rock = rock
     this.tweens.add({ targets: item, y: y - 7, duration: 1500 + x, yoyo: true, repeat: -1, ease: 'Sine.InOut' })
     return item
@@ -225,7 +251,8 @@ export class GoldMinerScene extends Phaser.Scene {
   }
 
   private dropHook(pointer: Phaser.Input.Pointer) {
-    if (!this.gameStarted || this.paused || this.state !== GoldMinerState.AIMING || pointer.worldY < 90 || pointer.worldY > 1175) return
+    if (!this.gameStarted || this.paused || this.state !== GoldMinerState.AIMING) return
+    if (pointer.worldX < 0 || pointer.worldX > W || pointer.worldY <= MINING_AREA_TOP || pointer.worldY >= MINING_AREA_BOTTOM) return
     this.sound.play('gold-voice-reel', { volume: 0.7 })
     this.setClawClosed(false)
     this.lockedAngle = this.angle
@@ -275,6 +302,7 @@ export class GoldMinerScene extends Phaser.Scene {
       return
     }
     if (!this.grabbed) { this.feedback.setText(''); this.state = GoldMinerState.AIMING; return }
+    stopQuestionVoice(this)
     this.state = GoldMinerState.CHECK_ANSWER
     const item = this.grabbed
     this.grabbed = undefined
@@ -283,6 +311,7 @@ export class GoldMinerScene extends Phaser.Scene {
       expectedAnswer: this.question.correctAnswer,
       selectedAnswer: item.value,
       correct: item.value === this.question.correctAnswer,
+      skill: this.question.skill, inputMode: this.question.inputMode, answerMode: this.question.answerMode,
     })
     if (item.value === this.question.correctAnswer) this.correct(item)
     else this.wrong(item)
@@ -574,3 +603,4 @@ export class GoldMinerScene extends Phaser.Scene {
     this.voiceManager = undefined
   }
 }
+import { createVoiceButton } from '../general/createVoiceButton'

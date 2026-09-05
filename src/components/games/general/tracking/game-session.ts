@@ -6,6 +6,7 @@ import type {
   LearningKey,
   LessonId,
 } from './types'
+import type { LearningSkill, QuestionAnswerMode, QuestionInputMode } from '../learning-question'
 
 type TrackerOptions = { lessonId: LessonId; gameId: GameId; repository: GameTrackingRepository }
 type ActiveQuestion = {
@@ -13,6 +14,9 @@ type ActiveQuestion = {
   expectedAnswer?: AnswerValue
   startedAt: number
   attempt: number
+  skill?: LearningSkill
+  inputMode?: QuestionInputMode
+  answerMode?: QuestionAnswerMode
 }
 
 const devLog = (label: string, value: unknown) => {
@@ -29,7 +33,7 @@ export class GameTracker {
     devLog('Start', { lessonId: options.lessonId, gameId: options.gameId })
   }
 
-  startQuestion(input: { learningKey: LearningKey; expectedAnswer?: AnswerValue }) {
+  startQuestion(input: { learningKey: LearningKey; expectedAnswer?: AnswerValue; skill?: LearningSkill; inputMode?: QuestionInputMode; answerMode?: QuestionAnswerMode }) {
     this.question = { ...input, startedAt: Date.now(), attempt: 1 }
   }
 
@@ -40,9 +44,13 @@ export class GameTracker {
     selectedAnswer?: AnswerValue
     responseTime?: number
     attempt?: number
+    skill?: LearningSkill
+    inputMode?: QuestionInputMode
+    answerMode?: QuestionAnswerMode
   }) {
     const active = this.question?.learningKey === input.learningKey ? this.question : undefined
     const result: GameQuestionResult = {
+      ...active,
       ...input,
       responseTime:
         input.responseTime ?? (active ? Math.max(0, Date.now() - active.startedAt) : undefined),

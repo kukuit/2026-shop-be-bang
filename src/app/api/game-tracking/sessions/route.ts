@@ -28,6 +28,9 @@ const resultSchema = z.object({
     .max(60 * 60 * 1000)
     .optional(),
   attempt: z.number().int().min(1).max(100),
+  skill: z.enum(['listening', 'reading', 'speaking', 'writing']).optional(),
+  inputMode: z.enum(['audio', 'text', 'image', 'scene']).optional(),
+  answerMode: z.enum(['select-image', 'select-text', 'drag-image', 'drag-text', 'speak']).optional(),
 })
 
 const sessionSchema = z

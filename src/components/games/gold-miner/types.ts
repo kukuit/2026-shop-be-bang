@@ -4,9 +4,15 @@ export type GoldMinerQuestion = {
   id: string
   objectType: TaskObject
   count: number
-  correctAnswer: number
-  choices: number[]
+  correctAnswer: string | number
+  choices: Array<string | number>
   learningKey: LearningKey
+  prompt?: string
+  skill?: import('../general/learning-question').LearningSkill
+  inputMode?: import('../general/learning-question').QuestionInputMode
+  answerMode?: import('../general/learning-question').QuestionAnswerMode
+  instructionVoice?: string
+  voice?: string
 }
 
 export type GoldMinerGameConfig = GameLessonConfig<GoldMinerQuestion>

@@ -1,3 +1,5 @@
+import { createGameImage, preloadGameImages } from '../../general/phaser-game-image'
+import { playQuestionVoice, stopQuestionVoice } from '../../general/scene-question-voice'
 import * as Phaser from 'phaser'
 import { Bubble } from '../objects/Bubble'
 import { Shooter } from '../objects/Shooter'
@@ -17,9 +19,11 @@ const QUESTION_Y = 170
 const QUESTION_PANEL_WIDTH = 570
 const QUESTION_PANEL_HEIGHT = 185
 const QUESTION_SAFE_WIDTH = 510
+const SHOOTING_AREA_TOP = QUESTION_Y + QUESTION_PANEL_HEIGHT / 2 + 16
 type RoundState = 'PLAYING' | 'CORRECT' | 'SHOW_RESULT' | 'ROUND_TRANSITION' | 'NEW_QUESTION' | 'COMPLETE'
 
 export class BubbleMathScene extends Phaser.Scene {
+  private readonly shootingPointers = new Set<number>()
   private questions?: QuestionSystem
   private readonly score = new ScoreSystem()
   private currentQuestion!: MathQuestion
@@ -66,6 +70,7 @@ export class BubbleMathScene extends Phaser.Scene {
   }
 
   preload() {
+    preloadGameImages(this, this.lesson.images)
     this.load.on('progress', (progress: number) => {
       this.game.events.emit('bubble-shooter:load-progress', progress)
     })
@@ -161,8 +166,9 @@ export class BubbleMathScene extends Phaser.Scene {
     this.createWolf()
 
     this.input.on('pointermove', this.aim, this)
-    this.input.on('pointerdown', this.aim, this)
+    this.input.on('pointerdown', this.beginAim, this)
     this.input.on('pointerup', this.shoot, this)
+    this.input.on('pointerupoutside', this.cancelAim, this)
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.cleanup, this)
 
     this.game.events.emit('bubble-shooter:ready')
@@ -205,6 +211,7 @@ export class BubbleMathScene extends Phaser.Scene {
   private setPaused(paused: boolean) {
     this.isPauseMenuOpen = paused
     if (paused) {
+      this.shootingPointers.clear()
       this.physics.pause()
       this.time.paused = true
       this.tweens.pauseAll()
@@ -370,6 +377,7 @@ export class BubbleMathScene extends Phaser.Scene {
       this.tracker?.startQuestion({
         learningKey: this.currentQuestion.learningKey,
         expectedAnswer: this.currentQuestion.answer,
+        skill: this.currentQuestion.skill, inputMode: this.currentQuestion.inputMode, answerMode: this.currentQuestion.answerMode,
       })
     }
     this.renderQuestion(this.currentQuestion)
@@ -535,7 +543,24 @@ export class BubbleMathScene extends Phaser.Scene {
   }
 
   private renderQuestion(question: MathQuestion, showCheck = false) {
+    if (!showCheck) playQuestionVoice(this, question)
+    this.questionText.off('pointerdown').disableInteractive()
+    if (question.voice && !showCheck) {
+      this.questionText.setSize(600, 100).setInteractive({ useHandCursor: true })
+        .off('pointerdown').on('pointerdown', () => {
+          if (this.roundState === 'PLAYING') playQuestionVoice(this, question)
+        })
+    }
     this.questionText.removeAll(true)
+    if (question.inputMode === 'audio' && question.voice) {
+      this.questionText.disableInteractive()
+      this.questionText.add(createVoiceButton(this, () => {
+        if (this.roundState === 'PLAYING') playQuestionVoice(this, question)
+      }))
+      return
+    }
+    const picture = createGameImage(this, this.lesson.images?.[question.text], 0, 0, 150, 100)
+    if (picture) { this.questionText.add(picture); return }
 
     if (question.presentation?.type === 'completeQuantity') {
       this.renderCompleteQuantityQuestion(question, showCheck)
@@ -546,7 +571,9 @@ export class BubbleMathScene extends Phaser.Scene {
       return
     }
 
-    const displayText = showCheck ? question.text.replace('?', `${question.answer}`) : question.text
+    const displayText = question.presentation?.type === 'generic'
+      ? question.presentation.prompt
+      : showCheck ? question.text.replace('?', `${question.answer}`) : question.text
     const tokens = displayText.split(/\s+/).filter(Boolean)
     const palette = Phaser.Utils.Array.Shuffle([
       '#2563eb', // xanh dương
@@ -571,7 +598,7 @@ export class BubbleMathScene extends Phaser.Scene {
 
     const totalWidth = labels.reduce((width, label) => width + label.width, 0) + gap * (labels.length - 1)
     const safeWidth = showCheck ? QUESTION_SAFE_WIDTH - 45 : QUESTION_SAFE_WIDTH
-    const rowScale = question.presentation?.type === 'fitToPanel' ? Math.min(1, safeWidth / totalWidth) : 1
+    const rowScale = Math.min(1, safeWidth / Math.max(1, totalWidth))
     let cursor = -totalWidth / 2
     labels.forEach((label) => {
       label.setX((cursor + label.width / 2) * rowScale)
@@ -674,14 +701,31 @@ export class BubbleMathScene extends Phaser.Scene {
     }
   }
 
+  private isInShootingArea(pointer: Phaser.Input.Pointer) {
+    return pointer.worldX >= 0 && pointer.worldX <= WIDTH
+      && pointer.worldY > SHOOTING_AREA_TOP && pointer.worldY < HUD_TOP
+  }
+
+  private beginAim(pointer: Phaser.Input.Pointer) {
+    this.shootingPointers.delete(pointer.id)
+    if (!this.gameStarted || this.isPauseMenuOpen || this.roundState !== 'PLAYING' || !this.isInShootingArea(pointer)) return
+    this.shootingPointers.add(pointer.id)
+    this.aim(pointer)
+  }
+
+  private cancelAim(pointer: Phaser.Input.Pointer) {
+    this.shootingPointers.delete(pointer.id)
+  }
+
   private aim(pointer: Phaser.Input.Pointer) {
-    if (!this.gameStarted) return
+    if (!this.gameStarted || this.isPauseMenuOpen || !this.isInShootingArea(pointer)) return
+    if (pointer.isDown && !this.shootingPointers.has(pointer.id)) return
     this.shooter.setAim(pointer.worldX, pointer.worldY)
   }
 
   private shoot(pointer: Phaser.Input.Pointer) {
-    if (!this.gameStarted || this.isPauseMenuOpen || pointer.worldY >= HUD_TOP) return
-    if (pointer.worldY <= 82 && pointer.worldX >= WIDTH - 140) return
+    const startedInShootingArea = this.shootingPointers.delete(pointer.id)
+    if (!startedInShootingArea || !this.gameStarted || this.isPauseMenuOpen || !this.isInShootingArea(pointer)) return
     this.aim(pointer)
     if (this.roundState !== 'PLAYING' || this.time.now - this.lastShotAt < 320 || this.projectiles.countActive(true) >= 8) return
     this.lastShotAt = this.time.now
@@ -704,6 +748,7 @@ export class BubbleMathScene extends Phaser.Scene {
     const bubble = bubbleObject as Bubble
     if (!projectile.active || !bubble.active || this.roundState !== 'PLAYING') return
 
+    stopQuestionVoice(this)
     projectile.destroy()
     const hitX = bubble.x
     const hitY = bubble.y
@@ -715,6 +760,7 @@ export class BubbleMathScene extends Phaser.Scene {
           correct: false,
           expectedAnswer: this.currentQuestion.answer,
           selectedAnswer: bubble.value,
+          skill: this.currentQuestion.skill, inputMode: this.currentQuestion.inputMode, answerMode: this.currentQuestion.answerMode,
         })
       }
       this.playRandomVoice(
@@ -739,6 +785,7 @@ export class BubbleMathScene extends Phaser.Scene {
         correct: true,
         expectedAnswer: this.currentQuestion.answer,
         selectedAnswer: bubble.value,
+        skill: this.currentQuestion.skill, inputMode: this.currentQuestion.inputMode, answerMode: this.currentQuestion.answerMode,
       })
     }
     if (this.questionNumber !== this.totalQuestions) {
@@ -835,6 +882,7 @@ export class BubbleMathScene extends Phaser.Scene {
       this.tracker?.startQuestion({
         learningKey: this.currentQuestion.learningKey,
         expectedAnswer: this.currentQuestion.answer,
+        skill: this.currentQuestion.skill, inputMode: this.currentQuestion.inputMode, answerMode: this.currentQuestion.answerMode,
       })
     }
     this.updateLevelHud()
@@ -1012,8 +1060,10 @@ export class BubbleMathScene extends Phaser.Scene {
     this.voiceManager = undefined
     this.bubbleSpawner?.destroy()
     this.input.off('pointermove', this.aim, this)
-    this.input.off('pointerdown', this.aim, this)
+    this.input.off('pointerdown', this.beginAim, this)
     this.input.off('pointerup', this.shoot, this)
+    this.input.off('pointerupoutside', this.cancelAim, this)
+    this.shootingPointers.clear()
     this.nextButton?.off('pointerdown', this.goToNextQuestion, this)
     this.game.events.off('game-ui:mute', this.setMuted, this)
     this.game.events.off('game-ui:pause', this.setPaused, this)
@@ -1021,3 +1071,4 @@ export class BubbleMathScene extends Phaser.Scene {
     this.game.events.off('game-ui:start', this.startGameplay, this)
   }
 }
+import { createVoiceButton } from '../../general/createVoiceButton'

@@ -1,3 +1,5 @@
+import { createGameImage } from '../../general/phaser-game-image'
+import type { GameImage } from '../../general/game-image'
 import * as Phaser from 'phaser'
 import { BUBBLE_CONFIG, BUBBLE_VISUAL_CONFIG } from '../config/bubble'
 
@@ -10,7 +12,7 @@ export interface BubbleMovement {
 }
 
 export class Bubble extends Phaser.GameObjects.Container {
-  readonly value: number
+  readonly value: string | number
   readonly hitRadius: number
   readonly baseX: number
   private readonly riseSpeed: number
@@ -23,10 +25,11 @@ export class Bubble extends Phaser.GameObjects.Container {
     scene: Phaser.Scene,
     x: number,
     y: number,
-    value: number,
+    value: string | number,
     color: number,
     movement: BubbleMovement,
     gameWidth: number,
+    image?: GameImage,
   ) {
     const radius = movement.radius
     const balloon = scene.add.image(0, radius * BUBBLE_VISUAL_CONFIG.bodyOffsetYFactor, 'balloon')
@@ -50,8 +53,11 @@ export class Bubble extends Phaser.GameObjects.Container {
       'rgba(31, 27, 82, 0.28)',
       2,
     )
+    label.setScale(Math.min(1, radius * 1.35 / label.width, radius * 1.15 / label.height))
 
-    super(scene, x, y, [balloon, label])
+    const picture = createGameImage(scene, image, 0, 0, radius * 1.25, radius * 1.25)
+    if (picture) label.destroy()
+    super(scene, x, y, [balloon, picture ?? label])
     this.value = value
     this.hitRadius = radius
     this.baseX = x

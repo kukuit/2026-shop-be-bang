@@ -8,4 +8,5 @@ export type GameLessonConfig<Question> = {
   supportedTargets: readonly LearningKey[]
   loadQuestions: () => Question[] | Promise<Question[]>
   introVoice?: string
+  images?: import('./game-image').GameImages
 }
