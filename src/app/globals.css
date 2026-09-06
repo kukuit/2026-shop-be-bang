@@ -50,6 +50,31 @@ body {
 
 /* Tiện ích nhỏ */
 @layer utilities {
+  /* Shared reading sizes for game pages; rem units respect browser text settings. */
+  .game-typography {
+    --game-text-body: 1.0625rem;
+    --game-text-small: 0.9375rem;
+    font-size: var(--game-text-body);
+    line-height: 1.5;
+  }
+
+  .game-typography :where(.text-xs, .text-\[10px\], .text-\[11px\]) {
+    font-size: var(--game-text-small);
+    line-height: 1.5;
+  }
+
+  .game-typography :where(.text-sm, .text-base) {
+    font-size: var(--game-text-body);
+    line-height: 1.5;
+  }
+
+  @media (min-width: 768px) {
+    .game-typography {
+      --game-text-body: 1.125rem;
+      --game-text-small: 1rem;
+    }
+  }
+
   .text-balance {
     text-wrap: balance;
   }
