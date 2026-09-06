@@ -11,7 +11,9 @@ export interface User {
   role: UserRole
   status: UserStatus
   activeGame: boolean
-  grade: number | null
+  activeGrade: number | null
+  grades: number[]
+  primaryGrade: number | null
   createdAt: string | null
   updatedAt: string | null
   lastLoginAt: string | null
@@ -25,7 +27,7 @@ export interface CreateUserInput {
   email?: string | null
   phone?: string | null
   avatar?: string | null
-  grade?: number | null
+  primaryGrade?: number | null
   activeGame?: boolean
 }
 
@@ -34,7 +36,7 @@ export interface UpdateUserInput {
   email?: string | null
   phone?: string | null
   avatar?: string | null
-  grade?: number | null
+  primaryGrade?: number | null
   activeGame?: boolean
   status?: UserStatus
 }

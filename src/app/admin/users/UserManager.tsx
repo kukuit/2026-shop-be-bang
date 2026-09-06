@@ -46,7 +46,7 @@ type FormState = {
   email: string
   phone: string
   avatar: string
-  grade: string
+  primaryGrade: string
   activeGame: boolean
   status: UserStatus
 }
@@ -58,7 +58,7 @@ const blankForm: FormState = {
   email: '',
   phone: '',
   avatar: '',
-  grade: '',
+  primaryGrade: '',
   activeGame: true,
   status: 'active',
 }
@@ -103,7 +103,7 @@ export default function UserManager({ initialUsers }: { initialUsers: User[] }) 
       email: user.email ?? '',
       phone: user.phone ?? '',
       avatar: user.avatar ?? '',
-      grade: user.grade?.toString() ?? '',
+      primaryGrade: user.primaryGrade?.toString() ?? '',
       activeGame: user.activeGame,
       status: user.status,
     })
@@ -125,7 +125,7 @@ export default function UserManager({ initialUsers }: { initialUsers: User[] }) 
       email: form.email || null,
       phone: form.phone || null,
       avatar: form.avatar || null,
-      grade: form.grade ? Number(form.grade) : null,
+      primaryGrade: form.primaryGrade ? Number(form.primaryGrade) : null,
       activeGame: form.activeGame,
     }
     const editing = mode === 'edit' && selected
@@ -231,7 +231,7 @@ export default function UserManager({ initialUsers }: { initialUsers: User[] }) 
                     <span className="block">{user.email ?? '—'}</span>
                     <span className="block">{user.phone ?? '—'}</span>
                   </td>
-                  <td className="px-5 py-4">{user.grade ? `Lớp ${user.grade}` : '—'}</td>
+                  <td className="px-5 py-4">{user.primaryGrade ? `Lớp ${user.primaryGrade}` : '—'}</td>
                   <td className="px-5 py-4">{gameBadge(user.activeGame)}</td>
                   <td className="px-5 py-4">{statusBadge(user.status)}</td>
                   <td className="px-5 py-4 text-slate-500">{dateText(user.createdAt)}</td>
@@ -306,7 +306,7 @@ function UserDetail({ user, onEdit }: { user: User; onEdit: () => void }) {
   const rows = [
     ['User ID', user.userId],
     ['Username', user.username],
-    ['Lớp', user.grade ? `Lớp ${user.grade}` : '—'],
+    ['Lớp', user.primaryGrade ? `Lớp ${user.primaryGrade}` : '—'],
     ['Email', user.email ?? '—'],
     ['Điện thoại', user.phone ?? '—'],
     ['Role', user.role],
@@ -437,14 +437,14 @@ function UserForm({
       </Field>
       <Field label="Lớp">
         <select
-          value={form.grade}
-          onChange={(event) => set('grade', event.target.value)}
+          value={form.primaryGrade}
+          onChange={(event) => set('primaryGrade', event.target.value)}
           className="input"
         >
           <option value="">Chưa chọn</option>
-          {[1, 2, 3, 4, 5].map((grade) => (
-            <option key={grade} value={grade}>
-              Lớp {grade}
+          {[1, 2, 3, 4, 5].map((primaryGrade) => (
+            <option key={primaryGrade} value={primaryGrade}>
+              Lớp {primaryGrade}
             </option>
           ))}
         </select>

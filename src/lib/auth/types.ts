@@ -1,7 +1,8 @@
+import type { GameProfile } from '@/lib/game-profile'
 export type AuthRole = 'user' | 'admin'
 export type AuthStatus = 'active' | 'inactive'
 
-export type SafeAuthUser = {
+export type SafeAuthUser = GameProfile & {
   id: string
   username: string
   displayName: string

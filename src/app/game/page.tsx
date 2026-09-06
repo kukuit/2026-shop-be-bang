@@ -1,7 +1,6 @@
 import type { Metadata } from 'next'
 import GameAuthHeader from '@/components/auth/GameAuthHeader'
-import GameNavigationGrid from '@/components/games/navigation/GameNavigationGrid'
-import { gradeItems } from '@/components/games/navigation/catalog'
+import GameEntry from '@/components/games/profile/GameEntry'
 
 export const metadata: Metadata = {
   title: 'Trò chơi học tập',
@@ -9,5 +8,5 @@ export const metadata: Metadata = {
 }
 
 export default function GamePage() {
-  return <><GameAuthHeader /><GameNavigationGrid title="Bé học lớp mấy?" breadcrumbs={[]} items={gradeItems} /></>
+  return <><GameAuthHeader /><GameEntry /></>
 }

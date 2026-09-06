@@ -4,7 +4,7 @@ const optionalText = z
   .union([z.string().trim().max(500), z.null()])
   .optional()
   .transform((value) => value || null)
-const grade = z
+const primaryGrade = z
   .union([z.number().int().min(1).max(5), z.null()])
   .optional()
   .transform((value) => value ?? null)
@@ -26,7 +26,7 @@ export const createUserSchema = z
       .transform((value) => value || null),
     phone: optionalText,
     avatar: optionalText,
-    grade,
+    primaryGrade,
     activeGame: z.boolean().optional().default(true),
   })
   .strict()
@@ -40,7 +40,7 @@ export const updateUserSchema = z
       .transform((value) => (value === '' ? null : value)),
     phone: optionalText,
     avatar: optionalText,
-    grade,
+    primaryGrade: z.number().int().min(1).max(5).nullable().optional(),
     activeGame: z.boolean().optional(),
     status: z.enum(['active', 'inactive', 'blocked']).optional(),
   })

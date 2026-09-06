@@ -3,6 +3,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { Gamepad2 } from 'lucide-react'
 import AuthMenu from './AuthMenu'
+import { GradeSwitcher } from '@/components/games/profile/GradeControls'
 
 export default function GameAuthHeader({ overlay = false }: { overlay?: boolean }) {
   return (
@@ -32,8 +33,8 @@ export default function GameAuthHeader({ overlay = false }: { overlay?: boolean 
             </Link>
           </>
         )}
-        <div className={overlay ? 'pointer-events-auto ml-auto' : 'flex min-w-0 justify-end'}>
-          <AuthMenu game />
+        <div className={overlay ? 'pointer-events-auto ml-auto flex items-center gap-2' : 'flex min-w-0 items-center justify-end gap-2'}>
+          <AuthMenu game><GradeSwitcher /></AuthMenu>
         </div>
       </div>
     </header>

@@ -1,3 +1,4 @@
+import { normalizeGameProfile, changeGameGrade } from '@/lib/game-profile'
 import 'server-only'
 import { FieldValue, Timestamp } from 'firebase-admin/firestore'
 import { getAdminDb } from '@/lib/firebaseAdmin'
@@ -22,7 +23,7 @@ function mapUser(id: string, data: FirebaseFirestore.DocumentData): User {
     role: (data.role === 'admin' ? 'admin' : 'user') as UserRole,
     status: (data.status ?? 'active') as UserStatus,
     activeGame: data.activeGame !== false,
-    grade: typeof data.grade === 'number' ? data.grade : null,
+    ...normalizeGameProfile(data),
     createdAt: dateValue(data.createdAt),
     updatedAt: dateValue(data.updatedAt),
     lastLoginAt: dateValue(data.lastLoginAt),
@@ -60,6 +61,7 @@ export async function createUser(input: CreateUserInput): Promise<User> {
     transaction.create(userRef, {
       userId,
       ...safeData,
+      ...normalizeGameProfile({ primaryGrade: data.primaryGrade, activeGrade: data.primaryGrade }),
       username,
       displayName: data.name,
       passwordHash,
@@ -77,12 +79,17 @@ export async function createUser(input: CreateUserInput): Promise<User> {
 export async function updateUser(userId: string, input: UpdateUserInput): Promise<User | null> {
   const data = updateUserSchema.parse(input)
   const reference = usersCollection().doc(userId)
-  if (!(await reference.get()).exists) return null
-  await reference.update({
-    ...data,
-    ...(data.name ? { displayName: data.name } : {}),
-    updatedAt: FieldValue.serverTimestamp(),
+  const exists = await getAdminDb().runTransaction(async transaction => {
+    const snapshot = await transaction.get(reference)
+    if (!snapshot.exists) return false
+    const profile = data.primaryGrade === undefined ? {} : data.primaryGrade === null
+      ? { ...normalizeGameProfile(snapshot.data()), primaryGrade: null }
+      : changeGameGrade(snapshot.data(), data.primaryGrade, true)
+    transaction.update(reference, { ...data, ...profile,
+      ...(data.name ? { displayName: data.name } : {}), updatedAt: FieldValue.serverTimestamp() })
+    return true
   })
+  if (!exists) return null
   return getUserById(userId)
 }
 
