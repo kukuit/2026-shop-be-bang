@@ -1,14 +1,30 @@
 'use client'
 import Link from 'next/link'
-import { useState } from 'react'
-import { LogIn, LogOut, UserRound } from 'lucide-react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { LogIn, LogOut, Menu, UserRound } from 'lucide-react'
 import { useAuth } from './AuthProvider'
 import LoginModal from './LoginModal'
 
-export default function AuthMenu({ game = false }: { game?: boolean }) {
+export default function AuthMenu({ game = false, children }: { game?: boolean; children?: ReactNode }) {
   const { user, loading, logout } = useAuth()
   const [loginOpen, setLoginOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!menuOpen) return
+    const dismiss = (event: PointerEvent) => {
+      if (!menuRef.current?.contains(event.target as Node)) setMenuOpen(false)
+    }
+    const escape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setMenuOpen(false)
+    }
+    document.addEventListener('pointerdown', dismiss)
+    document.addEventListener('keydown', escape)
+    return () => {
+      document.removeEventListener('pointerdown', dismiss)
+      document.removeEventListener('keydown', escape)
+    }
+  }, [menuOpen])
   if (loading)
     return (
       <span
@@ -21,7 +37,7 @@ export default function AuthMenu({ game = false }: { game?: boolean }) {
         <span className="hidden whitespace-nowrap sm:inline">Đang tải user...</span>
       </span>
     )
-  if (!user)
+  if (!user && !game)
     return (
       <>
         <button
@@ -39,45 +55,49 @@ export default function AuthMenu({ game = false }: { game?: boolean }) {
       </>
     )
   return (
-    <div className="relative">
+    <div ref={menuRef} className="relative">
       <button
         type="button"
         onClick={() => setMenuOpen((v) => !v)}
-        className="flex h-11 w-11 items-center justify-center gap-2 rounded-full border border-slate-200 bg-white p-0 text-sm font-bold sm:h-auto sm:w-auto sm:justify-start sm:px-3 sm:py-2"
+        aria-label="Menu tài khoản và chọn lớp"
+        aria-expanded={menuOpen}
+        className={`flex h-11 w-11 items-center justify-center gap-2 rounded-full border border-slate-200 bg-white p-0 text-sm font-bold ${user ? 'sm:h-auto sm:w-auto sm:justify-start sm:px-3 sm:py-2' : ''}`}
       >
         <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-blue-100 text-xs font-black uppercase text-blue-700">
-          {user.displayName.trim().charAt(0) || <UserRound size={16} />}
+          {user?.displayName.trim().charAt(0) || <Menu size={18} />}
         </span>
-        <span className="hidden max-w-32 truncate sm:inline">{user.displayName}</span>
+        {user && <span className="hidden max-w-32 truncate sm:inline">{user.displayName}</span>}
       </button>
       {menuOpen && (
-        <div className="absolute right-0 mt-2 w-48 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-xl">
+        <div className="absolute right-0 z-50 mt-2 max-h-[calc(100dvh-5rem)] w-64 max-w-[calc(100vw-2rem)] overflow-y-auto rounded-2xl border border-slate-200 bg-white py-1 text-slate-800 shadow-xl">
           <div className="flex items-center gap-2 border-b border-slate-100 px-4 py-2.5 sm:hidden">
             <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-blue-100 text-xs font-black uppercase text-blue-700">
-              {user.displayName.trim().charAt(0) || <UserRound size={16} />}
+              {user?.displayName.trim().charAt(0) || <UserRound size={16} />}
             </span>
-            <span className="min-w-0 truncate text-sm font-bold text-slate-800">{user.displayName}</span>
+            <span className="min-w-0 truncate text-sm font-bold text-slate-800">{user?.displayName || 'Bé chơi game'}</span>
           </div>
-          {game && user.activeGame && (
+          {children}
+          {game && user?.activeGame && (
             <Link href="/game/me" className="block px-4 py-2 text-sm hover:bg-slate-50">
               Tiến trình học
             </Link>
           )}
-          {user.role === 'admin' && (
+          {user?.role === 'admin' && (
             <Link href="/admin/users" className="block px-4 py-2 text-sm hover:bg-slate-50">
               Quản trị user
             </Link>
           )}
           <button
             type="button"
-            onClick={() => void logout()}
+            onClick={() => { setMenuOpen(false); if (user) void logout(); else setLoginOpen(true) }}
             className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50"
           >
-            <LogOut size={15} />
-            Đăng xuất
+            {user ? <LogOut size={15} /> : <LogIn size={15} />}
+            {user ? 'Đăng xuất' : 'Đăng nhập'}
           </button>
         </div>
       )}
+      <LoginModal open={loginOpen} onClose={() => setLoginOpen(false)} />
     </div>
   )
 }

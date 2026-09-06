@@ -1,3 +1,4 @@
+import { normalizeGameProfile } from '@/lib/game-profile'
 import 'server-only'
 import { getAdminDb } from '@/lib/firebaseAdmin'
 import type { SafeAuthUser, AuthRole, AuthStatus } from './types'
@@ -8,6 +9,7 @@ const collection = () => getAdminDb().collection('shopbebangcom').doc('users').c
 export function safeUser(id: string, data: FirebaseFirestore.DocumentData): SafeAuthUser {
   const legacyRole = String(data.role ?? 'user')
   return {
+    ...normalizeGameProfile(data),
     id,
     username: String(data.username ?? ''),
     displayName: String(data.name ?? data.displayName ?? data.username ?? ''),
