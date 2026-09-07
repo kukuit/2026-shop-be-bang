@@ -11,7 +11,7 @@ const games = [
 ] as const
 
 export default function Page() {
-  return <><GameAuthHeader /><main className="min-h-[calc(100dvh-4rem)] bg-gradient-to-b from-sky-50 to-pink-50 px-4 py-7 md:px-6 md:py-10"><section className="mx-auto max-w-6xl">
+  return <><GameAuthHeader /><main className="min-h-[calc(100dvh-4rem)] bg-gradient-to-b from-sky-50 to-pink-50 py-7 md:py-10"><section className="game-container">
     <nav className="flex items-center gap-1 text-sm font-bold text-slate-500" aria-label="Điều hướng bài học"><Link href="/game" className="text-blue-700">Game</Link><ChevronRight size={15}/><Link href="/game/lop-1" className="text-blue-700">Lớp 1</Link><ChevronRight size={15}/><Link href="/game/lop-1/toan" className="text-blue-700">Toán</Link><ChevronRight size={15}/><span className="text-slate-800">Bài 2</span></nav>
     <div className="mt-5"><h1 className="text-2xl font-black text-slate-800 md:text-4xl">Các số 6, 7, 8, 9, 10</h1></div>
     <div className="mt-5 grid grid-cols-2 gap-3 md:mt-7 md:gap-5 lg:grid-cols-4">{games.map((game) => <Link key={game.href} href={game.href} className="group relative aspect-square overflow-hidden rounded-2xl border-[3px] border-white bg-white shadow-xl md:rounded-[2rem]">

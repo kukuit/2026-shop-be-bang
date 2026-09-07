@@ -12,8 +12,8 @@ const games = [
 
 export default function LessonOnePage() {
   return (
-    <><GameAuthHeader /><main className="min-h-[calc(100dvh-4rem)] bg-gradient-to-b from-sky-50 to-pink-50 px-4 py-7 md:px-6 md:py-10">
-      <section className="mx-auto max-w-6xl">
+    <><GameAuthHeader /><main className="min-h-[calc(100dvh-4rem)] bg-gradient-to-b from-sky-50 to-pink-50 py-7 md:py-10">
+      <section className="game-container">
         <nav aria-label="Điều hướng bài học" className="flex items-center gap-1 overflow-x-auto whitespace-nowrap text-sm font-bold text-slate-500">
           <Link href="/game" className="text-blue-700 hover:text-blue-800">Game</Link><ChevronRight size={15} />
           <Link href="/game/lop-1" className="text-blue-700 hover:text-blue-800">Lớp 1</Link><ChevronRight size={15} />

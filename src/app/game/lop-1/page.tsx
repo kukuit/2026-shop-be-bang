@@ -3,19 +3,10 @@ import GameNavigationGrid from '@/components/games/navigation/GameNavigationGrid
 import { getSubjectItems } from '@/components/games/navigation/catalog'
 
 export default function GradeOnePage() {
-  // Card bounds in the edited reference sheet; each card displays only its artwork.
+  const images = ['toan-square.png', 'tieng-viet-square.png', 'tieng-anh-square.png']
   const items = getSubjectItems('lop-1').map((item, index) => ({
     ...item,
-    grade: 1,
-    artwork: {
-      src: '/games/lessons/lop-1/images/subject-cards-no-titles.png',
-      x: [46, 585, 1128][index],
-      y: 208,
-      width: 500,
-      height: 640,
-      sheetWidth: 1672,
-      sheetHeight: 941,
-    },
+    imageSrc: `/games/lessons/lop-1/images/${images[index]}`,
   }))
   return <><GameAuthHeader /><GameNavigationGrid breadcrumbs={[{ label: 'Game', href: '/game' }, { label: 'Lớp 1' }]} items={items} /></>
 }
