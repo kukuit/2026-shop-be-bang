@@ -23,7 +23,7 @@ export default async function GameMeLayout({ children }: { children: React.React
     <div className="min-h-screen bg-slate-100">
       <GameAuthHeader />
       <nav className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-6xl gap-2 overflow-x-auto px-4 py-3 text-sm font-bold">
+        <div className="game-container flex gap-2 overflow-x-auto py-3 text-sm font-bold">
           <Link
             href="/game/me"
             className="whitespace-nowrap rounded-xl px-4 py-2 hover:bg-blue-50 hover:text-blue-700"
@@ -56,7 +56,7 @@ export default async function GameMeLayout({ children }: { children: React.React
           </Link>
         </div>
       </nav>
-      <main className="mx-auto max-w-6xl px-4 py-7">{children}</main>
+      <main className="game-container py-7">{children}</main>
     </div>
   )
 }

@@ -18,7 +18,7 @@ export default function GameAuthHeader({ overlay = false }: { overlay?: boolean 
         className={
           overlay
             ? 'pointer-events-auto ml-auto'
-            : 'mx-auto grid h-16 max-w-6xl grid-cols-[1fr_auto_1fr] items-center gap-2 px-4 md:px-6'
+            : 'game-container grid h-16 grid-cols-[1fr_auto_1fr] items-center gap-2'
         }
       >
         {!overlay && (
