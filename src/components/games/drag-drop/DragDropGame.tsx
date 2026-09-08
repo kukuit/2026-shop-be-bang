@@ -14,6 +14,7 @@ import type { ReactNode } from 'react'
 import { QuestionVoicePlayer } from '../general/QuestionVoicePlayer'
 import CappyCompanion, { type CappyReaction } from './CappyCompanion'
 import WolfCompanion from './WolfCompanion'
+import { resolveIntroVoice } from '../general/intro-voice'
 
 type DragState = { value: DragAnswerValue; x: number; y: number; pointerId: number } | null
 type FloatingScore = { id: number; x: number; y: number; value: '+10' | '-2' | '0'; correct: boolean } | null
@@ -48,6 +49,20 @@ const SHARED_DRAG_DROP_VOICES = [
 ] as const
 
 export default function DragDropGame({ config }: { config: DragDropGameConfig }) {
+  const [resolved, setResolved] = useState<{ source: DragDropGameConfig; config: DragDropGameConfig }>()
+  useEffect(() => {
+    let cancelled = false
+    void resolveIntroVoice(config).then((introVoice) => {
+      if (!cancelled) setResolved({ source: config, config: { ...config, introVoice } })
+    })
+    return () => { cancelled = true }
+  }, [config])
+
+  if (resolved?.source !== config) return <GameLoadingScreen ready={false} />
+  return <ReadyDragDropGame config={resolved.config} />
+}
+
+function ReadyDragDropGame({ config }: { config: DragDropGameConfig }) {
   const questionVoiceRef = useRef<QuestionVoicePlayer | null>(null)
   const trackerRef = useRef<GameTracker | undefined>(undefined)
   const targetStartedAtRef = useRef<Record<string, number>>({})

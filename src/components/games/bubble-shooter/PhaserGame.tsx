@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { GameCompletion, GameLoadingScreen, GameShell, unlockGameAudio } from '../general'
 import type { BubbleShooterGameConfig } from './types/game'
+import { resolveIntroVoice } from '../general/intro-voice'
 
 export default function PhaserGame({ config }: { config: BubbleShooterGameConfig }) {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -18,10 +19,12 @@ export default function PhaserGame({ config }: { config: BubbleShooterGameConfig
   useEffect(() => {
     let cancelled = false
 
-    Promise.all([import('phaser'), import('./config')]).then(([Phaser, { createGameConfig }]) => {
+    Promise.all([import('phaser'), import('./config'), resolveIntroVoice({
+      gameId: 'bubble-shooter', lessonId: config.tracking?.lessonId, introVoice: config.introVoice,
+    })]).then(([Phaser, { createGameConfig }, introVoice]) => {
       if (cancelled || !containerRef.current || gameRef.current) return
       setProgress(15)
-      gameRef.current = new Phaser.Game(createGameConfig(containerRef.current, config, {
+      gameRef.current = new Phaser.Game(createGameConfig(containerRef.current, { ...config, introVoice }, {
         onProgress: (assetProgress) => {
           if (!cancelled) setProgress(15 + assetProgress * 84)
         },

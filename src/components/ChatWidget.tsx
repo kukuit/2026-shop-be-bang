@@ -6,8 +6,12 @@ import Image from 'next/image'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Bot, MessageCircle, SendHorizonal, X } from 'lucide-react'
 import type { ChatContext } from '@/lib/chat/constants'
+import { useAuth } from '@/components/auth/AuthProvider'
+import LoginModal from '@/components/auth/LoginModal'
+import { ASK_PROGRESS_TAG, PROGRESS_DETAILS_TAG, PROGRESS_QUESTION, isProgressRequest, isProgressDetailRequest, formatProgress, type ProgressReport } from '@/lib/chat/learning-progress'
+import { PROGRESS_SUBJECTS, progressSubjectFromText, type ProgressSubject } from '@/lib/chat/learning-progress'
 
-type ChatMessage = { role: 'user' | 'assistant'; content: string }
+type ChatMessage = { role: 'user' | 'assistant'; content: string; privateProgress?: boolean }
 
 const ASK_TAG = '[ASK_CONTACT_INFO]'
 
@@ -73,6 +77,7 @@ const BOT_CONFIG = {
 } as const
 
 export default function ChatWidget() {
+  const { user, loading: authLoading, refreshUser } = useAuth()
   const pathname = usePathname()
   const context: ChatContext = pathname === '/game' || pathname.startsWith('/game/') ? 'game' : 'shop'
   const config = BOT_CONFIG[context]
@@ -84,8 +89,23 @@ export default function ChatWidget() {
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
   const [note, setNote] = useState('')
+  const [showLogin, setShowLogin] = useState(false)
+  const [progressPending, setProgressPending] = useState(false)
+  const [progressViewed, setProgressViewed] = useState(false)
+  const [loginRequired, setLoginRequired] = useState(false)
+  const requestVersion = useRef(0)
+  const busy = useRef(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const previousContext = useRef(context)
+
+  useEffect(() => {
+    requestVersion.current += 1
+    busy.current = false
+    setIsSending(false)
+    setProgressViewed(false)
+    setLoginRequired(false)
+    setMessages(current => current.filter(message => !message.privateProgress))
+  }, [user?.id, context])
 
   useEffect(() => {
     if (previousContext.current === context) return
@@ -93,11 +113,13 @@ export default function ChatWidget() {
     setMessages([{ role: 'assistant', content: config.greeting }])
     setInput('')
     setShowLeadForm(false)
+    setProgressPending(false)
+    setShowLogin(false)
   }, [config.greeting, context])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages, showLeadForm])
+  }, [messages, showLeadForm, progressPending, user?.id])
 
   useEffect(() => {
     const sessionKey = `be-bang-${context}-chat-auto-opened`
@@ -122,30 +144,96 @@ export default function ChatWidget() {
     return () => { window.clearTimeout(timer); window.removeEventListener('scroll', checkScroll) }
   }, [context])
 
+  const askProgress = () => {
+    setProgressViewed(false)
+    setProgressPending(true)
+    setMessages(current => [...current, { role: 'assistant', content: PROGRESS_QUESTION }])
+  }
+
+  const loadProgress = async (detail = false, subject?: ProgressSubject) => {
+    if (busy.current || authLoading) return
+    if (!user || loginRequired) { setProgressPending(true); return }
+    busy.current = true
+    setIsSending(true)
+    const version = requestVersion.current
+    try {
+      const params = new URLSearchParams()
+      if (detail) params.set('detail', '1')
+      if (subject) params.set('subject', subject)
+      const response = await fetch(`/api/chat/learning-progress?${params}`, { cache: 'no-store' })
+      const data = await response.json()
+      if (version !== requestVersion.current) return
+      if (response.status === 401) {
+        setLoginRequired(true)
+        setProgressPending(true)
+        setProgressViewed(false)
+        setMessages(current => current.filter(message => !message.privateProgress))
+        void refreshUser().then(() => {
+          if (version === requestVersion.current) setLoginRequired(false)
+        })
+      }
+      if (!response.ok) throw new Error(data.error || 'Chưa tải được tiến trình học.')
+      setMessages(current => [...current, { role: 'assistant', content: formatProgress(data as ProgressReport, detail), privateProgress: true }])
+      setProgressPending(false)
+      setProgressViewed(true)
+    } catch (error) {
+      if (version !== requestVersion.current) return
+      setMessages(current => [...current, { role: 'assistant', content: error instanceof Error ? error.message : 'Chưa tải được tiến trình học. Bạn thử lại nhé.' }])
+      setProgressPending(true)
+    } finally {
+      if (version === requestVersion.current) { busy.current = false; setIsSending(false) }
+    }
+  }
+
   const handleSend = async () => {
     const content = input.trim()
-    if (!content || isSending) return
+    if (!content || busy.current) return
     const newMessages: ChatMessage[] = [...messages, { role: 'user', content }]
     setMessages(newMessages)
     setInput('')
+    if (context === 'game') {
+      if (progressViewed && /^(có|co|ok|đồng ý|muốn|xem)[.!]?$/i.test(content)) {
+        setMessages(current => [...current, { role: 'assistant', content: 'Bạn muốn xem chi tiết môn Toán, Tiếng Anh hay Tiếng Việt? Bạn chọn môn bên dưới nhé.' }])
+        return
+      }
+      if (progressViewed && /^(không|khong|ko|không cần)[.!]?$/i.test(content)) {
+        setProgressViewed(false)
+        setMessages(current => [...current, { role: 'assistant', content: 'Được nhé, khi cần xem thêm bạn cứ hỏi mình.' }])
+        return
+      }
+      const subject = progressSubjectFromText(content)
+      if (progressViewed && (isProgressDetailRequest(content) || /^(?:môn\s+)?(?:toán|tiếng anh|tiếng việt)[.!]?$/i.test(content))) { await loadProgress(true, subject); return }
+      if (isProgressRequest(content)) { askProgress(); return }
+    }
+    busy.current = true
     setIsSending(true)
+    const version = requestVersion.current
 
     try {
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: newMessages, context }),
+        body: JSON.stringify({ messages: newMessages.filter(message => !message.privateProgress).map(({ role, content }) => ({ role, content })), context }),
       })
       const data = await res.json()
+      if (version !== requestVersion.current) return
       if (!res.ok || data.error) throw new Error(data.error || 'Không thể kết nối chatbot.')
       const rawReply = String(data.reply ?? '')
+      if (context === 'game' && (rawReply.includes(ASK_PROGRESS_TAG) || rawReply.includes(PROGRESS_DETAILS_TAG))) {
+        if (rawReply.includes(PROGRESS_DETAILS_TAG) && progressViewed) {
+          busy.current = false
+          await loadProgress(true, progressSubjectFromText(content))
+        } else askProgress()
+        return
+      }
       setMessages((current) => [...current, { role: 'assistant', content: rawReply.replace(ASK_TAG, '').trim() }])
       if (context === 'shop' && rawReply.includes(ASK_TAG)) setShowLeadForm(true)
     } catch (error) {
+      if (version !== requestVersion.current) return
       const message = error instanceof Error ? error.message : 'Kết nối có lỗi, bạn thử gửi lại giúp mình nhé.'
       setMessages((current) => [...current, { role: 'assistant', content: message }])
     } finally {
-      setIsSending(false)
+      if (version === requestVersion.current) { busy.current = false; setIsSending(false) }
     }
   }
 
@@ -186,6 +274,29 @@ export default function ChatWidget() {
                 })}
                 {isSending && <div className="flex items-center gap-2 text-xs text-slate-400"><span className={`h-2 w-2 animate-ping rounded-full ${config.ping}`} />{config.name} đang trả lời.</div>}
 
+                {context === 'game' && progressPending && (
+                  <div className="space-y-2 rounded-xl border border-blue-100 bg-white p-3">
+                    <p>{PROGRESS_QUESTION}</p>
+                    {authLoading ? <p>Đang kiểm tra đăng nhập…</p> : (
+                      <div className="flex gap-2">
+                        {!user || loginRequired ? (
+                          <button type="button" disabled={isSending} onClick={() => setShowLogin(true)} className="rounded-lg bg-blue-600 px-3 py-2 text-white disabled:opacity-50">Đăng nhập</button>
+                        ) : (
+                          <button type="button" disabled={isSending} onClick={() => void loadProgress()} className="rounded-lg bg-blue-600 px-3 py-2 text-white disabled:opacity-50">Xem</button>
+                        )}
+                        <button type="button" disabled={isSending} onClick={() => { setProgressPending(false); setProgressViewed(false); setMessages(current => [...current, { role: 'assistant', content: 'Được nhé, mình chưa lấy thêm dữ liệu tiến trình học.' }]) }} className="rounded-lg border border-slate-300 px-3 py-2 disabled:opacity-50">Không</button>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {context === 'game' && progressViewed && !progressPending && (
+                  <div className="flex flex-wrap gap-2" aria-label="Xem chi tiết từng môn">
+                    {Object.entries(PROGRESS_SUBJECTS).map(([subject, label]) => <button key={subject} type="button" disabled={isSending} onClick={() => void loadProgress(true, subject as ProgressSubject)} className="rounded-lg border border-blue-200 bg-white px-3 py-2 text-blue-700 disabled:opacity-50">{label}</button>)}
+                    <button type="button" disabled={isSending} onClick={() => setProgressViewed(false)} className="rounded-lg border border-slate-300 px-3 py-2 disabled:opacity-50">Không</button>
+                  </div>
+                )}
+
                 {context === 'shop' && showLeadForm && (
                   <form onSubmit={submitLead} className="space-y-2 rounded-xl border border-pink-100 bg-white p-3 text-xs shadow-sm">
                     <p className="text-slate-600">Để shop hỗ trợ tốt hơn, bạn để lại tên và số điện thoại nhé.</p>
@@ -206,6 +317,7 @@ export default function ChatWidget() {
           </motion.div>
         )}
       </AnimatePresence>
+      <LoginModal open={showLogin && context === 'game'} onClose={() => { setShowLogin(false); setLoginRequired(false) }} />
     </>
   )
 }
