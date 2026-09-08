@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { GameCompletion, GameLoadingScreen, GameShell, unlockGameAudio } from '../general'
 import type { RacingGameConfig } from './types'
+import { resolveIntroVoice } from '../general/intro-voice'
 
 export default function RacingGame({ config }: { config: RacingGameConfig }) {
   const host = useRef<HTMLDivElement>(null)
@@ -17,10 +18,10 @@ export default function RacingGame({ config }: { config: RacingGameConfig }) {
 
   useEffect(() => {
     let cancelled = false
-    Promise.all([import('phaser'), import('./config')]).then(([Phaser, { createRacingConfig }]) => {
+    Promise.all([import('phaser'), import('./config'), resolveIntroVoice(config)]).then(([Phaser, { createRacingConfig }, introVoice]) => {
       if (cancelled || !host.current || game.current) return
       setLoadProgress(15)
-      const phaserGame = new Phaser.Game(createRacingConfig(host.current, config, {
+      const phaserGame = new Phaser.Game(createRacingConfig(host.current, { ...config, introVoice }, {
         onProgress: (progress) => { if (!cancelled) setLoadProgress(15 + progress * 84) },
         onReady: () => {
           if (cancelled) return

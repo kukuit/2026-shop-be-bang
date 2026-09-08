@@ -1,6 +1,7 @@
 'use client'
 
 import Image from 'next/image'
+import { usePathname } from 'next/navigation'
 import { ArrowLeft, Gamepad2, Play, RotateCcw, Store, Volume2, VolumeX, X } from 'lucide-react'
 import { ReactNode, useState } from 'react'
 import StarIcon from './StarIcon'
@@ -32,6 +33,8 @@ export default function GameShell({
   onRestart,
   className = '',
 }: GameShellProps) {
+  const pathname = usePathname()
+  const lessonPath = pathname.replace(/\/+$/, '').replace(/\/(?:luyen-tap\/)?[^/]+$/, '') || '/game'
   const [showExit, setShowExit] = useState(false)
   const { user, loading: authLoading } = useAuth()
   const displayName = playerName ?? user?.displayName ?? (authLoading ? '...' : 'Khách')
@@ -105,7 +108,7 @@ export default function GameShell({
             <div className="mt-7 grid gap-3">
               <button type="button" onClick={() => setExitOpen(false)} className="relative rounded-2xl bg-emerald-500 px-12 py-3 font-black text-white shadow-md"><Play className="absolute left-5 top-1/2 -translate-y-1/2" size={20} /> Tiếp tục chơi</button>
               <button type="button" onClick={restart} className="relative rounded-2xl bg-amber-500 px-12 py-3 font-black text-white shadow-md"><RotateCcw className="absolute left-5 top-1/2 -translate-y-1/2" size={20} /> Chơi lại</button>
-              <button type="button" onClick={() => window.location.assign('/game')} className="relative rounded-2xl bg-blue-600 px-12 py-3 font-black text-white shadow-md"><Gamepad2 className="absolute left-5 top-1/2 -translate-y-1/2" size={20} /> Về trang game</button>
+              <button type="button" onClick={() => window.location.assign(lessonPath)} className="relative rounded-2xl bg-blue-600 px-12 py-3 font-black text-white shadow-md"><Gamepad2 className="absolute left-5 top-1/2 -translate-y-1/2" size={20} /> Về trang game</button>
               <button type="button" onClick={() => window.location.assign('/')} className="relative rounded-2xl bg-[#f7357f] px-12 py-3 font-black text-white shadow-md"><Store className="absolute left-5 top-1/2 -translate-y-1/2" size={20} /> Về Shop Bé Băng</button>
             </div>
           </div>

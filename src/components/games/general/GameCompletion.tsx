@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { usePathname } from 'next/navigation'
 import { Gamepad2, RotateCcw, Store, Trophy } from 'lucide-react'
 import styles from './GameCompletion.module.css'
 
@@ -19,6 +20,8 @@ const BURSTS = [
 ]
 
 export default function GameCompletion({ score, onRestart, trackingTask }: GameCompletionProps) {
+  const pathname = usePathname()
+  const lessonPath = pathname.replace(/\/+$/, '').replace(/\/(?:luyen-tap\/)?[^/]+$/, '') || '/game'
   const [displayScore, setDisplayScore] = useState(0)
   const [ready, setReady] = useState(false)
 
@@ -50,7 +53,7 @@ export default function GameCompletion({ score, onRestart, trackingTask }: GameC
       <p className="mt-3 text-5xl font-black text-emerald-600" aria-live="polite">{displayScore} / 100</p>
       <fieldset disabled={!ready} className="mt-7 grid gap-3 disabled:cursor-wait disabled:opacity-60">
         <button type="button" onClick={onRestart} className="relative rounded-2xl bg-amber-500 px-12 py-3 font-black text-white shadow-md"><RotateCcw className="absolute left-5 top-1/2 -translate-y-1/2" size={20} /> Chơi lại</button>
-        <button type="button" onClick={() => window.location.assign('/game')} className="relative rounded-2xl bg-blue-600 px-12 py-3 font-black text-white shadow-md"><Gamepad2 className="absolute left-5 top-1/2 -translate-y-1/2" size={20} /> Về trang game</button>
+        <button type="button" onClick={() => window.location.assign(lessonPath)} className="relative rounded-2xl bg-blue-600 px-12 py-3 font-black text-white shadow-md"><Gamepad2 className="absolute left-5 top-1/2 -translate-y-1/2" size={20} /> Về trang game</button>
         <button type="button" onClick={() => window.location.assign('/')} className="relative rounded-2xl bg-[#f7357f] px-12 py-3 font-black text-white shadow-md"><Store className="absolute left-5 top-1/2 -translate-y-1/2" size={20} /> Về Shop Bé Băng</button>
       </fieldset>
     </div>
