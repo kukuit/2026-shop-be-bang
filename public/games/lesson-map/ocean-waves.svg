@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="600" viewBox="0 0 1440 600" fill="none">
+  <!-- Seamless, static wave bands keep the long lesson map lightweight. -->
+  <path d="M0 105C240 35 480 175 720 105S1200 175 1440 105V180C1200 250 960 110 720 180S240 110 0 180Z" fill="#078fdd" opacity=".08"/>
+  <path d="M0 300C240 370 480 230 720 300S1200 230 1440 300V395C1200 325 960 465 720 395S240 465 0 395Z" fill="#e7ffff" opacity=".17"/>
+  <path d="M0 500C240 430 480 570 720 500S1200 570 1440 500V550C1200 620 960 480 720 550S240 480 0 550Z" fill="#008fe0" opacity=".07"/>
+  <g stroke="#edffff" stroke-linecap="round">
+    <path d="M0 300C240 370 480 230 720 300S1200 230 1440 300" stroke-width="3" opacity=".25"/>
+    <path d="M0 105C240 35 480 175 720 105S1200 175 1440 105" stroke-width="2" opacity=".2"/>
+    <g stroke-width="3" opacity=".35">
+      <path d="M108 220q18 7 36 0m8 0h12M470 440q22 8 44 0M1025 205q18 7 36 0m8 0h10M1230 465q24 8 48 0M770 555q14 5 28 0"/>
+    </g>
+  </g>
+</svg>
