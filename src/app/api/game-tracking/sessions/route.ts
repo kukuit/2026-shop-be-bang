@@ -190,6 +190,12 @@ export async function POST(request: Request) {
           grade: lesson ? Number(lesson.gradeId.replace(/\D/g, '')) : null,
           subject: lesson?.subjectId ?? null,
           lessonId: session.lessonId,
+          games: {
+            ...(progressSnapshot.data()?.games ?? {}),
+            [session.gameId]: {
+              completedAt: progressSnapshot.data()?.games?.[session.gameId]?.completedAt ?? FieldValue.serverTimestamp(),
+            },
+          },
           keys,
           totalSessions: (progressSnapshot.data()?.totalSessions ?? 0) + 1,
           updatedAt: FieldValue.serverTimestamp(),
