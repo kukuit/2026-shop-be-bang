@@ -12,7 +12,14 @@ export type LessonProgress = {
   gamesTotal?: number
   lastPlayedAt?: string
 }
-export type LessonMapItem = LessonDefinition & { status: LessonStatus; stars?: number }
+export type LessonMapItem = LessonDefinition & {
+  status: LessonStatus
+  stars?: number
+  totalGames?: number
+  completedGames?: number
+  requiredGames?: number
+  completed?: boolean
+}
 
 export const lessonDefinitions: LessonDefinition[] = Array.from({ length: 41 }, (_, index) => {
   const id = index + 1

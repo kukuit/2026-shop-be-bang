@@ -131,6 +131,6 @@ export default function LessonJourneyMap({ theme, items: lessons, gradeLabel, gr
       </div>
       <footer className={styles.finish}><span aria-hidden="true">⚑</span><p>Hoàn thành hành trình {subjectLabel} {gradeLabel.toLowerCase()}</p><small>{lessons.length} {isAdventure ? 'địa điểm' : isSpace ? 'hành tinh' : 'hòn đảo'} đang chờ bé khám phá!</small></footer>
     </div>
-    <div role="status" aria-live="polite" className={notice ? styles.toast : styles.hidden}>{notice > 0 && <span key={notice}>🔒 {isAdventure ? 'Khu vực này chưa mở nhé!' : 'Hoàn thành bài trước để mở bài này nhé!'}</span>}</div>
+    <div role="status" aria-live="polite" className={notice ? styles.toast : styles.hidden}>{notice > 0 && <span key={notice}>🔒 {isAdventure ? 'Khu vực này chưa mở nhé!' : 'Bài học này chưa mở nhé!'}</span>}</div>
   </main>
 }

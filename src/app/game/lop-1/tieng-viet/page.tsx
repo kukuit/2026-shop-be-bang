@@ -1,7 +1,7 @@
 import GameAuthHeader from '@/components/auth/GameAuthHeader'
-import LessonJourneyMap from '@/components/games/lesson-map/LessonJourneyMap'
+import AccountLessonMap from '@/components/games/lesson-map/AccountLessonMap'
 import { buildVietnameseLessonMapData, demoVietnameseProgress, vietnameseLessonDefinitions } from '@/components/games/lesson-map/vietnameseData'
 
 export default function GradeOneVietnamesePage() {
-  return <><GameAuthHeader /><LessonJourneyMap theme="adventure" items={buildVietnameseLessonMapData(vietnameseLessonDefinitions, demoVietnameseProgress)} gradeLabel="Lớp 1" gradeHref="/game/lop-1" subjectLabel="Tiếng Việt" title="Vùng đất chữ" showOverview={false} /></>
+  return <><GameAuthHeader /><AccountLessonMap subject="tieng-viet" theme="adventure" items={buildVietnameseLessonMapData(vietnameseLessonDefinitions, demoVietnameseProgress)} gradeLabel="Lớp 1" gradeHref="/game/lop-1" subjectLabel="Tiếng Việt" title="Vùng đất tiếng Việt" showOverview={false} /></>
 }

@@ -1,0 +1,9 @@
+.prompt { animation: arrive 240ms ease-out; }
+.arm { transform-origin: 74px 69px; animation: wave 900ms ease-in-out infinite; }
+.cappy { animation: sway 1800ms ease-in-out infinite; }
+@keyframes arrive { from { opacity: 0; transform: translateY(12px) scale(.9); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@keyframes wave { 0%, 100% { transform: rotate(-12deg); } 50% { transform: rotate(22deg); } }
+@keyframes sway { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+@media (prefers-reduced-motion: reduce) {
+  .prompt, .arm, .cappy { animation: none; }
+}
