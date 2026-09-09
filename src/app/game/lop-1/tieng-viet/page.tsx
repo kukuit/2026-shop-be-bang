@@ -1,2 +1,7 @@
-import ComingSoon from '@/components/games/navigation/ComingSoon'
-export default function Page() { return <ComingSoon title="Tiếng Việt lớp 1" backHref="/game/lop-1" /> }
+import GameAuthHeader from '@/components/auth/GameAuthHeader'
+import LessonJourneyMap from '@/components/games/lesson-map/LessonJourneyMap'
+import { buildVietnameseLessonMapData, demoVietnameseProgress, vietnameseLessonDefinitions } from '@/components/games/lesson-map/vietnameseData'
+
+export default function GradeOneVietnamesePage() {
+  return <><GameAuthHeader /><LessonJourneyMap theme="adventure" items={buildVietnameseLessonMapData(vietnameseLessonDefinitions, demoVietnameseProgress)} gradeLabel="Lớp 1" gradeHref="/game/lop-1" subjectLabel="Tiếng Việt" title="Vùng đất chữ" tagline="Cùng Cappy khám phá 10 vùng đất nhé!" /></>
+}
