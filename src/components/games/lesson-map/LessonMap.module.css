@@ -14,7 +14,7 @@
 .hero { display: flex; align-items: center; justify-content: space-between; gap: 28px; min-height: 132px; }
 .intro { display: flex; align-items: center; gap: 15px; }
 .cappy { width: 88px; height: 95px; flex-shrink: 0; }
-.hero h1 { font-size: clamp(26px, 3vw, 38px); line-height: 1.2; font-weight: 800; letter-spacing: -.8px; color: #215978; }
+.hero h1 { font-size: clamp(24px, 2.5vw, 32px); line-height: 1.2; font-weight: 800; letter-spacing: -.8px; color: #215978; }
 .map { position: relative; }
 .grid { position: relative; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); grid-auto-rows: 255px; list-style: none; margin: 0; padding: 0; }
 .cell { grid-column: var(--desktop-column); grid-row: var(--desktop-row); display: flex; justify-content: center; position: relative; min-width: 0; }
@@ -60,7 +60,7 @@
   .hero { flex-direction: column; align-items: stretch; justify-content: center; min-height: 110px; gap: 12px; padding: 15px 0; }
   .intro { gap: 8px; }
   .cappy { width: 59px; height: 75px; }
-  .hero h1 { font-size: 26px; }
+  .hero h1 { font-size: 24px; }
   .grid { grid-template-columns: minmax(0, 1fr); grid-auto-rows: 225px; }
   .cell { grid-column: 1; grid-row: var(--mobile-row); display: block; }
   .node { position: relative; left: clamp(80px, var(--mobile-x), calc(100% - 80px)); transform: translateX(-50%); width: 160px; }
@@ -81,10 +81,12 @@
   background-repeat: no-repeat, no-repeat, no-repeat, no-repeat, repeat, repeat, no-repeat;
 }
 .space > div:first-child { max-width: 1320px; }
-.space nav, .space nav a, .space nav span { color: #d4d8fa; }
-.space nav a:hover { color: white; }
+.space nav { color: #a5a0c8; }
+.space nav a { color: #93c5fd; }
+.space nav a:hover { color: #dbeafe; }
+.space nav [aria-current='page'] { color: #f8fafc; }
 .space .hero { min-height: 172px; }
-.space .hero h1 { color: #fff; font-size: clamp(25px, 3vw, 38px); }
+.space .hero h1 { color: #fff; }
 .eyebrow { margin: 0 0 6px; color: #b6bdff; text-transform: uppercase; font-size: 12px; font-weight: 800; letter-spacing: 2px; }
 .tagline { margin-top: 10px; font-size: 14px; color: #c9c8eb; }
 .progress { width: 225px; flex-shrink: 0; font-size: 13px; }
@@ -108,7 +110,7 @@
 .space .completed .planet { filter: drop-shadow(0 0 12px #859fff55); }
 .space .current .planet { filter: drop-shadow(0 0 20px #4696ff66) drop-shadow(0 0 30px #b446ff38); }
 .space .current .planet { animation: spaceFloat 2.8s ease-in-out infinite; }
-.space .lessonTitle { font-size: 16px; color: #f2efff; }
+.space .lessonTitle { color: #f2efff; }
 .shortTitle { font-size: 12px; line-height: 1.4; margin-top: 3px; max-width: 170px; color: #c6c4e5; }
 .space .next { background: #6755b0; color: white; border-color: #a699f0; }
 .space .path { filter: drop-shadow(0 0 6px #6496ff80); }
@@ -129,7 +131,6 @@
   .space .hero { min-height: 210px; gap: 16px; padding: 16px 0 24px; }
   .space .intro { gap: 10px; }
   .space .cappy { width: 64px; height: 80px; }
-  .space .hero h1 { font-size: 25px; }
   .space .eyebrow { font-size: 10px; letter-spacing: 1.5px; }
   .space .tagline { font-size: 12px; margin-top: 7px; }
   .space .progress { width: 100%; }
@@ -149,10 +150,8 @@
   background-position: center top, center;
   background-repeat: repeat-y, no-repeat;
 }
-.adventure nav, .adventure nav a, .adventure nav span { color: #49656b; }
-.adventure nav a:hover { color: #284c5d; }
 .adventure .hero { min-height: 172px; }
-.adventure .hero h1 { color: #3f3328; font-size: clamp(25px, 3vw, 38px); }
+.adventure .hero h1 { color: #3f3328; }
 .adventure .eyebrow { color: #548a8c; }
 .adventure .tagline { color: #597777; }
 .adventure .progress { color: #597777; }
@@ -191,7 +190,6 @@
   .adventure .hero { min-height: 210px; gap: 16px; padding: 16px 0 24px; }
   .adventure .intro { gap: 10px; }
   .adventure .cappy { width: 62px; height: 80px; }
-  .adventure .hero h1 { font-size: 25px; }
   .adventure .eyebrow { font-size: 10px; letter-spacing: 1.5px; }
   .adventure .tagline { font-size: 12px; margin-top: 7px; }
   .adventure .progress { width: 100%; }
