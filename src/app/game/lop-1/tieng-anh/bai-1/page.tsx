@@ -5,10 +5,10 @@ import { ChevronRight } from 'lucide-react'
 import GameAuthHeader from '@/components/auth/GameAuthHeader'
 
 const games = [
-  { title: 'Bắn bóng', href: '/game/lop-1/tieng-anh/bai-1/bubble-shooter', image: '/games/bubble-shooter/images/thumbnail/thumbnail-v2.png', color: 'from-sky-500 to-blue-700' },
-  { title: 'Kéo thả', href: '/game/lop-1/tieng-anh/bai-1/drag-drop', image: '/games/drag-drop/images/thumbnail/thumbnail-v2.png', color: 'from-emerald-500 to-teal-700' },
-  { title: 'Đào vàng', href: '/game/lop-1/tieng-anh/bai-1/gold-mining', image: '/games/gold-mining/images/thumbnail/thumbnail.jpg', color: 'from-amber-500 to-orange-800' },
-  { title: 'Đua xe', href: '/game/lop-1/tieng-anh/bai-1/racing', image: '/games/racing/images/thumbnail/thumbnail.jpg', color: 'from-red-500 to-blue-700' },
+  { title: 'Bắn bóng', href: '/game/lop-1/tieng-anh/bai-1/bubble-shooter', image: '/games/bubble-shooter/images/optimize/thumbnail/thumbnail.png', color: 'from-sky-500 to-blue-700' },
+  { title: 'Kéo thả', href: '/game/lop-1/tieng-anh/bai-1/drag-drop', image: '/games/drag-drop/images/optimize/thumbnail/thumbnail.png', color: 'from-emerald-500 to-teal-700' },
+  { title: 'Đào vàng', href: '/game/lop-1/tieng-anh/bai-1/gold-mining', image: '/games/gold-mining/images/optimize/thumbnail/thumbnail.jpg', color: 'from-amber-500 to-orange-800' },
+  { title: 'Đua xe', href: '/game/lop-1/tieng-anh/bai-1/racing', image: '/games/racing/images/optimize/thumbnail/thumbnail.jpg', color: 'from-red-500 to-blue-700' },
 ] as const
 
 export default function Page() {

@@ -1,6 +1,6 @@
 import type { GameImages } from '@/components/games/general/game-image'
 
-const atlas = { src: '/games/lessons/lop-1/tieng-anh/bai-1/images/vocabulary.png', sourceWidth: 1298, sourceHeight: 1212 }
+const atlas = { src: '/games/lessons/lop-1/tieng-anh/bai-1/images/optimize/vocabulary.png', sourceWidth: 1298, sourceHeight: 1212 }
 
 // Exact transparent sprite bounds in the generated atlas; text answers remain text.
 const vocabulary: GameImages = {

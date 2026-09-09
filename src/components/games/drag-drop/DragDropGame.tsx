@@ -130,10 +130,10 @@ function ReadyDragDropGame({ config }: { config: DragDropGameConfig }) {
     const assets = preloadAssets({
       images: [
         ...Array.from(new Set(Object.values(config.images ?? {}).map((image) => image.src))),
-        '/games/drag-drop/images/farm-background.png',
-        '/games/general/images/player-avatar.png',
-        '/games/drag-drop/images/cappy-companion-sprites.png',
-        '/games/drag-drop/images/wolf-thief-sprites.png',
+        '/games/drag-drop/images/optimize/farm-background.png',
+        '/games/general/images/optimize/player-avatar.png',
+        '/games/drag-drop/images/optimize/cappy-companion-sprites.png',
+        '/games/drag-drop/images/optimize/wolf-thief-sprites.png',
       ],
       audio: [GAME_BACKGROUND_MUSIC, ...voiceAssets.map((voice) => voice.src)],
     }, (progress) => {
@@ -258,7 +258,7 @@ function ReadyDragDropGame({ config }: { config: DragDropGameConfig }) {
         startTracking(); setGameStarted(true)
         if (config.introVoice) window.setTimeout(() => voices.playOnce('intro', 'drag-intro', 'intro'), 500)
       }} />
-      <div ref={gameAreaRef} className="relative h-full touch-none overflow-hidden bg-sky-300 bg-cover bg-center" style={{ backgroundImage: "url('/games/drag-drop/images/farm-background.png')" }}>
+      <div ref={gameAreaRef} className="relative h-full touch-none overflow-hidden bg-sky-300 bg-cover bg-center" style={{ backgroundImage: "url('/games/drag-drop/images/optimize/farm-background.png')" }}>
         <div className={styles.gameplayPanel} data-density={density}>
           <div className={styles.questionArea}>
             {level.groups && <CountGroups groups={level.groups} completed={completedTargets} wrongTarget={wrongTarget} correctTarget={correctTarget} voiceButton={level.voice ? <button type="button" disabled={!gameStarted || gamePaused || gameCompleted || isTransitioning} onClick={() => questionVoiceRef.current?.play([level.instructionVoice, level.voice])} className="grid h-24 w-24 max-w-full shrink-0 place-items-center rounded-full border-[3px] border-sky-400 bg-sky-100 text-sky-700 active:scale-95 disabled:opacity-50" aria-label="Nghe lại"><Volume2 className="h-16 w-16" aria-hidden="true" /></button> : undefined} />}
