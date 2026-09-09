@@ -8,6 +8,7 @@ import { Bot, MessageCircle, SendHorizonal, X } from 'lucide-react'
 import type { ChatContext } from '@/lib/chat/constants'
 import { useAuth } from '@/components/auth/AuthProvider'
 import LoginModal from '@/components/auth/LoginModal'
+import CappyChatPrompt from '@/components/games/general/CappyChatPrompt'
 import { ASK_PROGRESS_TAG, PROGRESS_DETAILS_TAG, PROGRESS_QUESTION, isProgressRequest, isProgressDetailRequest, formatProgress, type ProgressReport } from '@/lib/chat/learning-progress'
 import { PROGRESS_SUBJECTS, progressSubjectFromText, type ProgressSubject } from '@/lib/chat/learning-progress'
 
@@ -82,6 +83,9 @@ export default function ChatWidget() {
   const context: ChatContext = pathname === '/game' || pathname.startsWith('/game/') ? 'game' : 'shop'
   const config = BOT_CONFIG[context]
   const [isOpen, setIsOpen] = useState(false)
+  const [showCappyPrompt, setShowCappyPrompt] = useState(false)
+  const cappyPromptSeen = useRef(false)
+  const cappyPromptPath = useRef(pathname)
   const [messages, setMessages] = useState<ChatMessage[]>([{ role: 'assistant', content: config.greeting }])
   const [input, setInput] = useState('')
   const [isSending, setIsSending] = useState(false)
@@ -122,6 +126,7 @@ export default function ChatWidget() {
   }, [messages, showLeadForm, progressPending, user?.id])
 
   useEffect(() => {
+    if (context === 'game') return
     const sessionKey = `be-bang-${context}-chat-auto-opened`
     if (sessionStorage.getItem(sessionKey)) return
     let scrolled = false
@@ -143,6 +148,44 @@ export default function ChatWidget() {
     checkScroll()
     return () => { window.clearTimeout(timer); window.removeEventListener('scroll', checkScroll) }
   }, [context])
+
+  useEffect(() => {
+    setShowCappyPrompt(false)
+    if (cappyPromptPath.current !== pathname) {
+      cappyPromptPath.current = pathname
+      cappyPromptSeen.current = false
+    }
+    if (context !== 'game') return
+    const markSeen = () => {
+      cappyPromptSeen.current = true
+    }
+    if (isOpen) { markSeen(); return }
+    if (cappyPromptSeen.current) return
+    let hideTimer: number | undefined
+    const showPrompt = () => {
+      if (cappyPromptSeen.current) return
+      markSeen()
+      setShowCappyPrompt(true)
+      window.clearTimeout(timer)
+      window.removeEventListener('scroll', checkScroll, true)
+      hideTimer = window.setTimeout(() => setShowCappyPrompt(false), 6_000)
+    }
+    const checkScroll = (event: Event) => {
+      const target = event.target
+      const scrollingPage = target === document || target === window || target === document.documentElement || target === document.body
+      const scroller = scrollingPage ? document.scrollingElement : target instanceof HTMLElement ? target : null
+      if (!scroller) return
+      const max = scroller.scrollHeight - (scrollingPage ? window.innerHeight : scroller.clientHeight)
+      if (max > 0 && scroller.scrollTop / max >= 0.25) showPrompt()
+    }
+    const timer = window.setTimeout(showPrompt, 15_000)
+    window.addEventListener('scroll', checkScroll, { passive: true, capture: true })
+    return () => {
+      window.clearTimeout(timer)
+      window.removeEventListener('scroll', checkScroll, true)
+      if (hideTimer !== undefined) window.clearTimeout(hideTimer)
+    }
+  }, [context, isOpen, pathname])
 
   const askProgress = () => {
     setProgressViewed(false)
@@ -246,9 +289,11 @@ export default function ChatWidget() {
 
   return (
     <>
-      <button onClick={() => setIsOpen((value) => !value)} className={`fixed bottom-4 right-4 z-50 flex h-14 w-14 items-center justify-center rounded-full text-white shadow-xl transition hover:scale-105 ${config.button}`} aria-label={`Mở ${config.name}`}>
+      <button onClick={() => { setShowCappyPrompt(false); setIsOpen((value) => !value) }} className={`fixed bottom-4 right-4 z-50 flex h-14 w-14 items-center justify-center rounded-full text-white shadow-xl transition hover:scale-105 ${config.button}`} aria-label={`${isOpen ? 'Đóng' : 'Mở'} ${config.name}`} aria-expanded={isOpen}>
         <MessageCircle className="h-7 w-7" />
       </button>
+
+      {context === 'game' && showCappyPrompt && !isOpen && <CappyChatPrompt onClick={() => { setShowCappyPrompt(false); setIsOpen(true) }} />}
 
       <AnimatePresence>
         {isOpen && (

@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import Image from 'next/image'
+import CappyJourneyLoading from '../general/CappyJourneyLoading'
 import { GAME_GRADES } from '@/lib/game-profile'
 import { useGameProfile } from './GameProfileProvider'
 import { useAuth } from '@/components/auth/AuthProvider'
@@ -21,26 +21,9 @@ export default function GameEntry() {
       void setActiveGrade(primaryGrade).catch(() => {})
     }
   }, [activeGrade, primaryGrade, isLoading, saving, router, setActiveGrade])
-  if (isLoading || activeGrade || primaryGrade) return <div className="fixed inset-x-0 bottom-0 top-16 z-40 grid w-full place-items-center overflow-y-auto bg-gradient-to-br from-sky-100 via-violet-50 to-pink-100 p-6" role="status" aria-live="polite">
-    {error ? <button className="max-w-md rounded-2xl border-2 border-amber-200 bg-white px-6 py-4 text-center font-bold text-amber-800 shadow-sm disabled:opacity-50" disabled={saving} onClick={() => isLoading ? retry() : primaryGrade && void setActiveGrade(primaryGrade).catch(() => {})}>{error} Nhấn để thử lại.</button> : (
-      <div className="text-center">
-        <div aria-hidden="true" className="relative mx-auto mb-6 h-28 w-28 motion-safe:animate-bounce motion-safe:[animation-duration:2.4s]">
-          <Image src="/games/general/images/loading-cappy-adventure.png" alt="" width={112} height={112} priority unoptimized className="h-full w-full object-contain drop-shadow-md" />
-        </div>
-        <p className="text-xl font-black leading-relaxed sm:text-2xl">
-          <span className="text-violet-600">Cappy</span>{' '}
-          <span className="text-sky-700">đang chuẩn bị</span>{' '}
-          <span className="text-pink-600">hành trình</span>
-          <span className="sr-only">…</span>
-        </p>
-        <div aria-hidden="true" className="mt-5 flex justify-center gap-2">
-          {['bg-sky-400', 'bg-violet-400', 'bg-pink-400'].map((color, index) => (
-            <span key={color} className={`h-3 w-3 rounded-full ${color} motion-safe:animate-bounce motion-safe:[animation-duration:1.4s]`} style={{ animationDelay: `${index * 180}ms` }} />
-          ))}
-        </div>
-      </div>
-    )}
-  </div>
+  if (isLoading || activeGrade || primaryGrade) return <CappyJourneyLoading>
+    {error ? <button className="max-w-md rounded-2xl border-2 border-amber-200 bg-white px-6 py-4 text-center font-bold text-amber-800 shadow-sm disabled:opacity-50" disabled={saving} onClick={() => isLoading ? retry() : primaryGrade && void setActiveGrade(primaryGrade).catch(() => {})}>{error} Nhấn để thử lại.</button> : undefined}
+  </CappyJourneyLoading>
   return <main className="grid min-h-[80vh] place-items-center bg-gradient-to-br from-sky-100 via-blue-50 to-violet-100 p-4">
     <section role="dialog" aria-modal="true" aria-labelledby="grade-title" aria-describedby="grade-description" className="w-full max-w-lg rounded-3xl border border-white bg-white p-6 text-center shadow-xl sm:p-10">
       <div aria-hidden="true" className="text-5xl">🎒</div>
