@@ -1,24 +1,6 @@
-﻿import GameAuthHeader from '@/components/auth/GameAuthHeader'
-import GameNavigationGrid from '@/components/games/navigation/GameNavigationGrid'
-
-const lessonItems = [
-  { title: 'Bài 1', href: '/game/lop-1/tieng-anh/bai-1' },
-  { title: 'Bài 2', href: '/game/lop-1/tieng-anh/bai-2' },
-] as const
-
+import GameAuthHeader from '@/components/auth/GameAuthHeader'
+import LessonJourneyMap from '@/components/games/lesson-map/LessonJourneyMap'
+import { buildEnglishUnitMapData, demoEnglishProgress, englishUnitDefinitions } from '@/components/games/lesson-map/englishData'
 export default function GradeOneEnglishPage() {
-  return (
-    <>
-      <GameAuthHeader />
-      <GameNavigationGrid
-        title="Tiếng Anh lớp 1"
-        breadcrumbs={[
-          { label: 'Game', href: '/game' },
-          { label: 'Lớp 1', href: '/game/lop-1' },
-          { label: 'Tiếng Anh' },
-        ]}
-        items={lessonItems}
-      />
-    </>
-  )
+ return <><GameAuthHeader /><LessonJourneyMap theme="space" items={buildEnglishUnitMapData(englishUnitDefinitions, demoEnglishProgress)} gradeLabel="Lớp 1" gradeHref="/game/lop-1" subjectLabel="Tiếng Anh" title="Hành trình vũ trụ" tagline="Cùng Cappy khám phá 16 hành tinh nhé!" /></>
 }

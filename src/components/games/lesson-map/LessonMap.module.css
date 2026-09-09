@@ -71,3 +71,144 @@
   .cell:nth-child(odd) .decoration { left: auto; right: 8%; }
 }
 @media (prefers-reduced-motion: reduce) { .island { transition: none; } .current .artwork { animation: none; } }
+
+/* Space changes artwork and presentation; geometry and interactions stay shared. */
+.space {
+  color: #edf0ff;
+  background-image: radial-gradient(ellipse at 15% 10%, #7841ff33, transparent 35%), radial-gradient(ellipse at 85% 40%, #ff50c81f, transparent 30%), radial-gradient(ellipse at 20% 65%, #288cff29, transparent 30%), radial-gradient(ellipse at 75% 95%, #ffd5721c, transparent 30%), radial-gradient(circle, #dce6ffb3 1px, transparent 1.6px), radial-gradient(circle, #bec8ff80 1px, transparent 1.5px), linear-gradient(180deg, #12083f, #241064 55%, #3c1b7a);
+  background-size: auto, auto, auto, auto, 97px 113px, 163px 179px, auto;
+  background-position: center, center, center, center, 17px 31px, 53px 79px, center;
+  background-repeat: no-repeat, no-repeat, no-repeat, no-repeat, repeat, repeat, no-repeat;
+}
+.space > div:first-child { max-width: 1320px; }
+.space nav, .space nav a, .space nav span { color: #d4d8fa; }
+.space nav a:hover { color: white; }
+.space .hero { min-height: 172px; }
+.space .hero h1 { color: #fff; font-size: clamp(25px, 3vw, 38px); }
+.eyebrow { margin: 0 0 6px; color: #b6bdff; text-transform: uppercase; font-size: 12px; font-weight: 800; letter-spacing: 2px; }
+.tagline { margin-top: 10px; font-size: 14px; color: #c9c8eb; }
+.progress { width: 225px; flex-shrink: 0; font-size: 13px; }
+.progress p { color: #c9c8eb; margin-bottom: 9px; }
+.progress > div { display: flex; justify-content: space-between; gap: 12px; }
+.progress strong { color: white; }
+.progress progress { appearance: none; display: block; width: 100%; height: 9px; margin-top: 12px; border: 0; border-radius: 10px; overflow: hidden; background: #ffffff20; }
+.progress progress::-webkit-progress-bar { background: #ffffff20; border-radius: 10px; }
+.progress progress::-webkit-progress-value { background: linear-gradient(90deg, #8586ff, #72deff); border-radius: 10px; }
+.progress progress::-moz-progress-bar { background: #8bafff; border-radius: 10px; }
+.space .grid { grid-auto-rows: 270px; }
+.space .node { width: 200px; }
+.space .planet { width: 200px; height: 150px; margin-top: -12px; }
+.space .checkpoint { transform: scale(1.1); }
+.space .number { width: 44px; height: 44px; border-color: #d0d6ff; background: #6860af; }
+.space .completed .number { background: #517e9a; }
+.space .current .number { background: #2f80ed; box-shadow: 0 0 0 5px #a1baff25, 0 0 24px #74b8ff80; }
+.space .locked .number { background: #47415f; color: #d3cce5; border-color: #8981a4; }
+.space .locked .lessonTitle { color: #c0b9d7; }
+.space .unexplored { filter: grayscale(.6) saturate(.4) brightness(.65); opacity: .78; }
+.space .completed .planet { filter: drop-shadow(0 0 12px #859fff55); }
+.space .current .planet { filter: drop-shadow(0 0 20px #4696ff66) drop-shadow(0 0 30px #b446ff38); }
+.space .current .planet { animation: spaceFloat 2.8s ease-in-out infinite; }
+.space .lessonTitle { font-size: 16px; color: #f2efff; }
+.shortTitle { font-size: 12px; line-height: 1.4; margin-top: 3px; max-width: 170px; color: #c6c4e5; }
+.space .next { background: #6755b0; color: white; border-color: #a699f0; }
+.space .path { filter: drop-shadow(0 0 6px #6496ff80); }
+.space .island:focus-visible { outline-color: #b2d8ff; background: #ffffff12; }
+.space .finish { color: #c9c3e3; }
+.space .toast { color: #32215a; }
+.space .cell::before { content: ''; position: absolute; width: 100%; height: 230px; top: 0; pointer-events: none; background: radial-gradient(ellipse, #628dff12, transparent 70%); }
+.space .cell[data-region='pinkNebula']::before { background: radial-gradient(ellipse, #ef70db19, transparent 70%); }
+.space .cell[data-region='deepSpace']::before { background: radial-gradient(ellipse, #347ac71a, transparent 70%); }
+.space .cell[data-region='goldenGalaxy']::before { background: radial-gradient(ellipse, #ffd67a19, transparent 70%); }
+@keyframes spaceFloat { 50% { translate: 0 -5px; } }
+@media (min-width: 641px) and (max-width: 1023px) {
+  .space .hero { gap: 18px; }
+  .space .cappy { width: 65px; }
+  .space .progress { width: 170px; }
+}
+@media (max-width: 640px) {
+  .space .hero { min-height: 210px; gap: 16px; padding: 16px 0 24px; }
+  .space .intro { gap: 10px; }
+  .space .cappy { width: 64px; height: 80px; }
+  .space .hero h1 { font-size: 25px; }
+  .space .eyebrow { font-size: 10px; letter-spacing: 1.5px; }
+  .space .tagline { font-size: 12px; margin-top: 7px; }
+  .space .progress { width: 100%; }
+  .space .progress p { display: none; }
+  .space .grid { grid-auto-rows: 240px; }
+  .space .node { width: 160px; }
+  .space .planet { width: 180px; height: 135px; }
+  .space .shortTitle { max-width: 155px; font-size: 11px; }
+}
+@media (prefers-reduced-motion: reduce) { .space .current .planet { animation: none; } }
+
+/* Adventure shares the grid, node controls and measured path with ocean/space. */
+.adventure {
+  color: #3f3328;
+  background-image: url('/games/lesson-map/adventure-landscape.svg'), linear-gradient(180deg, #dff4ff 0px, #eaf8f5 240px, #f1f8dd 600px, #e9f3cf 100%);
+  background-size: max(100%, 1440px) auto, 100% 100%;
+  background-position: center top, center;
+  background-repeat: repeat-y, no-repeat;
+}
+.adventure nav, .adventure nav a, .adventure nav span { color: #49656b; }
+.adventure nav a:hover { color: #284c5d; }
+.adventure .hero { min-height: 172px; }
+.adventure .hero h1 { color: #3f3328; font-size: clamp(25px, 3vw, 38px); }
+.adventure .eyebrow { color: #548a8c; }
+.adventure .tagline { color: #597777; }
+.adventure .progress { color: #597777; }
+.adventure .progress p { color: #597777; }
+.adventure .progress strong { color: #3f3328; }
+.adventure .progress progress, .adventure .progress progress::-webkit-progress-bar { background: #d5e8bf; }
+.adventure .progress progress::-webkit-progress-value { background: linear-gradient(90deg, #8fd17a, #ffd65a); }
+.adventure .progress progress::-moz-progress-bar { background: #8fd17a; }
+.adventure .grid { grid-auto-rows: 255px; }
+.adventure .location { display: block; width: 180px; height: 139px; margin-top: -15px; filter: drop-shadow(0 5px 4px #617e3820); }
+.adventure .number { background: #78b87a; border-color: #f6f4df; box-shadow: 0 3px 0 #60744120; }
+.adventure .completed .number { background: #68b865; }
+.adventure .current .number { background: #2f80ed; box-shadow: 0 0 0 5px #faf2c375, 0 0 22px #b6c77580; }
+.adventure .locked .number { background: #8e9980; border-color: #e7eadc; }
+.adventure .lock { background: #738168; }
+.adventure .check { background: #528643; }
+.adventure .lessonTitle { color: #3f3328; }
+.adventure .locked .lessonTitle { color: #626765; }
+.adventure .unexplored { filter: grayscale(.35) saturate(.55) brightness(.82); opacity: .95; }
+.adventure .current .location { animation: adventureFloat 2.8s ease-in-out infinite; filter: drop-shadow(0 0 13px #a5bf6099); }
+.adventure .completed .location { filter: drop-shadow(0 3px 8px #9bbb6140); }
+.adventure .next { background: #fbf5da; border-color: #b6c388; color: #587536; }
+.adventure .path { filter: drop-shadow(0 2px 0 #f6ebcfaa); }
+.adventure .island:focus-visible { outline-color: #678849; background: #f8f5d955; }
+.adventure .finish { color: #64774f; }
+.adventure .toast { color: #4c623d; border-color: #c3d0ad; background: #fffcef; }
+.adventure .decoration { color: #7b945c; font-size: 38px; opacity: .3; }
+.explorerCompanion { position: absolute; right: -3px; top: 58px; width: 42px; height: 47px; pointer-events: none; }
+@keyframes adventureFloat { 50% { translate: 0 -5px; } }
+@media (min-width: 641px) and (max-width: 1023px) {
+  .adventure .hero { gap: 18px; }
+  .adventure .progress { width: 170px; }
+}
+@media (max-width: 640px) {
+  .adventure { background-size: 1000px 625px, 100% 100%; }
+  .adventure .hero { min-height: 210px; gap: 16px; padding: 16px 0 24px; }
+  .adventure .intro { gap: 10px; }
+  .adventure .cappy { width: 62px; height: 80px; }
+  .adventure .hero h1 { font-size: 25px; }
+  .adventure .eyebrow { font-size: 10px; letter-spacing: 1.5px; }
+  .adventure .tagline { font-size: 12px; margin-top: 7px; }
+  .adventure .progress { width: 100%; }
+  .adventure .progress p { display: none; }
+  .adventure .grid { grid-auto-rows: 235px; }
+  .adventure .location { width: 160px; height: 124px; }
+  .adventure .explorerCompanion { right: -2px; top: 54px; width: 38px; height: 43px; }
+}
+@media (prefers-reduced-motion: reduce) { .adventure .current .location { animation: none; } }
+
+.adventure .node { width: 190px; top: 0; }
+.adventure .grid { padding-top: 18px; }
+.adventure .island { min-height: 222px; }
+@media (max-width: 640px) {
+ .adventure .node { width: 170px; left: 43%; top: 0; }
+ .adventure .cell:nth-child(2n) .node { left: 57%; top: 0; }
+ .adventure .cell:nth-child(2n + 1) .node { top: 0; }
+ .adventure .island { min-height: 222px; }
+ .adventure .grid { padding-top: 4px; }
+}

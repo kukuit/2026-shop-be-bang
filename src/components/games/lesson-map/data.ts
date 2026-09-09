@@ -1,5 +1,7 @@
+import type { AdventureNodeType } from './adventureTypes'
+
 export type LessonStatus = 'completed' | 'current' | 'available' | 'locked'
-export type LessonDefinition = { id: number; lessonId: string; title: string; href: string }
+export type LessonDefinition = { id: number; lessonId: string; title: string; mapTitle?: string; shortTitle?: string; href: string; nodeType?: AdventureNodeType; isCheckpoint?: boolean }
 export type LessonProgress = {
   lessonId: string
   completed: boolean
