@@ -24,7 +24,7 @@ export default function GameAuthHeader({ overlay = false }: { overlay?: boolean 
         {!overlay && (
           <>
             <Link href="/" className="flex min-w-0 items-center gap-2 font-black text-slate-800" aria-label="Về Shop Bé Băng">
-              <Image src="/images/logo.png" alt="" width={44} height={44} className="h-11 w-11 shrink-0 rounded-full" priority />
+              <Image src="/images/optimize/logo.png" alt="" width={44} height={44} className="h-11 w-11 shrink-0 rounded-full" priority />
               <span className="hidden truncate sm:inline">Shop Bé Băng</span>
             </Link>
             <Link href="/game" className="flex items-center justify-center gap-2 whitespace-nowrap font-black text-blue-700">

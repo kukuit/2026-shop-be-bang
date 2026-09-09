@@ -20,6 +20,10 @@ function thumbnailFromGamePath(gamePath: string) {
   const slug = gamePath.split('/').filter(Boolean).at(-1)
   if (!slug || slug === 'game') return null
   const assetFolder = slug === 'cong-den-10' ? 'bubble-shooter' : slug
+  if (assetFolder === 'bubble-shooter') return '/games/bubble-shooter/images/optimize/thumbnail/thumbnail.png'
+  if (assetFolder === 'drag-drop') return '/games/drag-drop/images/optimize/thumbnail/thumbnail.png'
+  if (assetFolder === 'gold-mining') return '/games/gold-mining/images/optimize/thumbnail/thumbnail.jpg'
+  if (assetFolder === 'racing') return '/games/racing/images/optimize/thumbnail/thumbnail.jpg'
   return `/games/${assetFolder}/images/thumbnail/thumbnail.jpg`
 }
 

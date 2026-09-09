@@ -75,18 +75,18 @@ export class BubbleMathScene extends Phaser.Scene {
       this.game.events.emit('bubble-shooter:load-progress', progress)
     })
 
-    this.load.image('game-background', '/games/bubble-shooter/images/background.png')
-    this.load.image('player-avatar-preload', '/games/general/images/player-avatar.png')
-    this.load.image('cannon-base', '/games/bubble-shooter/images/cannon-base.png')
-    this.load.image('cannon-barrel', '/games/bubble-shooter/images/cannon-barrel.png')
-    this.load.image('question-panel', '/games/bubble-shooter/images/question-panel.png')
-    this.load.image('balloon', '/games/bubble-shooter/images/balloon.png')
-    this.load.image('cappy', '/games/bubble-shooter/images/cappy.png')
-    this.load.spritesheet('ammo', '/games/bubble-shooter/images/ammo.png', {
+    this.load.image('game-background', '/games/bubble-shooter/images/optimize/background.png')
+    this.load.image('player-avatar-preload', '/games/general/images/optimize/player-avatar.png')
+    this.load.image('cannon-base', '/games/bubble-shooter/images/optimize/cannon-base.png')
+    this.load.image('cannon-barrel', '/games/bubble-shooter/images/optimize/cannon-barrel.png')
+    this.load.image('question-panel', '/games/bubble-shooter/images/optimize/question-panel.png')
+    this.load.image('balloon', '/games/bubble-shooter/images/optimize/balloon.png')
+    this.load.image('cappy', '/games/bubble-shooter/images/optimize/cappy.png')
+    this.load.spritesheet('ammo', '/games/bubble-shooter/images/optimize/ammo.png', {
       frameWidth: 724,
       frameHeight: 724,
     })
-    this.load.spritesheet('wolf', '/games/bubble-shooter/images/wolf.png', {
+    this.load.spritesheet('wolf', '/games/bubble-shooter/images/optimize/wolf.png', {
       frameWidth: 512,
       frameHeight: 512,
     })

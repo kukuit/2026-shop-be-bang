@@ -4,15 +4,14 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { useState } from 'react'
-import { Info, FolderKanban, ShoppingCart, BookOpen } from 'lucide-react'
+import { Info, FolderKanban, ShoppingCart } from 'lucide-react'
 import AuthMenu from '@/components/auth/AuthMenu'
 
 type Item = { label: string; href: string; icon: React.ReactNode }
 
 const NAV_ITEMS: Item[] = [
-  { label: 'Shop Bé Băng', href: '/about', icon: <Info className="w-4 h-4" /> },
+  { label: 'Shop Bé Băng', href: '/', icon: <Info className="w-4 h-4" /> },
   { label: 'Sản Phẩm', href: '/products', icon: <FolderKanban className="w-4 h-4" /> },
-  { label: 'Blog', href: '/blogs', icon: <BookOpen className="w-4 h-4" /> },
   {
     label: 'Liên Hệ',
     href: '/contact',
@@ -81,7 +80,7 @@ export default function HeaderTop() {
           onClick={() => setOpen(false)}
         >
           <Image
-            src="/images/logo.png"
+            src="/images/optimize/logo.png"
             alt="Shop Bé Băng"
             width={56}
             height={56}

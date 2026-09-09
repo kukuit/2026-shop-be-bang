@@ -66,7 +66,7 @@ export default function WolfCompanion({ active, round, correctValues, dragActive
   if (state === 'HIDDEN') return null
   return <div className={`${styles.wolf} ${styles[state.toLowerCase()]}`} style={{ left: `${position.x}%`, top: `${position.y}%` }} data-wolf-state={state} aria-hidden="true">
     <span className={styles.frame}>
-      <Image src="/games/drag-drop/images/wolf-thief-sprites.png" alt="" width={1536} height={1024} draggable={false} unoptimized />
+      <Image src="/games/drag-drop/images/optimize/wolf-thief-sprites.png" alt="" width={1536} height={1024} draggable={false} unoptimized />
     </span>
     {stolenValue !== null && (state === 'CARRY' || state === 'LAUGH') && <span className={styles.stolenTile} style={{ backgroundColor: colorFor(stolenValue) }}><GameImageValue value={stolenValue} size={30} /></span>}
   </div>
