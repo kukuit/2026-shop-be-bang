@@ -24,7 +24,7 @@ function thumbnailFromGamePath(gamePath: string) {
   if (assetFolder === 'drag-drop') return '/games/drag-drop/images/optimize/thumbnail/thumbnail.png'
   if (assetFolder === 'gold-mining') return '/games/gold-mining/images/optimize/thumbnail/thumbnail.jpg'
   if (assetFolder === 'racing') return '/games/racing/images/optimize/thumbnail/thumbnail.jpg'
-  return `/games/${assetFolder}/images/thumbnail/thumbnail.jpg`
+  return `/games/${assetFolder}/images/optimize/thumbnail/thumbnail.jpg`
 }
 
 function GameThumbnail({ gamePath }: { gamePath: string }) {
@@ -34,7 +34,7 @@ function GameThumbnail({ gamePath }: { gamePath: string }) {
 
   return (
     <a href={gamePath} className="mt-2 block overflow-hidden rounded-xl border border-blue-100 bg-blue-50">
-      <Image src={thumbnail} alt="Ảnh minh họa trò chơi" width={240} height={240} unoptimized className="aspect-square h-auto w-full object-cover" onError={() => setAvailable(false)} />
+      <Image src={thumbnail} alt="Ảnh minh họa trò chơi" width={240} height={240} sizes="220px" className="aspect-square h-auto w-full object-cover" onError={() => setAvailable(false)} />
     </a>
   )
 }

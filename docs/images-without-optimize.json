@@ -1,0 +1,202 @@
+{
+  "thresholdBytes": 204800,
+  "note": "Static URL references only; no optimize counterpart at conventional sibling path. Folder absence is not proof of poor optimization.",
+  "images": [
+    {
+      "path": "public/games/phaser/images/cannon-base.png",
+      "bytes": 1818792,
+      "refs": []
+    },
+    {
+      "path": "public/games/phaser/images/background.png",
+      "bytes": 1514461,
+      "refs": []
+    },
+    {
+      "path": "public/games/phaser/images/cannon-barrel.png",
+      "bytes": 1448383,
+      "refs": []
+    },
+    {
+      "path": "public/games/phaser/images/player-avatar.png",
+      "bytes": 1377914,
+      "refs": []
+    },
+    {
+      "path": "public/games/phaser/images/ui-icons.png",
+      "bytes": 1273137,
+      "refs": []
+    },
+    {
+      "path": "public/games/phaser/images/question-panel.png",
+      "bytes": 1258023,
+      "refs": []
+    },
+    {
+      "path": "public/games/phaser/images/player-card.png",
+      "bytes": 1197104,
+      "refs": []
+    },
+    {
+      "path": "public/games/phaser/images/balloon.png",
+      "bytes": 1197097,
+      "refs": []
+    },
+    {
+      "path": "public/games/phaser/images/cannon.png",
+      "bytes": 1030976,
+      "refs": []
+    },
+    {
+      "path": "public/games/phaser/images/ammo.png",
+      "bytes": 986380,
+      "refs": []
+    },
+    {
+      "path": "public/icon-1024.png",
+      "bytes": 384875,
+      "refs": []
+    },
+    {
+      "path": "public/images/products/product-0001.webp",
+      "bytes": 153574,
+      "refs": [
+        "src/app/layout.tsx",
+        "src/app/page.tsx"
+      ]
+    },
+    {
+      "path": "public/images/products/product-0002.webp",
+      "bytes": 153574,
+      "refs": [
+        "src/app/page.tsx"
+      ]
+    },
+    {
+      "path": "public/images/products/product-0003.webp",
+      "bytes": 153574,
+      "refs": [
+        "src/app/page.tsx"
+      ]
+    },
+    {
+      "path": "public/images/products/product-0004.webp",
+      "bytes": 153574,
+      "refs": [
+        "src/app/page.tsx"
+      ]
+    },
+    {
+      "path": "public/icon-512.png",
+      "bytes": 105294,
+      "refs": []
+    },
+    {
+      "path": "public/icon-384.png",
+      "bytes": 66200,
+      "refs": []
+    },
+    {
+      "path": "public/icon-256.png",
+      "bytes": 31942,
+      "refs": []
+    },
+    {
+      "path": "public/icon-192.png",
+      "bytes": 19210,
+      "refs": [
+        "src/app/layout.tsx"
+      ]
+    },
+    {
+      "path": "public/apple-touch-icon.png",
+      "bytes": 18676,
+      "refs": []
+    },
+    {
+      "path": "public/icon-180.png",
+      "bytes": 18676,
+      "refs": [
+        "src/app/layout.tsx"
+      ]
+    },
+    {
+      "path": "public/icon-128.png",
+      "bytes": 11132,
+      "refs": []
+    },
+    {
+      "path": "public/icon-96.png",
+      "bytes": 7009,
+      "refs": [
+        "src/app/layout.tsx"
+      ]
+    },
+    {
+      "path": "public/icon-64.png",
+      "bytes": 3693,
+      "refs": []
+    },
+    {
+      "path": "public/favicon.png",
+      "bytes": 2606,
+      "refs": []
+    },
+    {
+      "path": "public/icon-48.png",
+      "bytes": 2606,
+      "refs": [
+        "src/app/layout.tsx"
+      ]
+    },
+    {
+      "path": "public/games/racing/images/card.svg",
+      "bytes": 2189,
+      "refs": []
+    },
+    {
+      "path": "public/icon-32.png",
+      "bytes": 1495,
+      "refs": [
+        "src/app/layout.tsx"
+      ]
+    },
+    {
+      "path": "public/next.svg",
+      "bytes": 1375,
+      "refs": []
+    },
+    {
+      "path": "public/games/lesson-map/adventure-landscape.svg",
+      "bytes": 1156,
+      "refs": [
+        "src/components/games/lesson-map/LessonMap.module.css"
+      ]
+    },
+    {
+      "path": "public/games/lesson-map/ocean-waves.svg",
+      "bytes": 1022,
+      "refs": [
+        "src/components/games/lesson-map/LessonMap.module.css"
+      ]
+    },
+    {
+      "path": "public/favicon.ico",
+      "bytes": 935,
+      "refs": [
+        "src/app/layout.tsx",
+        "src/middleware.ts"
+      ]
+    },
+    {
+      "path": "public/vercel.svg",
+      "bytes": 629,
+      "refs": []
+    },
+    {
+      "path": "public/icon-16.png",
+      "bytes": 620,
+      "refs": []
+    }
+  ]
+}

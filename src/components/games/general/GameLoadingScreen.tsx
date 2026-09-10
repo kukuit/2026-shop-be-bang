@@ -77,17 +77,17 @@ export default function GameLoadingScreen({
             <motion.div animate={{ y: [0, -5, 0] }} transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }} className="relative h-full w-full">
               <div className="absolute bottom-0 left-1/2 z-0 w-[58%] -translate-x-1/2">
                 <motion.div animate={{ y: [0, -5, 0], rotate: [-0.8, 0.8, -0.8] }} transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}>
-                  <Image src="/games/general/images/optimize/ready-avatar.png" alt="" width={1103} height={1426} priority unoptimized className="h-auto w-full drop-shadow-[0_14px_18px_rgba(15,80,120,0.2)]" />
+                  <Image src="/games/general/images/optimize/ready-avatar.png" alt="" width={1103} height={1426} sizes="223px" priority className="h-auto w-full drop-shadow-[0_14px_18px_rgba(15,80,120,0.2)]" />
                 </motion.div>
               </div>
               <div className="absolute bottom-0 left-[2%] z-10 w-[34.4%]">
                 <motion.div animate={{ y: [0, 5, 0], rotate: [-2, 1.5, -2] }} transition={{ duration: 2.1, repeat: Infinity, ease: 'easeInOut' }}>
-                  <Image src="/games/general/images/optimize/ready-cappy.png" alt="" width={1149} height={1369} priority unoptimized className="h-auto w-full drop-shadow-[0_12px_16px_rgba(15,80,120,0.2)]" />
+                  <Image src="/games/general/images/optimize/ready-cappy.png" alt="" width={1149} height={1369} sizes="132px" priority className="h-auto w-full drop-shadow-[0_12px_16px_rgba(15,80,120,0.2)]" />
                 </motion.div>
               </div>
               <div className="absolute bottom-0 right-[2%] z-10 w-[33.6%]">
                 <motion.div animate={{ y: [4, -4, 4], rotate: [2, -1.5, 2] }} transition={{ duration: 1.9, repeat: Infinity, ease: 'easeInOut' }}>
-                  <Image src="/games/general/images/optimize/ready-wolf.png" alt="" width={1177} height={1337} priority unoptimized className="h-auto w-full drop-shadow-[0_12px_16px_rgba(15,80,120,0.2)]" />
+                  <Image src="/games/general/images/optimize/ready-wolf.png" alt="" width={1177} height={1337} sizes="129px" priority className="h-auto w-full drop-shadow-[0_12px_16px_rgba(15,80,120,0.2)]" />
                 </motion.div>
               </div>
             </motion.div>

@@ -123,7 +123,7 @@ export default function LessonJourneyMap({ theme, items: lessons, gradeLabel, gr
             const tablet = getMapPosition(index, 2)
             const style = { '--desktop-row': desktop.row, '--desktop-column': desktop.column, '--tablet-row': tablet.row, '--tablet-column': tablet.column, '--mobile-row': index + 1, '--mobile-x': `${[27, 68, 30, 68][index % 4]}%` } as CSSProperties
             return <li key={lesson.lessonId} style={style} data-region={isAdventure ? 'woodland' : isSpace ? getSpaceRegion(lesson.id) : getMapRegion(lesson.id)} data-lesson-id={lesson.id} className={styles.cell}>
-              <div data-map-node className={styles.node}><LessonJourneyNode theme={theme} lesson={lesson} onClick={lesson.status === 'locked' ? () => setNotice(value => value + 1) : undefined} /></div>
+              <div data-map-node className={styles.node}><LessonJourneyNode theme={theme} lesson={lesson} lessonOrder={index + 1} onClick={lesson.status === 'locked' ? () => setNotice(value => value + 1) : undefined} /></div>
               {(isAdventure ? index % 3 === 2 : index % 8 === 4) && <span className={styles.decoration} aria-hidden="true">{isAdventure ? '❧' : isSpace ? '✧' : ['🐚', '🪸', '🐟', '⛵', '🐋'][Math.floor(index / 8)]}</span>}
             </li>
           })}

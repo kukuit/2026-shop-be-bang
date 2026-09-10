@@ -129,4 +129,8 @@ test('map API requires login, validates scope and uses the authenticated user on
   assert.equal(response.body.userId, 'user-a')
   assert.deepEqual(calls, [['user-a', 'toan']])
   assert.equal(response.headers['Cache-Control'], 'private, no-store')
+  const vietnamese = await GET(request('grade=lop-1&subject=tieng-viet&userId=user-b'))
+  assert.equal(vietnamese.status, 200)
+  assert.equal(vietnamese.body.userId, 'user-a')
+  assert.deepEqual(calls.at(-1), ['user-a', 'tieng-viet'])
 })

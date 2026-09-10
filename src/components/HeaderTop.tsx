@@ -4,19 +4,13 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { useState } from 'react'
-import { Info, FolderKanban, ShoppingCart } from 'lucide-react'
+import { Info } from 'lucide-react'
 import AuthMenu from '@/components/auth/AuthMenu'
 
 type Item = { label: string; href: string; icon: React.ReactNode }
 
 const NAV_ITEMS: Item[] = [
   { label: 'Shop Bé Băng', href: '/', icon: <Info className="w-4 h-4" /> },
-  { label: 'Sản Phẩm', href: '/products', icon: <FolderKanban className="w-4 h-4" /> },
-  {
-    label: 'Liên Hệ',
-    href: '/contact',
-    icon: <ShoppingCart className="w-4 h-4" />,
-  },
 ]
 
 const CONTAINER = 'max-w-6xl mx-auto px-4'
