@@ -1,0 +1,5 @@
+.landmark { pointer-events: none; user-select: none; }
+.landmark[data-status='completed'], .landmark[data-status='current'] { opacity: 1; }
+.landmark[data-status='current'] { filter: brightness(1.05); }
+.landmark[data-status='available'] { opacity: .92; }
+.landmark[data-status='locked'] { filter: grayscale(1) saturate(.2); opacity: .5; }

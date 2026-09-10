@@ -1,6 +1,6 @@
 import GameAuthHeader from '@/components/auth/GameAuthHeader'
-import LessonJourneyMap from '@/components/games/lesson-map/LessonJourneyMap'
+import AccountLessonMap from '@/components/games/lesson-map/AccountLessonMap'
 import { buildEnglishUnitMapData, demoEnglishProgress, englishUnitDefinitions } from '@/components/games/lesson-map/englishData'
 export default function GradeOneEnglishPage() {
- return <><GameAuthHeader /><LessonJourneyMap theme="space" items={buildEnglishUnitMapData(englishUnitDefinitions, demoEnglishProgress)} gradeLabel="Lớp 1" gradeHref="/game/lop-1" subjectLabel="Tiếng Anh" title="Hành trình vũ trụ" tagline="Cùng Cappy khám phá 16 hành tinh nhé!" /></>
+ return <><GameAuthHeader /><AccountLessonMap subject="tieng-anh" theme="space" items={buildEnglishUnitMapData(englishUnitDefinitions, demoEnglishProgress)} gradeLabel="Lớp 1" gradeHref="/game/lop-1" subjectLabel="Tiếng Anh" title="Vũ trụ tiếng Anh" showOverview={false} /></>
 }
