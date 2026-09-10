@@ -448,12 +448,12 @@
       ]
     },
     {
-      "path": "/games/lesson-map/adventure-landscape.svg",
+      "path": "/games/general/images/background-map/adventure-landscape.svg",
       "bytes": 1156,
       "dimensions": null
     },
     {
-      "path": "/games/lesson-map/ocean-waves.svg",
+      "path": "/games/general/images/background-map/ocean-waves.svg",
       "bytes": 1022,
       "dimensions": null
     },
@@ -1400,14 +1400,14 @@
     {
       "file": "src/components/games/lesson-map/LessonMap.module.css",
       "line": 7,
-      "url": "/games/lesson-map/ocean-waves.svg",
+      "url": "/games/general/images/background-map/ocean-waves.svg",
       "exists": true,
       "optimizedAlternative": null
     },
     {
       "file": "src/components/games/lesson-map/LessonMap.module.css",
       "line": 149,
-      "url": "/games/lesson-map/adventure-landscape.svg",
+      "url": "/games/general/images/background-map/adventure-landscape.svg",
       "exists": true,
       "optimizedAlternative": null
     },

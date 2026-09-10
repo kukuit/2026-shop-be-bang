@@ -711,6 +711,7 @@ export class RacingScene extends Phaser.Scene {
     this.tracker = createGameTracker({ lessonId: this.lesson.lessonId, gameId: this.lesson.gameId })
     this.game.registry.set('game-ui:started', true)
     this.startMusic()
+    if (this.lesson.introVoice) this.voiceManager?.prepareIntro()
     if (this.lesson.introVoice) this.time.delayedCall(500, () => this.voiceManager?.playOnce('intro', 'racing-voice-intro', 'intro'))
     this.tweens.add({ targets: this.car, y: CAR_Y + 4, duration: 160, yoyo: true, repeat: -1, ease: 'Sine.InOut' })
     this.renderQuestion(false)

@@ -167,14 +167,14 @@
       "refs": []
     },
     {
-      "path": "public/games/lesson-map/adventure-landscape.svg",
+      "path": "public/games/general/images/background-map/adventure-landscape.svg",
       "bytes": 1156,
       "refs": [
         "src/components/games/lesson-map/LessonMap.module.css"
       ]
     },
     {
-      "path": "public/games/lesson-map/ocean-waves.svg",
+      "path": "public/games/general/images/background-map/ocean-waves.svg",
       "bytes": 1022,
       "refs": [
         "src/components/games/lesson-map/LessonMap.module.css"

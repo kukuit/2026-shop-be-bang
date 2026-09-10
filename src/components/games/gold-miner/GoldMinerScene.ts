@@ -542,6 +542,7 @@ export class GoldMinerScene extends Phaser.Scene {
     this.game.registry.set('game-ui:started', true)
     if (this.wolfRounds.size === 0) this.prepareWolfRounds()
     this.startMusic()
+    if (this.lesson.introVoice) this.voiceManager?.prepareIntro()
     if (this.lesson.introVoice) this.time.delayedCall(500, () => this.voiceManager?.playOnce('intro', 'gold-voice-intro', 'intro'))
     this.playHookEntrance()
   }

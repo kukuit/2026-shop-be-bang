@@ -1,3 +1,4 @@
+import { getVoiceChannel } from './VoiceChannel'
 import type * as Phaser from 'phaser'
 
 export type VoicePriority = 'false' | 'true' | 'intro' | 'win'
@@ -29,40 +30,54 @@ export class GameVoiceManager {
     })
   }
 
+  prepareIntro() { getVoiceChannel(this.soundManager).set('intro-pending', true) }
+
   play(key: string, priority: VoicePriority) {
     const voice = this.voices.get(key)
     if (!voice) return false
 
-    if (this.current?.isPlaying) {
+    if (this.current) {
       if (PRIORITY[priority] <= this.currentPriority) return false
-      this.current.stop()
+      // Hold the channel while replacing a lower-priority voice.
+      const previous = this.current
+      this.current = undefined
+      previous.stop()
     }
 
+    getVoiceChannel(this.soundManager).set('voice', true)
     this.current = voice
     this.currentPriority = PRIORITY[priority]
     const clearCurrent = () => {
+      voice.off('complete', clearCurrent)
+      voice.off('stop', clearCurrent)
       if (this.current !== voice) return
       this.current = undefined
       this.currentPriority = 0
+      getVoiceChannel(this.soundManager).set('voice', false)
     }
     voice.once('complete', clearCurrent)
     voice.once('stop', clearCurrent)
-    voice.play()
+    if (!voice.play()) { clearCurrent(); return false }
     return true
   }
 
   playOnce(id: string, key: string, priority: VoicePriority) {
-    if (this.playedOnce.has(id)) return false
+    if (this.playedOnce.has(id)) {
+      if (priority === 'intro') getVoiceChannel(this.soundManager).set('intro-pending', false)
+      return false
+    }
     const played = this.play(key, priority)
+    if (priority === 'intro') getVoiceChannel(this.soundManager).set('intro-pending', false)
     if (played) this.playedOnce.add(id)
     return played
   }
 
   destroy() {
-    this.current?.stop()
     this.current = undefined
     this.currentPriority = 0
     this.voices.forEach((voice) => voice.destroy())
+    getVoiceChannel(this.soundManager).set('intro-pending', false)
+    getVoiceChannel(this.soundManager).set('voice', false)
     this.voices.clear()
     this.playedOnce.clear()
   }

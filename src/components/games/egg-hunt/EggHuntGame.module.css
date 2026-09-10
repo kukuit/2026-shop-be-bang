@@ -1,0 +1,23 @@
+.shell { background: #9ae5ec url('/games/drag-drop/images/optimize/farm-background.png') center/cover no-repeat; }
+.play { position: absolute; inset: 0; touch-action: manipulation; user-select: none; }
+.glass { position: absolute; inset: 9% 3% 10%; border: 2px solid #ffffffdc; border-radius: 7cqw; background: #e8ffff65; box-shadow: 0 2px 20px #25695b18; }
+.dice { position: absolute; left: 38%; top: 10%; width: 24%; aspect-ratio: 1; display: grid; grid-template-columns: repeat(3, 1fr); gap: 12%; padding: 4%; border-radius: 5cqw; border: .6cqw solid #efa9c3; background: linear-gradient(140deg, #ffdce8, #f8c8dc 65%, #efa9c3); box-shadow: 0 1.8cqw 0 #dc8eaf, 0 3cqw 4cqw #5d486437, inset 0 .8cqw 1cqw #fff9; cursor: pointer; }
+.dice:disabled { cursor: default; }
+.pip { border-radius: 50%; background: #111; box-shadow: inset 0 .5cqw .5cqw #0005; }
+.empty { visibility: hidden; }
+.board { position: absolute; left: 4%; top: 26%; width: 92%; height: 64%; overflow: visible; }
+.egg { cursor: pointer; outline: none; transform-box: fill-box; transform-origin: center; }
+.egg:focus-visible { filter: drop-shadow(0 0 3px #125eff); }
+.egg[aria-disabled='true'] { cursor: default; }
+.invite { animation: pulse 1.8s ease-in-out infinite; }
+.rolling { animation: roll .9s ease-in-out infinite; }
+.shake { animation: shake .35s ease-in-out 2; }
+.hint { animation: pulse 1.2s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+.flying { animation: fly 1s ease-in-out both; }
+.celebration { position: absolute; inset: 29% 10% auto; text-align: center; font-size: 13cqw; animation: pulse .65s infinite; pointer-events: none; }
+.paused *, .paused { animation-play-state: paused !important; }
+@keyframes pulse { 50% { transform: scale(1.07); } }
+@keyframes roll { 0%, 100% { transform: rotate(0) scale(1); } 20% { transform: rotate(-12deg) scale(.9); } 40% { transform: rotate(12deg) scale(1.08); } 60% { transform: rotate(-8deg); } 80% { transform: rotate(8deg); } }
+@keyframes shake { 25%, 75% { transform: translateX(-3px); } 50% { transform: translateX(3px); } }
+@keyframes fly { 0% { transform: translate(var(--from-x), var(--from-y)) scale(1); } 35% { transform: translate(var(--from-x), calc(var(--from-y) - 24px)) scale(1.25); } 100% { transform: translate(var(--to-x), 383px) scale(1); } }
+@media (prefers-reduced-motion: reduce) { .invite, .rolling, .hint, .shake, .celebration { animation: none; } .flying { animation-timing-function: steps(1, end); } }

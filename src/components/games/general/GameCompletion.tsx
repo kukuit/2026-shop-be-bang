@@ -9,6 +9,7 @@ type GameCompletionProps = {
   score: number
   onRestart: () => void
   trackingTask?: Promise<unknown>
+  maxScore?: number
 }
 
 const SCORE_ANIMATION_MS = 1400
@@ -19,7 +20,7 @@ const BURSTS = [
   { left: '50%', top: '48%', delay: '1.1s' },
 ]
 
-export default function GameCompletion({ score, onRestart, trackingTask }: GameCompletionProps) {
+export default function GameCompletion({ score, onRestart, trackingTask, maxScore = 100 }: GameCompletionProps) {
   const pathname = usePathname()
   const lessonPath = pathname.replace(/\/+$/, '').replace(/\/(?:luyen-tap\/)?[^/]+$/, '') || '/game'
   const [displayScore, setDisplayScore] = useState(0)
@@ -50,7 +51,7 @@ export default function GameCompletion({ score, onRestart, trackingTask }: GameC
     </div>)}
     <div className="relative z-10 w-full max-w-sm rounded-[2rem] border-4 border-amber-300 bg-white p-7 text-center shadow-2xl">
       <Trophy className="mx-auto animate-bounce text-amber-400" size={82} aria-hidden="true" />
-      <p className="mt-3 text-5xl font-black text-emerald-600" aria-live="polite">{displayScore} / 100</p>
+      <p className="mt-3 text-5xl font-black text-emerald-600" aria-live="polite">{displayScore} / {maxScore}</p>
       <fieldset disabled={!ready} className="mt-7 grid gap-3 disabled:cursor-wait disabled:opacity-60">
         <button type="button" onClick={onRestart} className="relative rounded-2xl bg-amber-500 px-12 py-3 font-black text-white shadow-md"><RotateCcw className="absolute left-5 top-1/2 -translate-y-1/2" size={20} /> Chơi lại</button>
         <button type="button" onClick={() => window.location.assign(lessonPath)} className="relative rounded-2xl bg-blue-600 px-12 py-3 font-black text-white shadow-md"><Gamepad2 className="absolute left-5 top-1/2 -translate-y-1/2" size={20} /> Về trang game</button>

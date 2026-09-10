@@ -5,6 +5,7 @@ import { ChevronRight } from 'lucide-react'
 import GameAuthHeader from '@/components/auth/GameAuthHeader'
 
 const games = [
+  { title: 'Nhặt trứng', href: '/game/lop-1/toan/bai-2/egg-hunt', image: '/games/egg-hunt/thumbnail.svg', color: 'from-teal-500 to-emerald-800', subtitle: 'Lắc xúc xắc · Nhặt đủ 6 trứng' },
   { title: 'Bắn bóng', href: '/game/lop-1/toan/bai-2/bubble-shooter', image: '/games/bubble-shooter/images/optimize/thumbnail/thumbnail.png', color: 'from-sky-500 to-blue-700' },
   { title: 'Kéo thả số', href: '/game/lop-1/toan/bai-2/drag-drop', image: '/games/drag-drop/images/optimize/thumbnail/thumbnail.png', color: 'from-emerald-500 to-teal-700' },
   { title: 'Đào vàng', href: '/game/lop-1/toan/bai-2/gold-mining', image: '/games/gold-mining/images/optimize/thumbnail/thumbnail.jpg', color: 'from-amber-500 to-orange-800' },
