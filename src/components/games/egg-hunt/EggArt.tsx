@@ -22,7 +22,7 @@ function Flower({ x, y, size = 1 }: { x: number; y: number; size?: number }) {
 export default function EggArt({ color }: { color: EggStyle }) {
   const id = useId().replace(/:/g, '')
   const [light, base, dark] = PALETTE[color]
-  return <g aria-hidden="true">
+  return <g aria-hidden="true" transform="scale(0.9)">
     <defs>
       <radialGradient id={`${id}-color`} cx="32%" cy="24%" r="80%">
         <stop stopColor={light} /><stop offset=".58" stopColor={base} /><stop offset="1" stopColor={dark} />

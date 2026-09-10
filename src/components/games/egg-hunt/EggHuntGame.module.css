@@ -1,23 +1,50 @@
 .shell { background: #9ae5ec url('/games/drag-drop/images/optimize/farm-background.png') center/cover no-repeat; }
+.shuffleButton { position: absolute; left: 1.667cqw; bottom: .94%; z-index: 40; display: flex; align-items: center; justify-content: center; gap: 1.5cqw; width: 30.556cqw; height: 9.167cqw; box-sizing: border-box; border: .556cqw solid rgb(128 217 255 / 85%); border-radius: 3.056cqw; background: rgb(18 59 98 / 94%); color: white; text-align: center; font-family: Arial, sans-serif; font-size: 3cqw; font-weight: 700; white-space: nowrap; box-shadow: 0 10px 15px -3px rgb(0 0 0 / 20%); cursor: pointer; transition: transform .15s, background .15s; }
+.shuffleButton svg { width: 4.5cqw; height: 4.5cqw; flex-shrink: 0; color: #ffd43b; }
+.shuffleButton:hover:not(:disabled) { background: #1b507e; }
+.shuffleButton:active:not(:disabled) { transform: scale(.92); }
+.shuffleButton:focus-visible { outline: 3px solid #fcd34d; outline-offset: 2px; }
+.shuffleButton:disabled { opacity: .5; cursor: default; }
 .play { position: absolute; inset: 0; touch-action: manipulation; user-select: none; }
 .glass { position: absolute; inset: 9% 3% 10%; border: 2px solid #ffffffdc; border-radius: 7cqw; background: #e8ffff65; box-shadow: 0 2px 20px #25695b18; }
-.dice { position: absolute; left: 38%; top: 10%; width: 24%; aspect-ratio: 1; display: grid; grid-template-columns: repeat(3, 1fr); gap: 12%; padding: 4%; border-radius: 5cqw; border: .6cqw solid #efa9c3; background: linear-gradient(140deg, #ffdce8, #f8c8dc 65%, #efa9c3); box-shadow: 0 1.8cqw 0 #dc8eaf, 0 3cqw 4cqw #5d486437, inset 0 .8cqw 1cqw #fff9; cursor: pointer; }
+.dice { position: absolute; left: 38%; top: calc(10% + 15px); width: 24%; aspect-ratio: 1; display: grid; grid-template-columns: repeat(3, 1fr); gap: 12%; padding: 4%; border-radius: 5cqw; border: .6cqw solid #efa9c3; background: linear-gradient(140deg, #ffdce8, #f8c8dc 65%, #efa9c3); box-shadow: 0 1.8cqw 0 #dc8eaf, 0 3cqw 4cqw #5d486437, inset 0 .8cqw 1cqw #fff9; cursor: pointer; }
 .dice:disabled { cursor: default; }
+.diceResult { transform: perspective(100cqw) rotateX(7deg) rotateY(-8deg) rotateZ(-3deg); border-color: #ffe8f1 #e9a0bf #df91b2 #ffd8e8; background: linear-gradient(135deg, #ffeaf2 0%, #ffd3e4 45%, #f1b1cc 100%); box-shadow: .3cqw .4cqw 0 #e3a0bc, .6cqw .8cqw 0 #d990af, .9cqw 1.2cqw 0 #cb7f9f, 1.3cqw 2.4cqw 3cqw #79426140, inset .5cqw .6cqw 1cqw #fff9, inset -.4cqw -.5cqw .9cqw #dc91b04d; }
+.diceResult .pip { background: radial-gradient(circle at 65% 75%, #44303b, #21171f 75%); box-shadow: inset .2cqw .3cqw .4cqw #0009, 0 .25cqw .15cqw #fff9; }
 .pip { border-radius: 50%; background: #111; box-shadow: inset 0 .5cqw .5cqw #0005; }
 .empty { visibility: hidden; }
 .board { position: absolute; left: 4%; top: 26%; width: 92%; height: 64%; overflow: visible; }
 .egg { cursor: pointer; outline: none; transform-box: fill-box; transform-origin: center; }
 .egg:focus-visible { filter: drop-shadow(0 0 3px #125eff); }
 .egg[aria-disabled='true'] { cursor: default; }
-.invite { animation: pulse 1.8s ease-in-out infinite; }
-.rolling { animation: roll .9s ease-in-out infinite; }
+.invite, .rolling { padding: 0; border: 0; background: transparent; box-shadow: none; display: block; }
+.idleDice { width: 100%; height: 100%; overflow: visible; animation: beckon 1.8s ease-in-out infinite; }
+.sparkle { position: absolute; right: -9%; top: 5%; color: #fff7ad; font-size: 7cqw; text-shadow: 0 0 8px #ffb52e; animation: twinkle 1.2s ease-in-out infinite; pointer-events: none; }
+.tapPrompt { position: absolute; right: -17%; bottom: -16%; width: 48%; height: auto; overflow: visible; filter: drop-shadow(0 2px 2px #79426140); animation: tap 1.8s ease-in-out infinite; pointer-events: none; }
+.tapRing { transform-box: fill-box; transform-origin: center; animation: ripple 1.8s ease-out infinite; }
+.invite:focus-visible { outline: 3px solid #125eff; outline-offset: 5px; }
+.cubeStage { position: absolute; inset: 0; display: grid; place-items: center; perspective: 100cqw; animation: toss .9s ease-in-out infinite; }
+.cube { position: relative; display: block; width: 16cqw; height: 16cqw; transform-style: preserve-3d; animation: tumble .9s ease-in-out infinite; }
+.cubeFace { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); gap: 13%; padding: 16%; border: .4cqw solid #ffe5ef; border-radius: 2cqw; background: linear-gradient(135deg, #ffdeeb, #ee9fc0); backface-visibility: hidden; box-shadow: inset 0 0 2cqw #fff8; }
+.cubeFace:nth-child(2n) { background: linear-gradient(135deg, #f8bbd4, #df8fb1); }
 .shake { animation: shake .35s ease-in-out 2; }
 .hint { animation: pulse 1.2s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
 .flying { animation: fly 1s ease-in-out both; }
-.celebration { position: absolute; inset: 29% 10% auto; text-align: center; font-size: 13cqw; animation: pulse .65s infinite; pointer-events: none; }
+.celebration { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.burst { pointer-events: none; }
+.burstParticle { animation: burstOut 1s ease-out both; }
+.rocket { animation: launch .65s ease-out both; }
+@keyframes burstOut { 0% { opacity: 0; transform: translate(0, 0) scale(.3); } 12% { opacity: 1; } 65% { opacity: .85; } 100% { opacity: 0; transform: translate(var(--spark-x), calc(var(--spark-y) + 12px)) scale(.4); } }
+@keyframes launch { 0% { opacity: 0; transform: translateY(var(--launch-y)); } 10% { opacity: 1; } 90% { opacity: 1; } 100% { opacity: 0; transform: translateY(0); } }
 .paused *, .paused { animation-play-state: paused !important; }
+@media (prefers-reduced-motion: reduce) { .burst, .rocket { display: none; } }
 @keyframes pulse { 50% { transform: scale(1.07); } }
-@keyframes roll { 0%, 100% { transform: rotate(0) scale(1); } 20% { transform: rotate(-12deg) scale(.9); } 40% { transform: rotate(12deg) scale(1.08); } 60% { transform: rotate(-8deg); } 80% { transform: rotate(8deg); } }
+@keyframes beckon { 0%, 60%, 100% { transform: translateY(0) rotate(0); } 20% { transform: translateY(-5px) rotate(-7deg); } 35% { transform: translateY(-5px) rotate(7deg); } 48% { transform: translateY(-2px) rotate(-4deg); } }
+@keyframes twinkle { 0%, 100% { opacity: .3; transform: scale(.7); } 50% { opacity: 1; transform: scale(1.15); } }
+@keyframes tap { 0%, 65%, 100% { transform: translate(3px, 5px) rotate(-8deg); } 25%, 40% { transform: translate(-3px, -4px) rotate(-8deg) scale(.92); } }
+@keyframes ripple { 0%, 20%, 70%, 100% { opacity: 0; transform: scale(.55); } 30% { opacity: 1; transform: scale(.8); } 60% { opacity: 0; transform: scale(1.5); } }
+@keyframes toss { 0%, 100% { transform: translateY(0) scale(.92); } 45% { transform: translateY(-3cqw) scale(1.05); } 80% { transform: translateY(1cqw) scale(.95); } }
+@keyframes tumble { from { transform: rotateX(-25deg) rotateY(-35deg) rotateZ(0); } to { transform: rotateX(335deg) rotateY(685deg) rotateZ(360deg); } }
 @keyframes shake { 25%, 75% { transform: translateX(-3px); } 50% { transform: translateX(3px); } }
 @keyframes fly { 0% { transform: translate(var(--from-x), var(--from-y)) scale(1); } 35% { transform: translate(var(--from-x), calc(var(--from-y) - 24px)) scale(1.25); } 100% { transform: translate(var(--to-x), 383px) scale(1); } }
-@media (prefers-reduced-motion: reduce) { .invite, .rolling, .hint, .shake, .celebration { animation: none; } .flying { animation-timing-function: steps(1, end); } }
+@media (prefers-reduced-motion: reduce) { .invite, .idleDice, .sparkle, .tapPrompt, .tapRing, .cubeStage, .cube, .hint, .shake, .celebration { animation: none; } .cube { transform: rotateX(-25deg) rotateY(-35deg); } .flying { animation-timing-function: steps(1, end); } }

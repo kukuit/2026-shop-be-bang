@@ -31,15 +31,56 @@ export function createBoard(): { cells: Cell[]; eggs: Egg[] } {
   })
   const eggs: Egg[] = EGG_CELLS.map(id => {
     const cell = cells[id]
-    // Only numbered triangles physically touching this egg's triangle count.
-    const neighbors = cells.filter(candidate => !EGG_CELLS.includes(candidate.id) && candidate.points.some(p => cell.points.some(q => p.x === q.x && p.y === q.y)))
+    // A neighboring triangle must share an entire edge (two vertices).
+    // Triangles touching only at a corner do not determine this egg's number.
+    const neighbors = cells.filter(candidate => candidate.value !== null && candidate.points.filter(p => cell.points.some(q => p.x === q.x && p.y === q.y)).length === 2)
     return { id, x: cell.x, y: cell.y, surroundingCellIds: neighbors.map(n => n.id), surroundingNumbers: neighbors.flatMap(n => n.value === null ? [] : [n.value]), spriteKey: REFERENCE_CELLS[id] as EggStyle, collected: false }
   })
   return { cells, eggs }
 }
 
-export function availableNumbers(eggs: Egg[]) {
+export function createRandomBoard(random: () => number = Math.random): { cells: Cell[]; eggs: Egg[] } {
+  const { cells } = createBoard()
+  const shuffle = <T,>(items: T[]) => {
+    for (let i = items.length - 1; i > 0; i--) {
+      const j = Math.floor(random() * (i + 1))
+      ;[items[i], items[j]] = [items[j], items[i]]
+    }
+    return items
+  }
+  const neighbors = cells.map(cell => cells.filter(candidate => candidate.id !== cell.id && candidate.points.filter(p => cell.points.some(q => p.x === q.x && p.y === q.y)).length === 2).map(cell => cell.id))
+  const candidates = cells.filter(cell => neighbors[cell.id].length === 3).map(cell => cell.id)
+  let positions: number[] = []
+  // Reserve each egg and its three bordering cells to prevent conflicting answers.
+  for (let attempt = 0; attempt < 32; attempt++) {
+    const reserved = new Set<number>()
+    positions = []
+    for (const id of shuffle([...candidates])) {
+      const area = [id, ...neighbors[id]]
+      if (area.some(cellId => reserved.has(cellId))) continue
+      positions.push(id)
+      area.forEach(cellId => reserved.add(cellId))
+      if (positions.length === EGG_CELLS.length) break
+    }
+    if (positions.length === EGG_CELLS.length) break
+  }
+  // Verified disjoint fallback keeps generation bounded for unusual RNG sequences.
+  if (positions.length !== EGG_CELLS.length) positions = [94, 64, 85, 76, 2, 21, 12, 98, 36, 40, 102, 61, 31, 57, 49, 111]
+  const answers = shuffle(positions.map((_, index) => index % 6 + 1))
+  const colors: EggStyle[] = ['green', 'pink', 'orange', 'blue', 'striped']
+  cells.forEach(cell => { cell.value = 1 + Math.floor(random() * 6) })
+  const eggs = positions.map((id, index): Egg => {
+    const cell = cells[id]
+    cell.value = null
+    neighbors[id].forEach(cellId => { cells[cellId].value = answers[index] })
+    return { id, x: cell.x, y: cell.y, surroundingCellIds: [...neighbors[id]], surroundingNumbers: Array(3).fill(answers[index]), spriteKey: colors[Math.floor(random() * colors.length)], collected: false }
+  })
+  return { cells, eggs }
+}
+
+export function availableNumbers(eggs: Egg[], rollCounts: Readonly<Record<number, number>> = {}) {
   return Array.from(new Set(eggs.filter(egg => !egg.collected).flatMap(egg => egg.surroundingNumbers)))
+    .filter(number => (rollCounts[number] ?? 0) < 2)
 }
 export function canCollect(egg: Egg, result: number) {
   return !egg.collected && egg.surroundingNumbers.includes(result)

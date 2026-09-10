@@ -9,7 +9,7 @@ export default function SiteShell({ children }: { children: React.ReactNode }) {
   // Hiện chatbot ở mọi trang game, trừ màn chơi minigame toàn màn hình.
   const isGameRoute = pathname === '/game' || pathname.startsWith('/game/')
   const isGameplayRoute = isGameRoute && (
-    /\/(bubble-shooter|drag-drop|gold-mining|racing)(\/|$)/.test(pathname) ||
+    /\/(bubble-shooter|drag-drop|gold-mining|racing|egg-hunt)(\/|$)/.test(pathname) ||
     /^\/game\/lop-1\/toan\/luyen-tap\/cong-den-10\/?$/.test(pathname)
   )
   const hasGameChat = isGameRoute && !isGameplayRoute
