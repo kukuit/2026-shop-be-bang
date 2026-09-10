@@ -3,16 +3,16 @@ import type { AdventureNodeType } from './adventureTypes'
 
 export type VietnameseLessonDefinition = LessonDefinition & { nodeType: AdventureNodeType; mapTitle: string }
 const locations: readonly { nodeType: AdventureNodeType; mapTitle: string }[] = [
-  { nodeType: 'alphabetZone', mapTitle: 'Khu chữ cái' },
-  { nodeType: 'rhymeHill', mapTitle: 'Đồi âm vần' },
-  { nodeType: 'spellingBridge', mapTitle: 'Cầu đánh vần' },
-  { nodeType: 'readingForest', mapTitle: 'Rừng đọc hiểu' },
-  { nodeType: 'wordVillage', mapTitle: 'Làng chữ' },
-  { nodeType: 'library', mapTitle: 'Thư viện' },
-  { nodeType: 'languageCave', mapTitle: 'Hang tiếng Việt' },
-  { nodeType: 'wordTower', mapTitle: 'Tháp từ ngữ' },
-  { nodeType: 'storyGate', mapTitle: 'Cổng kể chuyện' },
-  { nodeType: 'storyCastle', mapTitle: 'Lâu đài kể chuyện' },
+  { nodeType: 'alphabetZone', mapTitle: 'Bài 1' },
+  { nodeType: 'rhymeHill', mapTitle: 'Bài 2' },
+  { nodeType: 'spellingBridge', mapTitle: 'Bài 3' },
+  { nodeType: 'readingForest', mapTitle: 'Bài 4' },
+  { nodeType: 'wordVillage', mapTitle: 'Bài 5' },
+  { nodeType: 'library', mapTitle: 'Bài 6' },
+  { nodeType: 'languageCave', mapTitle: 'Bài 7' },
+  { nodeType: 'wordTower', mapTitle: 'Bài 8' },
+  { nodeType: 'storyGate', mapTitle: 'Bài 9' },
+  { nodeType: 'storyCastle', mapTitle: 'Bài 10' },
 ]
 export const vietnameseLessonDefinitions: VietnameseLessonDefinition[] = locations.map(({ nodeType, mapTitle }, index) => {
   const id = index + 1

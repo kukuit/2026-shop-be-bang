@@ -72,20 +72,20 @@ export class GoldMinerScene extends Phaser.Scene {
       this.game.events.emit('gold-miner:progress', progress)
     })
     this.load.audio('gold-background', GAME_BACKGROUND_MUSIC)
-    this.load.image('mine-background', '/games/gold-mining/images/mine-background.png')
-    this.load.image('gold-nugget', '/games/gold-mining/images/gold.png')
-    this.load.image('mine-rock', '/games/gold-mining/images/rock.png')
-    this.load.image('golden-claw', '/games/gold-mining/images/golden-claw.png')
-    this.load.image('golden-claw-closed', '/games/gold-mining/images/golden-claw-closed.png')
-    this.load.spritesheet('wolf-animation', '/games/gold-mining/images/wolf-animation-alpha.png', {
+    this.load.image('mine-background', '/games/gold-mining/images/optimize/mine-background.png')
+    this.load.image('gold-nugget', '/games/gold-mining/images/optimize/gold.png')
+    this.load.image('mine-rock', '/games/gold-mining/images/optimize/rock.png')
+    this.load.image('golden-claw', '/games/gold-mining/images/optimize/golden-claw.png')
+    this.load.image('golden-claw-closed', '/games/gold-mining/images/optimize/golden-claw-closed.png')
+    this.load.spritesheet('wolf-animation', '/games/gold-mining/images/optimize/wolf-animation-alpha.png', {
       frameWidth: 512,
       frameHeight: 512,
     })
-    this.load.spritesheet('wolf-rock-animation', '/games/gold-mining/images/wolf-rock-animation-alpha.png', {
+    this.load.spritesheet('wolf-rock-animation', '/games/gold-mining/images/optimize/wolf-rock-animation-alpha.png', {
       frameWidth: 512,
       frameHeight: 512,
     })
-    this.load.image('wolf-caught-icon', '/games/gold-mining/images/wolf-caught-icon.png')
+    this.load.image('wolf-caught-icon', '/games/gold-mining/images/optimize/wolf-caught-icon.png')
     if (this.lesson.introVoice) this.load.audio('gold-voice-intro', this.lesson.introVoice)
     this.load.audio('gold-voice-reel', '/games/gold-mining/voices/reel.mp3')
     this.load.audio('gold-voice-ting', '/games/gold-mining/voices/ting.mp3')

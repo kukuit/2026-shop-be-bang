@@ -25,7 +25,7 @@ export default function GameEntry() {
     {error ? <button className="max-w-md rounded-2xl border-2 border-amber-200 bg-white px-6 py-4 text-center font-bold text-amber-800 shadow-sm disabled:opacity-50" disabled={saving} onClick={() => isLoading ? retry() : primaryGrade && void setActiveGrade(primaryGrade).catch(() => {})}>{error} Nhấn để thử lại.</button> : (
       <div className="text-center">
         <div aria-hidden="true" className="relative mx-auto mb-6 h-28 w-28 motion-safe:animate-bounce motion-safe:[animation-duration:2.4s]">
-          <Image src="/games/general/images/loading-cappy-adventure.png" alt="" width={112} height={112} priority unoptimized className="h-full w-full object-contain drop-shadow-md" />
+          <Image src="/games/general/images/optimize/loading-cappy-adventure.png" alt="" width={112} height={112} priority unoptimized className="h-full w-full object-contain drop-shadow-md" />
         </div>
         <p className="text-xl font-black leading-relaxed sm:text-2xl">
           <span className="text-violet-600">Cappy</span>{' '}

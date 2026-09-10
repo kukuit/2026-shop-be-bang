@@ -1,0 +1,2209 @@
+{
+  "images": [
+    {
+      "path": "/apple-touch-icon.png",
+      "bytes": 18676,
+      "dimensions": [
+        180,
+        180
+      ]
+    },
+    {
+      "path": "/favicon.ico",
+      "bytes": 935,
+      "dimensions": null
+    },
+    {
+      "path": "/favicon.png",
+      "bytes": 2606,
+      "dimensions": [
+        48,
+        48
+      ]
+    },
+    {
+      "path": "/games/bubble-shooter/images/ammo.png",
+      "bytes": 986380,
+      "dimensions": [
+        2172,
+        724
+      ]
+    },
+    {
+      "path": "/games/bubble-shooter/images/background.png",
+      "bytes": 1514461,
+      "dimensions": [
+        941,
+        1672
+      ]
+    },
+    {
+      "path": "/games/bubble-shooter/images/balloon.png",
+      "bytes": 1197097,
+      "dimensions": [
+        1024,
+        1536
+      ]
+    },
+    {
+      "path": "/games/bubble-shooter/images/cannon-barrel.png",
+      "bytes": 1448383,
+      "dimensions": [
+        1024,
+        1536
+      ]
+    },
+    {
+      "path": "/games/bubble-shooter/images/cannon-base.png",
+      "bytes": 2197008,
+      "dimensions": [
+        1536,
+        1024
+      ]
+    },
+    {
+      "path": "/games/bubble-shooter/images/cappy.png",
+      "bytes": 1254180,
+      "dimensions": [
+        1275,
+        1233
+      ]
+    },
+    {
+      "path": "/games/bubble-shooter/images/optimize/ammo.png",
+      "bytes": 159788,
+      "dimensions": [
+        2172,
+        724
+      ]
+    },
+    {
+      "path": "/games/bubble-shooter/images/optimize/background.png",
+      "bytes": 359663,
+      "dimensions": [
+        941,
+        1672
+      ]
+    },
+    {
+      "path": "/games/bubble-shooter/images/optimize/balloon.png",
+      "bytes": 211896,
+      "dimensions": [
+        1024,
+        1536
+      ]
+    },
+    {
+      "path": "/games/bubble-shooter/images/optimize/cannon-barrel.png",
+      "bytes": 263968,
+      "dimensions": [
+        1024,
+        1536
+      ]
+    },
+    {
+      "path": "/games/bubble-shooter/images/optimize/cannon-base.png",
+      "bytes": 348514,
+      "dimensions": [
+        1536,
+        1024
+      ]
+    },
+    {
+      "path": "/games/bubble-shooter/images/optimize/cappy.png",
+      "bytes": 425548,
+      "dimensions": [
+        1275,
+        1233
+      ]
+    },
+    {
+      "path": "/games/bubble-shooter/images/optimize/question-panel.png",
+      "bytes": 362650,
+      "dimensions": [
+        1890,
+        665
+      ]
+    },
+    {
+      "path": "/games/bubble-shooter/images/optimize/thumbnail/thumbnail.png",
+      "bytes": 411818,
+      "dimensions": [
+        1254,
+        1254
+      ]
+    },
+    {
+      "path": "/games/bubble-shooter/images/optimize/wolf.png",
+      "bytes": 253583,
+      "dimensions": [
+        1536,
+        1024
+      ]
+    },
+    {
+      "path": "/games/bubble-shooter/images/question-panel.png",
+      "bytes": 1258023,
+      "dimensions": [
+        1890,
+        665
+      ]
+    },
+    {
+      "path": "/games/bubble-shooter/images/thumbnail/thumbnail.png",
+      "bytes": 2072247,
+      "dimensions": [
+        1254,
+        1254
+      ]
+    },
+    {
+      "path": "/games/bubble-shooter/images/wolf.png",
+      "bytes": 975758,
+      "dimensions": [
+        1536,
+        1024
+      ]
+    },
+    {
+      "path": "/games/drag-drop/images/cappy-companion-sprites.png",
+      "bytes": 1181113,
+      "dimensions": [
+        1536,
+        1024
+      ]
+    },
+    {
+      "path": "/games/drag-drop/images/farm-background.png",
+      "bytes": 1665508,
+      "dimensions": [
+        941,
+        1672
+      ]
+    },
+    {
+      "path": "/games/drag-drop/images/optimize/cappy-companion-sprites.png",
+      "bytes": 286590,
+      "dimensions": [
+        1536,
+        1024
+      ]
+    },
+    {
+      "path": "/games/drag-drop/images/optimize/farm-background.png",
+      "bytes": 380257,
+      "dimensions": [
+        941,
+        1672
+      ]
+    },
+    {
+      "path": "/games/drag-drop/images/optimize/thumbnail/thumbnail.png",
+      "bytes": 464289,
+      "dimensions": [
+        1254,
+        1254
+      ]
+    },
+    {
+      "path": "/games/drag-drop/images/optimize/wolf-thief-sprites.png",
+      "bytes": 272476,
+      "dimensions": [
+        1536,
+        1024
+      ]
+    },
+    {
+      "path": "/games/drag-drop/images/thumbnail/thumbnail.png",
+      "bytes": 2153130,
+      "dimensions": [
+        1254,
+        1254
+      ]
+    },
+    {
+      "path": "/games/drag-drop/images/wolf-thief-sprites.png",
+      "bytes": 1012071,
+      "dimensions": [
+        1536,
+        1024
+      ]
+    },
+    {
+      "path": "/games/general/images/loading-cappy-adventure.png",
+      "bytes": 66565,
+      "dimensions": [
+        224,
+        224
+      ]
+    },
+    {
+      "path": "/games/general/images/optimize/loading-cappy-adventure.png",
+      "bytes": 16255,
+      "dimensions": [
+        224,
+        224
+      ]
+    },
+    {
+      "path": "/games/general/images/optimize/player-avatar.png",
+      "bytes": 322132,
+      "dimensions": [
+        1254,
+        1254
+      ]
+    },
+    {
+      "path": "/games/general/images/optimize/ready-avatar.png",
+      "bytes": 193708,
+      "dimensions": [
+        1103,
+        1426
+      ]
+    },
+    {
+      "path": "/games/general/images/optimize/ready-cappy.png",
+      "bytes": 247157,
+      "dimensions": [
+        1149,
+        1369
+      ]
+    },
+    {
+      "path": "/games/general/images/optimize/ready-wolf.png",
+      "bytes": 282022,
+      "dimensions": [
+        1177,
+        1337
+      ]
+    },
+    {
+      "path": "/games/general/images/player-avatar.png",
+      "bytes": 1377914,
+      "dimensions": [
+        1254,
+        1254
+      ]
+    },
+    {
+      "path": "/games/general/images/ready-avatar.png",
+      "bytes": 1217891,
+      "dimensions": [
+        1103,
+        1426
+      ]
+    },
+    {
+      "path": "/games/general/images/ready-cappy.png",
+      "bytes": 1550070,
+      "dimensions": [
+        1149,
+        1369
+      ]
+    },
+    {
+      "path": "/games/general/images/ready-wolf.png",
+      "bytes": 1225211,
+      "dimensions": [
+        1177,
+        1337
+      ]
+    },
+    {
+      "path": "/games/gold-mining/images/gold.png",
+      "bytes": 1817551,
+      "dimensions": [
+        1536,
+        1024
+      ]
+    },
+    {
+      "path": "/games/gold-mining/images/golden-claw-closed.png",
+      "bytes": 1417052,
+      "dimensions": [
+        1024,
+        1536
+      ]
+    },
+    {
+      "path": "/games/gold-mining/images/golden-claw.png",
+      "bytes": 594261,
+      "dimensions": [
+        1115,
+        1411
+      ]
+    },
+    {
+      "path": "/games/gold-mining/images/mine-background.png",
+      "bytes": 1779445,
+      "dimensions": [
+        941,
+        1672
+      ]
+    },
+    {
+      "path": "/games/gold-mining/images/optimize/gold.png",
+      "bytes": 410103,
+      "dimensions": [
+        1536,
+        1024
+      ]
+    },
+    {
+      "path": "/games/gold-mining/images/optimize/golden-claw-closed.png",
+      "bytes": 225117,
+      "dimensions": [
+        1024,
+        1536
+      ]
+    },
+    {
+      "path": "/games/gold-mining/images/optimize/golden-claw.png",
+      "bytes": 172040,
+      "dimensions": [
+        1115,
+        1411
+      ]
+    },
+    {
+      "path": "/games/gold-mining/images/optimize/mine-background.png",
+      "bytes": 723083,
+      "dimensions": [
+        941,
+        1672
+      ]
+    },
+    {
+      "path": "/games/gold-mining/images/optimize/rock.png",
+      "bytes": 423157,
+      "dimensions": [
+        1536,
+        1024
+      ]
+    },
+    {
+      "path": "/games/gold-mining/images/optimize/thumbnail/thumbnail.jpg",
+      "bytes": 143499,
+      "dimensions": null
+    },
+    {
+      "path": "/games/gold-mining/images/optimize/wolf-animation-alpha.png",
+      "bytes": 244780,
+      "dimensions": [
+        1536,
+        1024
+      ]
+    },
+    {
+      "path": "/games/gold-mining/images/optimize/wolf-caught-icon.png",
+      "bytes": 330260,
+      "dimensions": [
+        1254,
+        1254
+      ]
+    },
+    {
+      "path": "/games/gold-mining/images/optimize/wolf-rock-animation-alpha.png",
+      "bytes": 256116,
+      "dimensions": [
+        1536,
+        1024
+      ]
+    },
+    {
+      "path": "/games/gold-mining/images/rock.png",
+      "bytes": 2000474,
+      "dimensions": [
+        1536,
+        1024
+      ]
+    },
+    {
+      "path": "/games/gold-mining/images/thumbnail/thumbnail.jpg",
+      "bytes": 171602,
+      "dimensions": null
+    },
+    {
+      "path": "/games/gold-mining/images/wolf-animation-alpha.png",
+      "bytes": 1692599,
+      "dimensions": [
+        1536,
+        1024
+      ]
+    },
+    {
+      "path": "/games/gold-mining/images/wolf-caught-icon.png",
+      "bytes": 1585976,
+      "dimensions": [
+        1254,
+        1254
+      ]
+    },
+    {
+      "path": "/games/gold-mining/images/wolf-rock-animation-alpha.png",
+      "bytes": 1839677,
+      "dimensions": [
+        1536,
+        1024
+      ]
+    },
+    {
+      "path": "/games/lesson-map/adventure-landscape.svg",
+      "bytes": 1156,
+      "dimensions": null
+    },
+    {
+      "path": "/games/lesson-map/ocean-waves.svg",
+      "bytes": 1022,
+      "dimensions": null
+    },
+    {
+      "path": "/games/lessons/lop-1/images/optimize/tieng-anh-square.png",
+      "bytes": 451678,
+      "dimensions": [
+        1254,
+        1254
+      ]
+    },
+    {
+      "path": "/games/lessons/lop-1/images/optimize/tieng-viet-square.png",
+      "bytes": 509410,
+      "dimensions": [
+        1254,
+        1254
+      ]
+    },
+    {
+      "path": "/games/lessons/lop-1/images/optimize/toan-square.png",
+      "bytes": 411127,
+      "dimensions": [
+        1254,
+        1254
+      ]
+    },
+    {
+      "path": "/games/lessons/lop-1/images/tieng-anh-square.png",
+      "bytes": 2085154,
+      "dimensions": [
+        1254,
+        1254
+      ]
+    },
+    {
+      "path": "/games/lessons/lop-1/images/tieng-viet-square.png",
+      "bytes": 2286740,
+      "dimensions": [
+        1254,
+        1254
+      ]
+    },
+    {
+      "path": "/games/lessons/lop-1/images/toan-square.png",
+      "bytes": 1992836,
+      "dimensions": [
+        1254,
+        1254
+      ]
+    },
+    {
+      "path": "/games/lessons/lop-1/tieng-anh/bai-1/images/optimize/vocabulary.png",
+      "bytes": 222957,
+      "dimensions": [
+        1298,
+        1212
+      ]
+    },
+    {
+      "path": "/games/lessons/lop-1/tieng-anh/bai-1/images/vocabulary.png",
+      "bytes": 1161563,
+      "dimensions": [
+        1298,
+        1212
+      ]
+    },
+    {
+      "path": "/games/phaser/images/ammo.png",
+      "bytes": 986380,
+      "dimensions": [
+        2172,
+        724
+      ]
+    },
+    {
+      "path": "/games/phaser/images/background.png",
+      "bytes": 1514461,
+      "dimensions": [
+        941,
+        1672
+      ]
+    },
+    {
+      "path": "/games/phaser/images/balloon.png",
+      "bytes": 1197097,
+      "dimensions": [
+        1024,
+        1536
+      ]
+    },
+    {
+      "path": "/games/phaser/images/cannon-barrel.png",
+      "bytes": 1448383,
+      "dimensions": [
+        1024,
+        1536
+      ]
+    },
+    {
+      "path": "/games/phaser/images/cannon-base.png",
+      "bytes": 1818792,
+      "dimensions": [
+        1536,
+        1024
+      ]
+    },
+    {
+      "path": "/games/phaser/images/cannon.png",
+      "bytes": 1030976,
+      "dimensions": [
+        1312,
+        1199
+      ]
+    },
+    {
+      "path": "/games/phaser/images/player-avatar.png",
+      "bytes": 1377914,
+      "dimensions": [
+        1254,
+        1254
+      ]
+    },
+    {
+      "path": "/games/phaser/images/player-card.png",
+      "bytes": 1197104,
+      "dimensions": [
+        1897,
+        829
+      ]
+    },
+    {
+      "path": "/games/phaser/images/question-panel.png",
+      "bytes": 1258023,
+      "dimensions": [
+        1890,
+        665
+      ]
+    },
+    {
+      "path": "/games/phaser/images/ui-icons.png",
+      "bytes": 1273137,
+      "dimensions": [
+        2172,
+        724
+      ]
+    },
+    {
+      "path": "/games/racing/images/answer-barrel.png",
+      "bytes": 1279611,
+      "dimensions": [
+        1254,
+        1254
+      ]
+    },
+    {
+      "path": "/games/racing/images/answer-rock.png",
+      "bytes": 1784992,
+      "dimensions": [
+        1254,
+        1254
+      ]
+    },
+    {
+      "path": "/games/racing/images/cappy-red-car.png",
+      "bytes": 1327157,
+      "dimensions": [
+        1230,
+        1278
+      ]
+    },
+    {
+      "path": "/games/racing/images/card.svg",
+      "bytes": 2189,
+      "dimensions": null
+    },
+    {
+      "path": "/games/racing/images/optimize/answer-barrel.png",
+      "bytes": 293435,
+      "dimensions": [
+        1254,
+        1254
+      ]
+    },
+    {
+      "path": "/games/racing/images/optimize/answer-rock.png",
+      "bytes": 497434,
+      "dimensions": [
+        1254,
+        1254
+      ]
+    },
+    {
+      "path": "/games/racing/images/optimize/cappy-red-car.png",
+      "bytes": 277448,
+      "dimensions": [
+        1230,
+        1278
+      ]
+    },
+    {
+      "path": "/games/racing/images/optimize/thumbnail/thumbnail.jpg",
+      "bytes": 76258,
+      "dimensions": null
+    },
+    {
+      "path": "/games/racing/images/optimize/valley-road-v2.png",
+      "bytes": 529421,
+      "dimensions": [
+        1023,
+        1537
+      ]
+    },
+    {
+      "path": "/games/racing/images/optimize/wolf-car-states.png",
+      "bytes": 313192,
+      "dimensions": [
+        1536,
+        1024
+      ]
+    },
+    {
+      "path": "/games/racing/images/optimize/wolf-gray-car.png",
+      "bytes": 335239,
+      "dimensions": [
+        1254,
+        1254
+      ]
+    },
+    {
+      "path": "/games/racing/images/thumbnail/thumbnail.jpg",
+      "bytes": 142467,
+      "dimensions": null
+    },
+    {
+      "path": "/games/racing/images/valley-road-v2.png",
+      "bytes": 1952645,
+      "dimensions": [
+        1023,
+        1537
+      ]
+    },
+    {
+      "path": "/games/racing/images/wolf-car-states.png",
+      "bytes": 1848245,
+      "dimensions": [
+        1536,
+        1024
+      ]
+    },
+    {
+      "path": "/games/racing/images/wolf-gray-car.png",
+      "bytes": 1240056,
+      "dimensions": [
+        1254,
+        1254
+      ]
+    },
+    {
+      "path": "/icon-1024.png",
+      "bytes": 384875,
+      "dimensions": [
+        1024,
+        1024
+      ]
+    },
+    {
+      "path": "/icon-128.png",
+      "bytes": 11132,
+      "dimensions": [
+        128,
+        128
+      ]
+    },
+    {
+      "path": "/icon-16.png",
+      "bytes": 620,
+      "dimensions": [
+        16,
+        16
+      ]
+    },
+    {
+      "path": "/icon-180.png",
+      "bytes": 18676,
+      "dimensions": [
+        180,
+        180
+      ]
+    },
+    {
+      "path": "/icon-192.png",
+      "bytes": 19210,
+      "dimensions": [
+        192,
+        192
+      ]
+    },
+    {
+      "path": "/icon-256.png",
+      "bytes": 31942,
+      "dimensions": [
+        256,
+        256
+      ]
+    },
+    {
+      "path": "/icon-32.png",
+      "bytes": 1495,
+      "dimensions": [
+        32,
+        32
+      ]
+    },
+    {
+      "path": "/icon-384.png",
+      "bytes": 66200,
+      "dimensions": [
+        384,
+        384
+      ]
+    },
+    {
+      "path": "/icon-48.png",
+      "bytes": 2606,
+      "dimensions": [
+        48,
+        48
+      ]
+    },
+    {
+      "path": "/icon-512.png",
+      "bytes": 105294,
+      "dimensions": [
+        512,
+        512
+      ]
+    },
+    {
+      "path": "/icon-64.png",
+      "bytes": 3693,
+      "dimensions": [
+        64,
+        64
+      ]
+    },
+    {
+      "path": "/icon-96.png",
+      "bytes": 7009,
+      "dimensions": [
+        96,
+        96
+      ]
+    },
+    {
+      "path": "/images/icon-512.png",
+      "bytes": 260882,
+      "dimensions": [
+        512,
+        512
+      ]
+    },
+    {
+      "path": "/images/logo.png",
+      "bytes": 863530,
+      "dimensions": [
+        1024,
+        1024
+      ]
+    },
+    {
+      "path": "/images/optimize/icon-512.png",
+      "bytes": 105294,
+      "dimensions": [
+        512,
+        512
+      ]
+    },
+    {
+      "path": "/images/optimize/logo.png",
+      "bytes": 384875,
+      "dimensions": [
+        1024,
+        1024
+      ]
+    },
+    {
+      "path": "/images/products/product-0001.webp",
+      "bytes": 153574,
+      "dimensions": null
+    },
+    {
+      "path": "/images/products/product-0002.webp",
+      "bytes": 153574,
+      "dimensions": null
+    },
+    {
+      "path": "/images/products/product-0003.webp",
+      "bytes": 153574,
+      "dimensions": null
+    },
+    {
+      "path": "/images/products/product-0004.webp",
+      "bytes": 153574,
+      "dimensions": null
+    },
+    {
+      "path": "/next.svg",
+      "bytes": 1375,
+      "dimensions": null
+    },
+    {
+      "path": "/vercel.svg",
+      "bytes": 629,
+      "dimensions": null
+    }
+  ],
+  "references": [
+    {
+      "file": "src/app/game/lop-1/tieng-anh/bai-1/images.ts",
+      "line": 3,
+      "url": "/games/lessons/lop-1/tieng-anh/bai-1/images/vocabulary.png",
+      "exists": true,
+      "optimizedAlternative": "/games/lessons/lop-1/tieng-anh/bai-1/images/optimize/vocabulary.png"
+    },
+    {
+      "file": "src/app/game/lop-1/tieng-anh/bai-1/page.tsx",
+      "line": 8,
+      "url": "/games/bubble-shooter/images/thumbnail/thumbnail-v2.png",
+      "exists": false,
+      "optimizedAlternative": null
+    },
+    {
+      "file": "src/app/game/lop-1/tieng-anh/bai-1/page.tsx",
+      "line": 9,
+      "url": "/games/drag-drop/images/thumbnail/thumbnail-v2.png",
+      "exists": false,
+      "optimizedAlternative": null
+    },
+    {
+      "file": "src/app/game/lop-1/tieng-anh/bai-1/page.tsx",
+      "line": 10,
+      "url": "/games/gold-mining/images/thumbnail/thumbnail.jpg",
+      "exists": true,
+      "optimizedAlternative": "/games/gold-mining/images/optimize/thumbnail/thumbnail.jpg"
+    },
+    {
+      "file": "src/app/game/lop-1/tieng-anh/bai-1/page.tsx",
+      "line": 11,
+      "url": "/games/racing/images/thumbnail/thumbnail.jpg",
+      "exists": true,
+      "optimizedAlternative": "/games/racing/images/optimize/thumbnail/thumbnail.jpg"
+    },
+    {
+      "file": "src/app/game/lop-1/toan/bai-1/page.tsx",
+      "line": 8,
+      "url": "/games/bubble-shooter/images/optimize/thumbnail/thumbnail.png",
+      "exists": true,
+      "optimizedAlternative": null
+    },
+    {
+      "file": "src/app/game/lop-1/toan/bai-1/page.tsx",
+      "line": 9,
+      "url": "/games/drag-drop/images/optimize/thumbnail/thumbnail.png",
+      "exists": true,
+      "optimizedAlternative": null
+    },
+    {
+      "file": "src/app/game/lop-1/toan/bai-1/page.tsx",
+      "line": 10,
+      "url": "/games/gold-mining/images/optimize/thumbnail/thumbnail.jpg",
+      "exists": true,
+      "optimizedAlternative": null
+    },
+    {
+      "file": "src/app/game/lop-1/toan/bai-1/page.tsx",
+      "line": 11,
+      "url": "/games/racing/images/optimize/thumbnail/thumbnail.jpg",
+      "exists": true,
+      "optimizedAlternative": null
+    },
+    {
+      "file": "src/app/game/lop-1/toan/bai-2/page.tsx",
+      "line": 8,
+      "url": "/games/bubble-shooter/images/thumbnail/thumbnail-v2.png",
+      "exists": false,
+      "optimizedAlternative": null
+    },
+    {
+      "file": "src/app/game/lop-1/toan/bai-2/page.tsx",
+      "line": 9,
+      "url": "/games/drag-drop/images/thumbnail/thumbnail-v2.png",
+      "exists": false,
+      "optimizedAlternative": null
+    },
+    {
+      "file": "src/app/game/lop-1/toan/bai-2/page.tsx",
+      "line": 10,
+      "url": "/games/gold-mining/images/thumbnail/thumbnail.jpg",
+      "exists": true,
+      "optimizedAlternative": "/games/gold-mining/images/optimize/thumbnail/thumbnail.jpg"
+    },
+    {
+      "file": "src/app/game/lop-1/toan/bai-2/page.tsx",
+      "line": 11,
+      "url": "/games/racing/images/thumbnail/thumbnail.jpg",
+      "exists": true,
+      "optimizedAlternative": "/games/racing/images/optimize/thumbnail/thumbnail.jpg"
+    },
+    {
+      "file": "src/app/layout.tsx",
+      "line": 35,
+      "url": "/favicon.ico",
+      "exists": true,
+      "optimizedAlternative": null
+    },
+    {
+      "file": "src/app/layout.tsx",
+      "line": 36,
+      "url": "/icon-32.png",
+      "exists": true,
+      "optimizedAlternative": null
+    },
+    {
+      "file": "src/app/layout.tsx",
+      "line": 37,
+      "url": "/icon-48.png",
+      "exists": true,
+      "optimizedAlternative": null
+    },
+    {
+      "file": "src/app/layout.tsx",
+      "line": 38,
+      "url": "/icon-96.png",
+      "exists": true,
+      "optimizedAlternative": null
+    },
+    {
+      "file": "src/app/layout.tsx",
+      "line": 39,
+      "url": "/icon-192.png",
+      "exists": true,
+      "optimizedAlternative": null
+    },
+    {
+      "file": "src/app/layout.tsx",
+      "line": 41,
+      "url": "/favicon.ico",
+      "exists": true,
+      "optimizedAlternative": null
+    },
+    {
+      "file": "src/app/layout.tsx",
+      "line": 42,
+      "url": "/icon-180.png",
+      "exists": true,
+      "optimizedAlternative": null
+    },
+    {
+      "file": "src/app/layout.tsx",
+      "line": 53,
+      "url": "/images/products/product-0001.webp",
+      "exists": true,
+      "optimizedAlternative": null
+    },
+    {
+      "file": "src/app/layout.tsx",
+      "line": 64,
+      "url": "/images/products/product-0001.webp",
+      "exists": true,
+      "optimizedAlternative": null
+    },
+    {
+      "file": "src/app/page.tsx",
+      "line": 18,
+      "url": "/images/products/product-0001.webp",
+      "exists": true,
+      "optimizedAlternative": null
+    },
+    {
+      "file": "src/app/page.tsx",
+      "line": 23,
+      "url": "/images/products/product-0002.webp",
+      "exists": true,
+      "optimizedAlternative": null
+    },
+    {
+      "file": "src/app/page.tsx",
+      "line": 28,
+      "url": "/images/products/product-0003.webp",
+      "exists": true,
+      "optimizedAlternative": null
+    },
+    {
+      "file": "src/app/page.tsx",
+      "line": 33,
+      "url": "/images/products/product-0004.webp",
+      "exists": true,
+      "optimizedAlternative": null
+    },
+    {
+      "file": "src/app/page.tsx",
+      "line": 107,
+      "url": "/images/products/product-0001.webp",
+      "exists": true,
+      "optimizedAlternative": null
+    },
+    {
+      "file": "src/app/page.tsx",
+      "line": 118,
+      "url": "/images/products/product-0002.webp",
+      "exists": true,
+      "optimizedAlternative": null
+    },
+    {
+      "file": "src/app/page.tsx",
+      "line": 143,
+      "url": "/images/products/product-0003.webp",
+      "exists": true,
+      "optimizedAlternative": null
+    },
+    {
+      "file": "src/app/page.tsx",
+      "line": 157,
+      "url": "/images/products/product-0002.webp",
+      "exists": true,
+      "optimizedAlternative": null
+    },
+    {
+      "file": "src/app/page.tsx",
+      "line": 171,
+      "url": "/images/products/product-0004.webp",
+      "exists": true,
+      "optimizedAlternative": null
+    },
+    {
+      "file": "src/app/page.tsx",
+      "line": 227,
+      "url": "/images/products/product-0002.webp",
+      "exists": true,
+      "optimizedAlternative": null
+    },
+    {
+      "file": "src/app/page.tsx",
+      "line": 246,
+      "url": "/images/products/product-0003.webp",
+      "exists": true,
+      "optimizedAlternative": null
+    },
+    {
+      "file": "src/app/page.tsx",
+      "line": 260,
+      "url": "/images/products/product-0004.webp",
+      "exists": true,
+      "optimizedAlternative": null
+    },
+    {
+      "file": "src/app/page.tsx",
+      "line": 276,
+      "url": "/images/products/product-0001.webp",
+      "exists": true,
+      "optimizedAlternative": null
+    },
+    {
+      "file": "src/app/products/page.tsx",
+      "line": 32,
+      "url": "/images/products/orange-1.jpg",
+      "exists": false,
+      "optimizedAlternative": null
+    },
+    {
+      "file": "src/app/products/page.tsx",
+      "line": 39,
+      "url": "/images/products/orange-2.jpg",
+      "exists": false,
+      "optimizedAlternative": null
+    },
+    {
+      "file": "src/app/products/page.tsx",
+      "line": 46,
+      "url": "/images/products/orange-3.jpg",
+      "exists": false,
+      "optimizedAlternative": null
+    },
+    {
+      "file": "src/app/products/page.tsx",
+      "line": 53,
+      "url": "/images/products/orange-syrup.jpg",
+      "exists": false,
+      "optimizedAlternative": null
+    },
+    {
+      "file": "src/app/products/page.tsx",
+      "line": 60,
+      "url": "/images/products/orange-wine.jpg",
+      "exists": false,
+      "optimizedAlternative": null
+    },
+    {
+      "file": "src/app/products/page.tsx",
+      "line": 67,
+      "url": "/images/products/orange-dried.jpg",
+      "exists": false,
+      "optimizedAlternative": null
+    },
+    {
+      "file": "src/components/auth/GameAuthHeader.tsx",
+      "line": 27,
+      "url": "/images/logo.png",
+      "exists": true,
+      "optimizedAlternative": "/images/optimize/logo.png"
+    },
+    {
+      "file": "src/components/ChatWidget.tsx",
+      "line": 23,
+      "url": "/games/bubble-shooter/images/optimize/thumbnail/thumbnail.png",
+      "exists": true,
+      "optimizedAlternative": null
+    },
+    {
+      "file": "src/components/ChatWidget.tsx",
+      "line": 24,
+      "url": "/games/drag-drop/images/optimize/thumbnail/thumbnail.png",
+      "exists": true,
+      "optimizedAlternative": null
+    },
+    {
+      "file": "src/components/ChatWidget.tsx",
+      "line": 25,
+      "url": "/games/gold-mining/images/optimize/thumbnail/thumbnail.jpg",
+      "exists": true,
+      "optimizedAlternative": null
+    },
+    {
+      "file": "src/components/ChatWidget.tsx",
+      "line": 26,
+      "url": "/games/racing/images/optimize/thumbnail/thumbnail.jpg",
+      "exists": true,
+      "optimizedAlternative": null
+    },
+    {
+      "file": "src/components/games/bubble-shooter/scenes/BubbleMathScene.ts",
+      "line": 78,
+      "url": "/games/bubble-shooter/images/optimize/background.png",
+      "exists": true,
+      "optimizedAlternative": null
+    },
+    {
+      "file": "src/components/games/bubble-shooter/scenes/BubbleMathScene.ts",
+      "line": 79,
+      "url": "/games/general/images/optimize/player-avatar.png",
+      "exists": true,
+      "optimizedAlternative": null
+    },
+    {
+      "file": "src/components/games/bubble-shooter/scenes/BubbleMathScene.ts",
+      "line": 80,
+      "url": "/games/bubble-shooter/images/optimize/cannon-base.png",
+      "exists": true,
+      "optimizedAlternative": null
+    },
+    {
+      "file": "src/components/games/bubble-shooter/scenes/BubbleMathScene.ts",
+      "line": 81,
+      "url": "/games/bubble-shooter/images/optimize/cannon-barrel.png",
+      "exists": true,
+      "optimizedAlternative": null
+    },
+    {
+      "file": "src/components/games/bubble-shooter/scenes/BubbleMathScene.ts",
+      "line": 82,
+      "url": "/games/bubble-shooter/images/optimize/question-panel.png",
+      "exists": true,
+      "optimizedAlternative": null
+    },
+    {
+      "file": "src/components/games/bubble-shooter/scenes/BubbleMathScene.ts",
+      "line": 83,
+      "url": "/games/bubble-shooter/images/optimize/balloon.png",
+      "exists": true,
+      "optimizedAlternative": null
+    },
+    {
+      "file": "src/components/games/bubble-shooter/scenes/BubbleMathScene.ts",
+      "line": 84,
+      "url": "/games/bubble-shooter/images/optimize/cappy.png",
+      "exists": true,
+      "optimizedAlternative": null
+    },
+    {
+      "file": "src/components/games/bubble-shooter/scenes/BubbleMathScene.ts",
+      "line": 85,
+      "url": "/games/bubble-shooter/images/optimize/ammo.png",
+      "exists": true,
+      "optimizedAlternative": null
+    },
+    {
+      "file": "src/components/games/bubble-shooter/scenes/BubbleMathScene.ts",
+      "line": 89,
+      "url": "/games/bubble-shooter/images/optimize/wolf.png",
+      "exists": true,
+      "optimizedAlternative": null
+    },
+    {
+      "file": "src/components/games/drag-drop/CappyCompanion.tsx",
+      "line": 87,
+      "url": "/games/drag-drop/images/optimize/cappy-companion-sprites.png",
+      "exists": true,
+      "optimizedAlternative": null
+    },
+    {
+      "file": "src/components/games/drag-drop/DragDropGame.tsx",
+      "line": 133,
+      "url": "/games/drag-drop/images/optimize/farm-background.png",
+      "exists": true,
+      "optimizedAlternative": null
+    },
+    {
+      "file": "src/components/games/drag-drop/DragDropGame.tsx",
+      "line": 134,
+      "url": "/games/general/images/optimize/player-avatar.png",
+      "exists": true,
+      "optimizedAlternative": null
+    },
+    {
+      "file": "src/components/games/drag-drop/DragDropGame.tsx",
+      "line": 135,
+      "url": "/games/drag-drop/images/optimize/cappy-companion-sprites.png",
+      "exists": true,
+      "optimizedAlternative": null
+    },
+    {
+      "file": "src/components/games/drag-drop/DragDropGame.tsx",
+      "line": 136,
+      "url": "/games/drag-drop/images/optimize/wolf-thief-sprites.png",
+      "exists": true,
+      "optimizedAlternative": null
+    },
+    {
+      "file": "src/components/games/drag-drop/DragDropGame.tsx",
+      "line": 261,
+      "url": "/games/drag-drop/images/optimize/farm-background.png",
+      "exists": true,
+      "optimizedAlternative": null
+    },
+    {
+      "file": "src/components/games/drag-drop/WolfCompanion.tsx",
+      "line": 69,
+      "url": "/games/drag-drop/images/optimize/wolf-thief-sprites.png",
+      "exists": true,
+      "optimizedAlternative": null
+    },
+    {
+      "file": "src/components/games/general/CappyJourneyLoading.tsx",
+      "line": 8,
+      "url": "/games/general/images/optimize/loading-cappy-adventure.png",
+      "exists": true,
+      "optimizedAlternative": null
+    },
+    {
+      "file": "src/components/games/general/GameLoadingScreen.tsx",
+      "line": 80,
+      "url": "/games/general/images/optimize/ready-avatar.png",
+      "exists": true,
+      "optimizedAlternative": null
+    },
+    {
+      "file": "src/components/games/general/GameLoadingScreen.tsx",
+      "line": 85,
+      "url": "/games/general/images/optimize/ready-cappy.png",
+      "exists": true,
+      "optimizedAlternative": null
+    },
+    {
+      "file": "src/components/games/general/GameLoadingScreen.tsx",
+      "line": 90,
+      "url": "/games/general/images/optimize/ready-wolf.png",
+      "exists": true,
+      "optimizedAlternative": null
+    },
+    {
+      "file": "src/components/games/general/GameShell.tsx",
+      "line": 62,
+      "url": "/games/general/images/optimize/player-avatar.png",
+      "exists": true,
+      "optimizedAlternative": null
+    },
+    {
+      "file": "src/components/games/gold-miner/GoldMinerScene.ts",
+      "line": 75,
+      "url": "/games/gold-mining/images/optimize/mine-background.png",
+      "exists": true,
+      "optimizedAlternative": null
+    },
+    {
+      "file": "src/components/games/gold-miner/GoldMinerScene.ts",
+      "line": 76,
+      "url": "/games/gold-mining/images/optimize/gold.png",
+      "exists": true,
+      "optimizedAlternative": null
+    },
+    {
+      "file": "src/components/games/gold-miner/GoldMinerScene.ts",
+      "line": 77,
+      "url": "/games/gold-mining/images/optimize/rock.png",
+      "exists": true,
+      "optimizedAlternative": null
+    },
+    {
+      "file": "src/components/games/gold-miner/GoldMinerScene.ts",
+      "line": 78,
+      "url": "/games/gold-mining/images/optimize/golden-claw.png",
+      "exists": true,
+      "optimizedAlternative": null
+    },
+    {
+      "file": "src/components/games/gold-miner/GoldMinerScene.ts",
+      "line": 79,
+      "url": "/games/gold-mining/images/optimize/golden-claw-closed.png",
+      "exists": true,
+      "optimizedAlternative": null
+    },
+    {
+      "file": "src/components/games/gold-miner/GoldMinerScene.ts",
+      "line": 80,
+      "url": "/games/gold-mining/images/optimize/wolf-animation-alpha.png",
+      "exists": true,
+      "optimizedAlternative": null
+    },
+    {
+      "file": "src/components/games/gold-miner/GoldMinerScene.ts",
+      "line": 84,
+      "url": "/games/gold-mining/images/optimize/wolf-rock-animation-alpha.png",
+      "exists": true,
+      "optimizedAlternative": null
+    },
+    {
+      "file": "src/components/games/gold-miner/GoldMinerScene.ts",
+      "line": 88,
+      "url": "/games/gold-mining/images/optimize/wolf-caught-icon.png",
+      "exists": true,
+      "optimizedAlternative": null
+    },
+    {
+      "file": "src/components/games/lesson-map/LessonMap.module.css",
+      "line": 7,
+      "url": "/games/lesson-map/ocean-waves.svg",
+      "exists": true,
+      "optimizedAlternative": null
+    },
+    {
+      "file": "src/components/games/lesson-map/LessonMap.module.css",
+      "line": 149,
+      "url": "/games/lesson-map/adventure-landscape.svg",
+      "exists": true,
+      "optimizedAlternative": null
+    },
+    {
+      "file": "src/components/games/profile/GameEntry.tsx",
+      "line": 28,
+      "url": "/games/general/images/loading-cappy-adventure.png",
+      "exists": true,
+      "optimizedAlternative": "/games/general/images/optimize/loading-cappy-adventure.png"
+    },
+    {
+      "file": "src/components/games/racing/RacingScene.ts",
+      "line": 83,
+      "url": "/games/racing/images/valley-road-v2.png",
+      "exists": true,
+      "optimizedAlternative": "/games/racing/images/optimize/valley-road-v2.png"
+    },
+    {
+      "file": "src/components/games/racing/RacingScene.ts",
+      "line": 84,
+      "url": "/games/racing/images/cappy-red-car.png",
+      "exists": true,
+      "optimizedAlternative": "/games/racing/images/optimize/cappy-red-car.png"
+    },
+    {
+      "file": "src/components/games/racing/RacingScene.ts",
+      "line": 85,
+      "url": "/games/racing/images/answer-rock.png",
+      "exists": true,
+      "optimizedAlternative": "/games/racing/images/optimize/answer-rock.png"
+    },
+    {
+      "file": "src/components/games/racing/RacingScene.ts",
+      "line": 86,
+      "url": "/games/racing/images/answer-barrel.png",
+      "exists": true,
+      "optimizedAlternative": "/games/racing/images/optimize/answer-barrel.png"
+    },
+    {
+      "file": "src/components/games/racing/RacingScene.ts",
+      "line": 87,
+      "url": "/games/racing/images/wolf-car-states.png",
+      "exists": true,
+      "optimizedAlternative": "/games/racing/images/optimize/wolf-car-states.png"
+    },
+    {
+      "file": "src/components/HeaderTop.tsx",
+      "line": 83,
+      "url": "/images/optimize/logo.png",
+      "exists": true,
+      "optimizedAlternative": null
+    },
+    {
+      "file": "src/middleware.ts",
+      "line": 5,
+      "url": "/favicon.ico",
+      "exists": true,
+      "optimizedAlternative": null
+    },
+    {
+      "file": "src/middleware.ts",
+      "line": 6,
+      "url": "/favicon-20260112.ico",
+      "exists": false,
+      "optimizedAlternative": null
+    },
+    {
+      "file": "src/middleware.ts",
+      "line": 7,
+      "url": "/icon-48-v2.png",
+      "exists": false,
+      "optimizedAlternative": null
+    },
+    {
+      "file": "src/middleware.ts",
+      "line": 8,
+      "url": "/icon-192-v2.png",
+      "exists": false,
+      "optimizedAlternative": null
+    },
+    {
+      "file": "src/middleware.ts",
+      "line": 9,
+      "url": "/apple-touch-icon-v2.png",
+      "exists": false,
+      "optimizedAlternative": null
+    }
+  ],
+  "pairs": [
+    {
+      "optimized": {
+        "path": "/games/bubble-shooter/images/optimize/ammo.png",
+        "bytes": 159788,
+        "dimensions": [
+          2172,
+          724
+        ]
+      },
+      "original": {
+        "path": "/games/bubble-shooter/images/ammo.png",
+        "bytes": 986380,
+        "dimensions": [
+          2172,
+          724
+        ]
+      }
+    },
+    {
+      "optimized": {
+        "path": "/games/bubble-shooter/images/optimize/background.png",
+        "bytes": 359663,
+        "dimensions": [
+          941,
+          1672
+        ]
+      },
+      "original": {
+        "path": "/games/bubble-shooter/images/background.png",
+        "bytes": 1514461,
+        "dimensions": [
+          941,
+          1672
+        ]
+      }
+    },
+    {
+      "optimized": {
+        "path": "/games/bubble-shooter/images/optimize/balloon.png",
+        "bytes": 211896,
+        "dimensions": [
+          1024,
+          1536
+        ]
+      },
+      "original": {
+        "path": "/games/bubble-shooter/images/balloon.png",
+        "bytes": 1197097,
+        "dimensions": [
+          1024,
+          1536
+        ]
+      }
+    },
+    {
+      "optimized": {
+        "path": "/games/bubble-shooter/images/optimize/cannon-barrel.png",
+        "bytes": 263968,
+        "dimensions": [
+          1024,
+          1536
+        ]
+      },
+      "original": {
+        "path": "/games/bubble-shooter/images/cannon-barrel.png",
+        "bytes": 1448383,
+        "dimensions": [
+          1024,
+          1536
+        ]
+      }
+    },
+    {
+      "optimized": {
+        "path": "/games/bubble-shooter/images/optimize/cannon-base.png",
+        "bytes": 348514,
+        "dimensions": [
+          1536,
+          1024
+        ]
+      },
+      "original": {
+        "path": "/games/bubble-shooter/images/cannon-base.png",
+        "bytes": 2197008,
+        "dimensions": [
+          1536,
+          1024
+        ]
+      }
+    },
+    {
+      "optimized": {
+        "path": "/games/bubble-shooter/images/optimize/cappy.png",
+        "bytes": 425548,
+        "dimensions": [
+          1275,
+          1233
+        ]
+      },
+      "original": {
+        "path": "/games/bubble-shooter/images/cappy.png",
+        "bytes": 1254180,
+        "dimensions": [
+          1275,
+          1233
+        ]
+      }
+    },
+    {
+      "optimized": {
+        "path": "/games/bubble-shooter/images/optimize/question-panel.png",
+        "bytes": 362650,
+        "dimensions": [
+          1890,
+          665
+        ]
+      },
+      "original": {
+        "path": "/games/bubble-shooter/images/question-panel.png",
+        "bytes": 1258023,
+        "dimensions": [
+          1890,
+          665
+        ]
+      }
+    },
+    {
+      "optimized": {
+        "path": "/games/bubble-shooter/images/optimize/thumbnail/thumbnail.png",
+        "bytes": 411818,
+        "dimensions": [
+          1254,
+          1254
+        ]
+      },
+      "original": {
+        "path": "/games/bubble-shooter/images/thumbnail/thumbnail.png",
+        "bytes": 2072247,
+        "dimensions": [
+          1254,
+          1254
+        ]
+      }
+    },
+    {
+      "optimized": {
+        "path": "/games/bubble-shooter/images/optimize/wolf.png",
+        "bytes": 253583,
+        "dimensions": [
+          1536,
+          1024
+        ]
+      },
+      "original": {
+        "path": "/games/bubble-shooter/images/wolf.png",
+        "bytes": 975758,
+        "dimensions": [
+          1536,
+          1024
+        ]
+      }
+    },
+    {
+      "optimized": {
+        "path": "/games/drag-drop/images/optimize/cappy-companion-sprites.png",
+        "bytes": 286590,
+        "dimensions": [
+          1536,
+          1024
+        ]
+      },
+      "original": {
+        "path": "/games/drag-drop/images/cappy-companion-sprites.png",
+        "bytes": 1181113,
+        "dimensions": [
+          1536,
+          1024
+        ]
+      }
+    },
+    {
+      "optimized": {
+        "path": "/games/drag-drop/images/optimize/farm-background.png",
+        "bytes": 380257,
+        "dimensions": [
+          941,
+          1672
+        ]
+      },
+      "original": {
+        "path": "/games/drag-drop/images/farm-background.png",
+        "bytes": 1665508,
+        "dimensions": [
+          941,
+          1672
+        ]
+      }
+    },
+    {
+      "optimized": {
+        "path": "/games/drag-drop/images/optimize/thumbnail/thumbnail.png",
+        "bytes": 464289,
+        "dimensions": [
+          1254,
+          1254
+        ]
+      },
+      "original": {
+        "path": "/games/drag-drop/images/thumbnail/thumbnail.png",
+        "bytes": 2153130,
+        "dimensions": [
+          1254,
+          1254
+        ]
+      }
+    },
+    {
+      "optimized": {
+        "path": "/games/drag-drop/images/optimize/wolf-thief-sprites.png",
+        "bytes": 272476,
+        "dimensions": [
+          1536,
+          1024
+        ]
+      },
+      "original": {
+        "path": "/games/drag-drop/images/wolf-thief-sprites.png",
+        "bytes": 1012071,
+        "dimensions": [
+          1536,
+          1024
+        ]
+      }
+    },
+    {
+      "optimized": {
+        "path": "/games/general/images/optimize/loading-cappy-adventure.png",
+        "bytes": 16255,
+        "dimensions": [
+          224,
+          224
+        ]
+      },
+      "original": {
+        "path": "/games/general/images/loading-cappy-adventure.png",
+        "bytes": 66565,
+        "dimensions": [
+          224,
+          224
+        ]
+      }
+    },
+    {
+      "optimized": {
+        "path": "/games/general/images/optimize/player-avatar.png",
+        "bytes": 322132,
+        "dimensions": [
+          1254,
+          1254
+        ]
+      },
+      "original": {
+        "path": "/games/general/images/player-avatar.png",
+        "bytes": 1377914,
+        "dimensions": [
+          1254,
+          1254
+        ]
+      }
+    },
+    {
+      "optimized": {
+        "path": "/games/general/images/optimize/ready-avatar.png",
+        "bytes": 193708,
+        "dimensions": [
+          1103,
+          1426
+        ]
+      },
+      "original": {
+        "path": "/games/general/images/ready-avatar.png",
+        "bytes": 1217891,
+        "dimensions": [
+          1103,
+          1426
+        ]
+      }
+    },
+    {
+      "optimized": {
+        "path": "/games/general/images/optimize/ready-cappy.png",
+        "bytes": 247157,
+        "dimensions": [
+          1149,
+          1369
+        ]
+      },
+      "original": {
+        "path": "/games/general/images/ready-cappy.png",
+        "bytes": 1550070,
+        "dimensions": [
+          1149,
+          1369
+        ]
+      }
+    },
+    {
+      "optimized": {
+        "path": "/games/general/images/optimize/ready-wolf.png",
+        "bytes": 282022,
+        "dimensions": [
+          1177,
+          1337
+        ]
+      },
+      "original": {
+        "path": "/games/general/images/ready-wolf.png",
+        "bytes": 1225211,
+        "dimensions": [
+          1177,
+          1337
+        ]
+      }
+    },
+    {
+      "optimized": {
+        "path": "/games/gold-mining/images/optimize/gold.png",
+        "bytes": 410103,
+        "dimensions": [
+          1536,
+          1024
+        ]
+      },
+      "original": {
+        "path": "/games/gold-mining/images/gold.png",
+        "bytes": 1817551,
+        "dimensions": [
+          1536,
+          1024
+        ]
+      }
+    },
+    {
+      "optimized": {
+        "path": "/games/gold-mining/images/optimize/golden-claw-closed.png",
+        "bytes": 225117,
+        "dimensions": [
+          1024,
+          1536
+        ]
+      },
+      "original": {
+        "path": "/games/gold-mining/images/golden-claw-closed.png",
+        "bytes": 1417052,
+        "dimensions": [
+          1024,
+          1536
+        ]
+      }
+    },
+    {
+      "optimized": {
+        "path": "/games/gold-mining/images/optimize/golden-claw.png",
+        "bytes": 172040,
+        "dimensions": [
+          1115,
+          1411
+        ]
+      },
+      "original": {
+        "path": "/games/gold-mining/images/golden-claw.png",
+        "bytes": 594261,
+        "dimensions": [
+          1115,
+          1411
+        ]
+      }
+    },
+    {
+      "optimized": {
+        "path": "/games/gold-mining/images/optimize/mine-background.png",
+        "bytes": 723083,
+        "dimensions": [
+          941,
+          1672
+        ]
+      },
+      "original": {
+        "path": "/games/gold-mining/images/mine-background.png",
+        "bytes": 1779445,
+        "dimensions": [
+          941,
+          1672
+        ]
+      }
+    },
+    {
+      "optimized": {
+        "path": "/games/gold-mining/images/optimize/rock.png",
+        "bytes": 423157,
+        "dimensions": [
+          1536,
+          1024
+        ]
+      },
+      "original": {
+        "path": "/games/gold-mining/images/rock.png",
+        "bytes": 2000474,
+        "dimensions": [
+          1536,
+          1024
+        ]
+      }
+    },
+    {
+      "optimized": {
+        "path": "/games/gold-mining/images/optimize/thumbnail/thumbnail.jpg",
+        "bytes": 143499,
+        "dimensions": null
+      },
+      "original": {
+        "path": "/games/gold-mining/images/thumbnail/thumbnail.jpg",
+        "bytes": 171602,
+        "dimensions": null
+      }
+    },
+    {
+      "optimized": {
+        "path": "/games/gold-mining/images/optimize/wolf-animation-alpha.png",
+        "bytes": 244780,
+        "dimensions": [
+          1536,
+          1024
+        ]
+      },
+      "original": {
+        "path": "/games/gold-mining/images/wolf-animation-alpha.png",
+        "bytes": 1692599,
+        "dimensions": [
+          1536,
+          1024
+        ]
+      }
+    },
+    {
+      "optimized": {
+        "path": "/games/gold-mining/images/optimize/wolf-caught-icon.png",
+        "bytes": 330260,
+        "dimensions": [
+          1254,
+          1254
+        ]
+      },
+      "original": {
+        "path": "/games/gold-mining/images/wolf-caught-icon.png",
+        "bytes": 1585976,
+        "dimensions": [
+          1254,
+          1254
+        ]
+      }
+    },
+    {
+      "optimized": {
+        "path": "/games/gold-mining/images/optimize/wolf-rock-animation-alpha.png",
+        "bytes": 256116,
+        "dimensions": [
+          1536,
+          1024
+        ]
+      },
+      "original": {
+        "path": "/games/gold-mining/images/wolf-rock-animation-alpha.png",
+        "bytes": 1839677,
+        "dimensions": [
+          1536,
+          1024
+        ]
+      }
+    },
+    {
+      "optimized": {
+        "path": "/games/lessons/lop-1/images/optimize/tieng-anh-square.png",
+        "bytes": 451678,
+        "dimensions": [
+          1254,
+          1254
+        ]
+      },
+      "original": {
+        "path": "/games/lessons/lop-1/images/tieng-anh-square.png",
+        "bytes": 2085154,
+        "dimensions": [
+          1254,
+          1254
+        ]
+      }
+    },
+    {
+      "optimized": {
+        "path": "/games/lessons/lop-1/images/optimize/tieng-viet-square.png",
+        "bytes": 509410,
+        "dimensions": [
+          1254,
+          1254
+        ]
+      },
+      "original": {
+        "path": "/games/lessons/lop-1/images/tieng-viet-square.png",
+        "bytes": 2286740,
+        "dimensions": [
+          1254,
+          1254
+        ]
+      }
+    },
+    {
+      "optimized": {
+        "path": "/games/lessons/lop-1/images/optimize/toan-square.png",
+        "bytes": 411127,
+        "dimensions": [
+          1254,
+          1254
+        ]
+      },
+      "original": {
+        "path": "/games/lessons/lop-1/images/toan-square.png",
+        "bytes": 1992836,
+        "dimensions": [
+          1254,
+          1254
+        ]
+      }
+    },
+    {
+      "optimized": {
+        "path": "/games/lessons/lop-1/tieng-anh/bai-1/images/optimize/vocabulary.png",
+        "bytes": 222957,
+        "dimensions": [
+          1298,
+          1212
+        ]
+      },
+      "original": {
+        "path": "/games/lessons/lop-1/tieng-anh/bai-1/images/vocabulary.png",
+        "bytes": 1161563,
+        "dimensions": [
+          1298,
+          1212
+        ]
+      }
+    },
+    {
+      "optimized": {
+        "path": "/games/racing/images/optimize/answer-barrel.png",
+        "bytes": 293435,
+        "dimensions": [
+          1254,
+          1254
+        ]
+      },
+      "original": {
+        "path": "/games/racing/images/answer-barrel.png",
+        "bytes": 1279611,
+        "dimensions": [
+          1254,
+          1254
+        ]
+      }
+    },
+    {
+      "optimized": {
+        "path": "/games/racing/images/optimize/answer-rock.png",
+        "bytes": 497434,
+        "dimensions": [
+          1254,
+          1254
+        ]
+      },
+      "original": {
+        "path": "/games/racing/images/answer-rock.png",
+        "bytes": 1784992,
+        "dimensions": [
+          1254,
+          1254
+        ]
+      }
+    },
+    {
+      "optimized": {
+        "path": "/games/racing/images/optimize/cappy-red-car.png",
+        "bytes": 277448,
+        "dimensions": [
+          1230,
+          1278
+        ]
+      },
+      "original": {
+        "path": "/games/racing/images/cappy-red-car.png",
+        "bytes": 1327157,
+        "dimensions": [
+          1230,
+          1278
+        ]
+      }
+    },
+    {
+      "optimized": {
+        "path": "/games/racing/images/optimize/thumbnail/thumbnail.jpg",
+        "bytes": 76258,
+        "dimensions": null
+      },
+      "original": {
+        "path": "/games/racing/images/thumbnail/thumbnail.jpg",
+        "bytes": 142467,
+        "dimensions": null
+      }
+    },
+    {
+      "optimized": {
+        "path": "/games/racing/images/optimize/valley-road-v2.png",
+        "bytes": 529421,
+        "dimensions": [
+          1023,
+          1537
+        ]
+      },
+      "original": {
+        "path": "/games/racing/images/valley-road-v2.png",
+        "bytes": 1952645,
+        "dimensions": [
+          1023,
+          1537
+        ]
+      }
+    },
+    {
+      "optimized": {
+        "path": "/games/racing/images/optimize/wolf-car-states.png",
+        "bytes": 313192,
+        "dimensions": [
+          1536,
+          1024
+        ]
+      },
+      "original": {
+        "path": "/games/racing/images/wolf-car-states.png",
+        "bytes": 1848245,
+        "dimensions": [
+          1536,
+          1024
+        ]
+      }
+    },
+    {
+      "optimized": {
+        "path": "/games/racing/images/optimize/wolf-gray-car.png",
+        "bytes": 335239,
+        "dimensions": [
+          1254,
+          1254
+        ]
+      },
+      "original": {
+        "path": "/games/racing/images/wolf-gray-car.png",
+        "bytes": 1240056,
+        "dimensions": [
+          1254,
+          1254
+        ]
+      }
+    },
+    {
+      "optimized": {
+        "path": "/images/optimize/icon-512.png",
+        "bytes": 105294,
+        "dimensions": [
+          512,
+          512
+        ]
+      },
+      "original": {
+        "path": "/images/icon-512.png",
+        "bytes": 260882,
+        "dimensions": [
+          512,
+          512
+        ]
+      }
+    },
+    {
+      "optimized": {
+        "path": "/images/optimize/logo.png",
+        "bytes": 384875,
+        "dimensions": [
+          1024,
+          1024
+        ]
+      },
+      "original": {
+        "path": "/images/logo.png",
+        "bytes": 863530,
+        "dimensions": [
+          1024,
+          1024
+        ]
+      }
+    }
+  ]
+}

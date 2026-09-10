@@ -9,11 +9,11 @@ import type { JourneyTheme } from './LessonJourneyMap'
 import styles from './LessonMap.module.css'
 
 export function LessonStars({ stars }: { stars: number }) {
-  return <span className={styles.stars} aria-label={`${stars} trên 3 sao`}>{[1, 2, 3].map(value => <Star key={value} size={17} aria-hidden="true" fill={value <= stars ? '#ffc94b' : 'none'} color={value <= stars ? '#b87908' : '#7896a6'} />)}</span>
+  return <span className={styles.stars} aria-label={`${stars} trên 5 sao`}>{[1, 2, 3, 4, 5].map(value => <Star key={value} size={15} aria-hidden="true" fill={value <= stars ? '#ffc94b' : 'none'} color={value <= stars ? '#b87908' : '#7896a6'} />)}</span>
 }
 
 export default function LessonJourneyNode({ theme = 'ocean', lesson, status = lesson.status, stars = lesson.stars, onClick }: { theme?: JourneyTheme; lesson: LessonMapItem; status?: LessonStatus; stars?: number; onClick?: () => void }) {
-  const label = `${theme !== 'ocean' ? lesson.title : `Bài ${lesson.id}: ${lesson.title}`}${lesson.mapTitle ? ` - ${lesson.mapTitle}` : ''}${lesson.shortTitle ? `: ${lesson.shortTitle}` : ''}${status === 'locked' ? ', chưa mở' : status === 'completed' ? ', đã hoàn thành' : status === 'current' ? ', tiếp theo' : ''}`
+  const label = `${theme !== 'ocean' ? lesson.title : `Bài ${lesson.id}: ${lesson.title}`}${lesson.mapTitle ? ` - ${lesson.mapTitle}` : ''}${lesson.shortTitle ? `: ${lesson.shortTitle}` : ''}${status === 'locked' ? ', chưa mở' : status === 'completed' ? ', đã hoàn thành' : status === 'current' ? ', chơi tiếp' : ''}`
   const content = <>
     <span className={styles.number}>{theme === 'adventure' ? lesson.id : String(lesson.id).padStart(2, '0')}
       {status === 'completed' && <span className={styles.check}><Check size={13} strokeWidth={4} /></span>}
@@ -23,8 +23,8 @@ export default function LessonJourneyNode({ theme = 'ocean', lesson, status = le
     {theme === 'adventure' && status === 'current' && <CappyExplorer small />}
     <span className={styles.lessonTitle}>{lesson.mapTitle ?? lesson.title}</span>
     {lesson.shortTitle && <span className={styles.shortTitle}>{lesson.shortTitle}</span>}
-    {stars !== undefined && <LessonStars stars={stars} />}
-    {status === 'current' && <span className={styles.next}>{theme !== 'ocean' ? 'Đang học' : 'Tiếp theo'} <span aria-hidden="true">→</span></span>}
+    {status !== 'locked' && stars !== undefined && (status !== 'available' || stars > 0) && <LessonStars stars={stars} />}
+    {status === 'current' && <span className={styles.next}>Chơi tiếp <span aria-hidden="true">→</span></span>}
   </>
   const className = `${styles.island} ${styles[status]}`
   return status === 'locked'

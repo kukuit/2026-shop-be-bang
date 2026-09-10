@@ -59,13 +59,12 @@ export default function GameShell({
       <div className="pointer-events-none absolute inset-x-0 top-0 z-40 flex items-start justify-between p-[1.7%]">
         <div className="flex h-10 min-w-0 max-w-[42%] items-center gap-1.5 rounded-2xl border-2 border-white/80 bg-blue-600/90 py-0.5 pl-0.5 pr-3 text-white shadow-lg">
           <Image
-            src="/games/general/images/player-avatar.png"
+            src="/games/general/images/optimize/player-avatar.png"
             alt="Ảnh đại diện người chơi"
             width={52}
             height={52}
             className="h-[34px] w-[34px] rounded-[0.8rem] object-cover"
             priority
-            unoptimized
           />
           <span className="min-w-0 flex-1 truncate text-xs font-black drop-shadow" title={displayName}>{shortDisplayName}</span>
         </div>

@@ -80,11 +80,11 @@ export class RacingScene extends Phaser.Scene {
     this.load.audio('voice-false-5', '/games/general/voices/false-5.mp3')
     this.load.audio('voice-win', '/games/general/voices/win.mp3')
     this.load.audio('racing-wolf-haha', '/games/general/voices/wolf-haha.mp3')
-    this.load.image('racing-valley-road', '/games/racing/images/valley-road-v2.png')
-    this.load.image('racing-cappy-car', '/games/racing/images/cappy-red-car.png')
-    this.load.image('racing-answer-rock', '/games/racing/images/answer-rock.png')
-    this.load.image('racing-answer-barrel', '/games/racing/images/answer-barrel.png')
-    this.load.spritesheet('racing-wolf-states', '/games/racing/images/wolf-car-states.png', {
+    this.load.image('racing-valley-road', '/games/racing/images/optimize/valley-road-v2.png')
+    this.load.image('racing-cappy-car', '/games/racing/images/optimize/cappy-red-car.png')
+    this.load.image('racing-answer-rock', '/games/racing/images/optimize/answer-rock.png')
+    this.load.image('racing-answer-barrel', '/games/racing/images/optimize/answer-barrel.png')
+    this.load.spritesheet('racing-wolf-states', '/games/racing/images/optimize/wolf-car-states.png', {
       frameWidth: 512,
       frameHeight: 512,
     })

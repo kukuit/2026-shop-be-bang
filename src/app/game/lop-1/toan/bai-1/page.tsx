@@ -5,10 +5,10 @@ import { ChevronRight } from 'lucide-react'
 import GameAuthHeader from '@/components/auth/GameAuthHeader'
 
 const games = [
-  { title: 'Bắn bóng', subtitle: 'Các số từ 0 đến 5', href: '/game/lop-1/toan/bai-1/bubble-shooter', image: '/games/bubble-shooter/images/thumbnail/thumbnail-v2.png', position: 'center 38%', color: 'from-sky-500 to-blue-700' },
-  { title: 'Kéo thả số', subtitle: 'Các số từ 0 đến 5', href: '/game/lop-1/toan/bai-1/drag-drop', image: '/games/drag-drop/images/thumbnail/thumbnail-v2.png', position: 'center 68%', color: 'from-emerald-500 to-teal-700' },
-  { title: 'Đào vàng', subtitle: 'Các số từ 0 đến 5', href: '/game/lop-1/toan/bai-1/gold-mining', image: '/games/gold-mining/images/thumbnail/thumbnail.jpg', position: 'center 22%', color: 'from-amber-500 to-orange-800' },
-  { title: 'Đua xe', subtitle: 'Các số từ 0 đến 5', href: '/game/lop-1/toan/bai-1/racing', image: '/games/racing/images/thumbnail/thumbnail.jpg', position: 'center center', color: 'from-red-500 to-blue-700' },
+  { title: 'Bắn bóng', subtitle: 'Các số từ 0 đến 5', href: '/game/lop-1/toan/bai-1/bubble-shooter', image: '/games/bubble-shooter/images/optimize/thumbnail/thumbnail.png', position: 'center 38%', color: 'from-sky-500 to-blue-700' },
+  { title: 'Kéo thả số', subtitle: 'Các số từ 0 đến 5', href: '/game/lop-1/toan/bai-1/drag-drop', image: '/games/drag-drop/images/optimize/thumbnail/thumbnail.png', position: 'center 68%', color: 'from-emerald-500 to-teal-700' },
+  { title: 'Đào vàng', subtitle: 'Các số từ 0 đến 5', href: '/game/lop-1/toan/bai-1/gold-mining', image: '/games/gold-mining/images/optimize/thumbnail/thumbnail.jpg', position: 'center 22%', color: 'from-amber-500 to-orange-800' },
+  { title: 'Đua xe', subtitle: 'Các số từ 0 đến 5', href: '/game/lop-1/toan/bai-1/racing', image: '/games/racing/images/optimize/thumbnail/thumbnail.jpg', position: 'center center', color: 'from-red-500 to-blue-700' },
 ] as const
 
 export default function LessonOnePage() {
