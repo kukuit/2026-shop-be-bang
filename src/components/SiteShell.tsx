@@ -6,6 +6,7 @@ import ChatWidget from '@/components/ChatWidget'
 
 export default function SiteShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
+  if (pathname === '/chatbot/demo' || pathname.startsWith('/chatbot/demo/')) return <>{children}</>
   // Hiện chatbot ở mọi trang game, trừ màn chơi minigame toàn màn hình.
   const isGameRoute = pathname === '/game' || pathname.startsWith('/game/')
   const isGameplayRoute = isGameRoute && (
