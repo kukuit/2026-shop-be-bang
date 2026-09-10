@@ -40,7 +40,8 @@ const order = (id: number, targetCount: number): DragDropLevel => {
 }
 const complete = (id: number, current: number, goal: number): DragDropLevel => ({
   id, type: 'count', title: 'Thêm cho đủ', instruction: `Có ${current} cái bánh. Kéo số cần thêm để đủ ${goal}`,
-  groups: [{ id: `complete-${id}`, icon: '🧁', count: current, label: 'cái bánh hiện có' }],
+  instructionVoice: '/games/lessons/lop-1/toan/bai-2/drag-drop/voices/be_hay_dem_cho_trong.mp3',
+  groups: [{ id: `complete-${id}`, icon: '🧁', count: current, capacity: goal, label: 'cái bánh hiện có' }],
   answers: { [`complete-${id}`]: goal - current }, learningKeys: { [`complete-${id}`]: K.COMPLETE_QUANTITY },
 })
 
@@ -72,6 +73,7 @@ const forTarget = (target: LearningKey, index: number) => {
 }
 
 export const TOAN_1_BAI_2_DRAG_DROP_CONFIG: DragDropGameConfig = {
+  hideQuestionText: true,
   lessonId: LESSON_IDS.TOAN_1_BAI_2, gameId: GAME_IDS.DRAG_DROP, totalRounds: 10,
   answerDomain: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10], supportedTargets: supported,
   initialLevels: LEVELS,

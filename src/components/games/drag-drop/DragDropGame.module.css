@@ -13,6 +13,18 @@
   backdrop-filter: blur(2px);
 }
 
+.questionHeading { flex: none; text-align: center; color: #075985; }
+.listenButton { display: grid; flex: none; place-items: center; width: 48px; height: 48px; border: 2px solid #38bdf8; border-radius: 50%; background: #e0f2fe; color: #0369a1; }
+.listenButton:disabled { opacity: .5; }
+.completionGroup { display: flex; flex-direction: column; align-items: center; gap: 20px; width: 100%; }
+.cakeTray { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: clamp(5px, 1.8cqw, 8px); width: 100%; padding: clamp(8px, 2.5cqw, 12px); border: 3px solid #d97706; border-radius: 20px; background: #fef3c7; box-shadow: 0 5px 0 #b45309; }
+.cakeSlot { display: grid; place-items: center; min-width: 0; aspect-ratio: 1; border: 2px solid #fcd34d; border-radius: 12px; background: #fff; font-size: clamp(24px, 8cqw, 36px); line-height: 1; }
+.cakeSlotMissing { border: 3px dashed #f97316; background: #ffedd5; }
+.cakeSlotFilled { border-color: #10b981; background: #d1fae5; }
+.completionAnswer { display: flex; align-items: center; gap: 14px; color: #ea580c; font-size: 30px; font-weight: 900; }
+.completionAnswer > .cakeSlot { width: clamp(40px, 12cqw, 52px); }
+.questionHeading h2 { margin: 0; font-size: clamp(16px, 4.5cqw, 20px); font-weight: 900; }
+.questionHeading p { margin: 4px 0 0; font-size: clamp(13px, 3.6cqw, 16px); font-weight: 600; line-height: 1.35; }
 .questionArea { display: flex; min-height: 0; flex: 1; flex-direction: column; align-items: center; justify-content: center; gap: clamp(8px, 2.5cqw, 12px); overflow: hidden; }
 .answerTray { display: grid; flex: none; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: clamp(6px, 1.8cqw, 8px); width: 100%; background: transparent; }
 .answerButton { display: grid; min-width: 0; height: clamp(50px, 14cqw, 58px); flex: 1; touch-action: none; user-select: none; place-items: center; border: 2px solid white; border-radius: clamp(12px, 3.4cqw, 16px); color: white; font-size: clamp(22px, 6.4cqw, 28px); font-weight: 900; line-height: 1; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 18%); transition: transform 150ms; }

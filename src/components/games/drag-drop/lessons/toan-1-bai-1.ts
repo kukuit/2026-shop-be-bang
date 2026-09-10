@@ -4,6 +4,7 @@ import { createDragDropLevelForTarget, createRandomizedLevels, DRAG_DROP_LEVELS,
 import type { DragDropGameConfig } from '../types'
 
 export const TOAN_1_BAI_1_DRAG_DROP_CONFIG: DragDropGameConfig = {
+  hideQuestionText: true,
   lessonId: LESSON_IDS.TOAN_1_BAI_1, gameId: GAME_IDS.DRAG_DROP, totalRounds: 10,
   answerDomain: [0, 1, 2, 3, 4, 5], supportedTargets: DRAG_DROP_SUPPORTED_TARGETS,
   initialLevels: DRAG_DROP_LEVELS,

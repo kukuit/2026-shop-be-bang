@@ -4,7 +4,7 @@
   color: #214b64;
   background-image:
     linear-gradient(180deg, #d9f7ffeb 0, #b5efff80 230px, transparent 520px),
-    url('/games/lesson-map/ocean-waves.svg'),
+    url('/games/general/images/background-map/ocean-waves.svg'),
     linear-gradient(180deg, #72dcfa 0%, #55d9ee 45%, #46c9ef 100%);
   background-size: 100% 100%, 1440px 600px, 100% 100%;
   background-position: center top;
@@ -146,7 +146,7 @@
 /* Adventure shares the grid, node controls and measured path with ocean/space. */
 .adventure {
   color: #3f3328;
-  background-image: url('/games/lesson-map/adventure-landscape.svg'), linear-gradient(180deg, #dff4ff 0px, #eaf8f5 240px, #f1f8dd 600px, #e9f3cf 100%);
+  background-image: url('/games/general/images/background-map/adventure-landscape.svg'), linear-gradient(180deg, #dff4ff 0px, #eaf8f5 240px, #f1f8dd 600px, #e9f3cf 100%);
   background-size: max(100%, 1440px) auto, 100% 100%;
   background-position: center top, center;
   background-repeat: repeat-y, no-repeat;
@@ -217,3 +217,4 @@
 .ocean .current .number { background: #2f80ed; color: #fff; }
 .ocean .available .number { background: #eff6ff; border-color: #bfdbfe; color: #1d4ed8; box-shadow: none; }
 .ocean .locked .number { background: #7e8998; border-color: #d1d5db; color: #fff; }
+.ocean.guest .available .number { background: #2f80ed; border-color: #fff; color: #fff; }

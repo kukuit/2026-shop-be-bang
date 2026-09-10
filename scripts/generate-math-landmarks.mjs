@@ -64,7 +64,7 @@ const entries = [
   ['waterfall', 'Thác nước nhỏ', path('M6 55L11 13H47L59 55Z', '#94b7a3') + path('M25 14H39L38 38L48 54H19L28 36Z', '#82d8e9') + path('M31 18V37L27 49M36 42L40 51', 'none') + path('M12 57Q31 50 54 57', 'none')],
   ['sand-castle', 'Lâu đài cát', path('M8 56V27H15V20H21V27H26V15H38V27H43V20H49V27H56V56Z', '#efcc88') + path('M27 56V43Q32 35 37 43V56Z', '#bd965b') + path('M32 15V4L44 8L32 12', '#f1937e')],
 ]
-const directory = 'public/game/math/island-icons'
+const directory = 'public/games/general/images/map-island-icons'
 mkdirSync(directory, { recursive: true })
 for (const [id,, artwork] of entries) {
   const stroke = id.includes('coral') ? '#de817d' : '#526d71'
@@ -74,5 +74,5 @@ const categories = ['sea-life', 'ocean', 'voyage', 'treasure', 'mystery-island']
 const checkpoints = [10, 20, 30, 32, 33, 40, 47, 48, 50]
 const large = ['sailboat', 'treasure-chest', 'open-treasure-chest', 'lighthouse', 'cave', 'volcano', 'waterfall', 'sand-castle']
 const small = ['starfish', 'seashell', 'pearl', 'golden-key', 'coconuts']
-const config = entries.map(([id, alt], i) => `  { id: '${id}', src: '/game/math/island-icons/${id}.svg', alt: '${alt}', category: '${categories[Math.floor(i / 10)]}', position: '${large.includes(id) ? 'back-right' : ['shrimp','squid','jumping-fish','shark-fin','dolphin','whale-tail','wooden-boat','speedboat','ship'].includes(id) ? 'water-right' : 'front-right'}', scale: ${small.includes(id) ? 0.85 : large.includes(id) ? 1.1 : 1}, checkpoint: ${checkpoints.includes(i + 1)} },`).join('\n')
+const config = entries.map(([id, alt], i) => `  { id: '${id}', src: '/games/general/images/map-island-icons/${id}.svg', alt: '${alt}', category: '${categories[Math.floor(i / 10)]}', position: '${large.includes(id) ? 'back-right' : ['shrimp','squid','jumping-fish','shark-fin','dolphin','whale-tail','wooden-boat','speedboat','ship'].includes(id) ? 'water-right' : 'front-right'}', scale: ${small.includes(id) ? 0.85 : large.includes(id) ? 1.1 : 1}, checkpoint: ${checkpoints.includes(i + 1)} },`).join('\n')
 writeFileSync('src/components/games/lesson-map/mathIslandLandmarks.ts', `// Shared visual identities for every math grade. No lesson or database IDs.\nexport type IslandLandmarkPosition = 'front-left' | 'front-center' | 'front-right' | 'back-left' | 'back-center' | 'back-right' | 'water-left' | 'water-right'\nexport type IslandLandmarkConfig = {\n  id: string\n  src: string\n  alt: string\n  category: 'sea-life' | 'ocean' | 'voyage' | 'treasure' | 'mystery-island'\n  position: IslandLandmarkPosition\n  scale?: number\n  rotate?: number\n  offsetX?: number\n  offsetY?: number\n  checkpoint?: boolean\n}\n\nexport const MATH_ISLAND_LANDMARKS: readonly IslandLandmarkConfig[] = [\n${config}\n]\n\n/** One-based order within a grade; cycles safely after lesson 50. */\nexport function getMathIslandLandmark(lessonOrder: number): IslandLandmarkConfig {\n  const index = Number.isFinite(lessonOrder) ? Math.max(0, Math.trunc(lessonOrder) - 1) : 0\n  return MATH_ISLAND_LANDMARKS[index % MATH_ISLAND_LANDMARKS.length]\n}\n`)

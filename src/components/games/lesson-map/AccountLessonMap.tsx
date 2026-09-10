@@ -6,7 +6,7 @@ import { fetchWithAuthRetry } from '@/lib/auth/client-fetch'
 import CappyJourneyLoading from '../general/CappyJourneyLoading'
 import LessonJourneyMap, { type LessonJourneyMapProps } from './LessonJourneyMap'
 import type { LessonMapItem } from './data'
-import type { MapSubject } from './progress-config'
+import { getProgressLessons, type MapSubject } from './progress-config'
 
 export default function AccountLessonMap({ subject, ...props }: LessonJourneyMapProps & { subject: MapSubject }) {
   const { user, loading } = useAuth()
@@ -59,6 +59,6 @@ export default function AccountLessonMap({ subject, ...props }: LessonJourneyMap
   </CappyJourneyLoading>
   return <>
     {error && userId && <div className="game-container py-2" role="status">Chưa cập nhật được tiến độ. <button type="button" className="font-bold text-blue-700 underline" onClick={() => setRetry(value => value + 1)}>Thử lại</button></div>}
-    <LessonJourneyMap {...props} items={userId && items ? items : props.items} />
+    <LessonJourneyMap {...props} guest={!userId} showOverview={userId ? props.showOverview : false} items={userId && items ? items : getProgressLessons(subject).map((lesson): LessonMapItem => ({ ...lesson, status: lesson.available ? 'available' : 'locked' }))} />
   </>
 }

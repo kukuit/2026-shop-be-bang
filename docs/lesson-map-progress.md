@@ -1,6 +1,6 @@
 # Lesson map progress (signed-in users)
 
-The three grade-one maps load `/api/game-tracking/lesson-map` through the existing auth retry helper. Guests retain the existing demo input; this feature does not store or merge guest progress.
+The three grade-one maps load `/api/game-tracking/lesson-map` through the existing auth retry helper. Guests use the same published-lesson configuration: available lessons are blue and playable, unpublished lessons are gray and locked. Guest maps show no demo achievements, stars, current-lesson recommendation, or progress overview; this feature does not store or merge guest progress.
 
 ## Configuration
 

@@ -258,6 +258,7 @@ export class BubbleMathScene extends Phaser.Scene {
     this.tracker = this.lesson.tracking ? createGameTracker(this.lesson.tracking) : undefined
     this.prepareWolfRounds()
     this.ensureBackgroundMusic()
+    if (this.lesson.introVoice) this.voiceManager?.prepareIntro()
     if (this.lesson.introVoice) this.scheduleTransition(500, () => {
       this.voiceManager?.playOnce('intro', 'voice-intro', 'intro')
     })
