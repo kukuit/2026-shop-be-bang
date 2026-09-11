@@ -3,7 +3,7 @@ import { getAdminDb } from '@/lib/firebaseAdmin'
 import { Timestamp } from 'firebase-admin/firestore'
 import { Collection, collections, Dataset } from '../_lib/model'
 
-export function getDemoRoot() { return getAdminDb().collection('chatbot').doc('demo') }
+export function getDemoRoot() { return getAdminDb().collection('demo').doc('chatbot') }
 export function getDemoCollection(name: Collection) {
   if (!collections.includes(name)) throw new Error('Collection demo không hợp lệ')
   return getDemoRoot().collection(name)

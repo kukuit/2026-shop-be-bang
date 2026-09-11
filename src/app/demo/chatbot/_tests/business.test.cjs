@@ -27,13 +27,13 @@ class Query {
 }
 let queue = Promise.resolve()
 const db = {
-  collection: p => { assert.equal(p, 'chatbot', 'No access outside demo namespace'); return new Query(p) },
+  collection: p => { assert.equal(p, 'demo', 'No access outside demo namespace'); return new Query(p) },
   runTransaction(callback) {
     const run = queue.then(async () => {
       const state = new Map([...database].map(([k, v]) => [k, clone(v)])); let written = false
       const tx = {
         async get(ref) { assert.equal(written, false, 'Firestore reads must precede writes'); return ref instanceof Query ? ref.read(state) : snapshot(ref, state) },
-        set(ref, value, options) { written = true; assert.ok(ref.path === 'chatbot/demo' || ref.path.startsWith('chatbot/demo/')); state.set(ref.path, options?.merge ? { ...state.get(ref.path), ...clone(value) } : clone(value)); return tx },
+        set(ref, value, options) { written = true; assert.ok(ref.path === 'demo/chatbot' || ref.path.startsWith('demo/chatbot/')); state.set(ref.path, options?.merge ? { ...state.get(ref.path), ...clone(value) } : clone(value)); return tx },
         update(ref, value) { return tx.set(ref, value, { merge: true }) },
         delete(ref) { written = true; state.delete(ref.path); return tx },
       }
@@ -74,7 +74,7 @@ test('harvest recomputes total, creates actual cash and remaining debt atomicall
   assert.equal(d.receivables[0].originalAmount, 364000000)
   assert.equal(d.harvests[0].transactionId, d.transactions[0].id)
   assert.equal(d.transactions[0].sourceId, d.harvests[0].id)
-  assert.ok(database.get(`chatbot/demo/harvests/${d.harvests[0].id}`).harvestDate instanceof Timestamp)
+  assert.ok(database.get(`demo/chatbot/harvests/${d.harvests[0].id}`).harvestDate instanceof Timestamp)
 })
 test('debt payment updates cash, balance and harvest without counting revenue twice', async () => {
   const refs = await fixture(); await save('harvests', harvest(refs)); let d = await getDemoData()
@@ -111,7 +111,7 @@ test('chat needs pending confirmation and only executes once', async () => {
   await mutate({ entity: 'harvests', operation: 'save', data: input, requestId: 'confirm_2', source: 'chat' }, { id: 'message_1' })
   await assert.rejects(mutate({ entity: 'harvests', operation: 'save', data: input, requestId: 'confirm_3', source: 'chat' }, { id: 'message_1' }), /đã được xử lý/)
 })
-function getDemoCollectionForTest(entity, id) { return new Ref(`chatbot/demo/${entity}/${id}`) }
+function getDemoCollectionForTest(entity, id) { return new Ref(`demo/chatbot/${entity}/${id}`) }
 test('Vietnamese parser resolves pond/crop and harvest units; query has no write intent', async () => {
   await fixture(); const d = await getDemoData()
   const i = localIntent('Thu tôm ao A1 vụ 3, 3 tấn 2, size 30, giá 145 nghìn, bán Minh Phú', d)

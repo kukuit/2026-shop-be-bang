@@ -9,6 +9,8 @@ import { dateKey, today, formatVND, displayName, formatDate } from '../_lib/mode
 export async function chat(text: string, source: 'chat' | 'voice') {
   if (!text.trim() || text.length > 4000) throw new Error('Nội dung phải từ 1 đến 4000 ký tự')
   const data = await getDemoData()
+  if (data.chatMessages.some(message => message.status === 'waiting_confirmation'))
+    throw new Error('Vui lòng xác nhận hoặc hủy yêu cầu trước rồi gửi tin nhắn tiếp theo.')
   const intent = await parseIntent(text, data)
   let content = 'Tôi chưa hiểu đủ yêu cầu. Bạn có thể nhập bằng form hoặc thử: “Chi 100 triệu Tấn Thành tiền thức ăn ao A01 vụ 1”.'
   let actionData: Record<string, unknown> | null = null
@@ -31,11 +33,16 @@ export async function chat(text: string, source: 'chat' | 'voice') {
     }
   }
   const reply = getDemoCollection('chatMessages').doc()
+  const userMessage = getDemoCollection('chatMessages').doc()
   await getAdminDb().runTransaction(async tx => {
     const root = await tx.get(getDemoRoot()); if (root.get('resetting')) throw new Error('Đang reset demo')
-    tx.set(getDemoCollection('chatMessages').doc(), { role: 'user', content: text, source, status: 'normal', createdAt: Timestamp.now() })
-    tx.set(reply, { role: 'assistant', content, intent: intent?.intent || null, actionData, status: actionData ? 'waiting_confirmation' : 'normal', createdAt: Timestamp.now() })
-    tx.set(getDemoRoot(), { revision: Number(root.get('revision') || 0) + 1 }, { merge: true })
+    const pending = await tx.get(getDemoCollection('chatMessages').where('status', '==', 'waiting_confirmation').limit(1))
+    if (!pending.empty) throw new Error('Vui lòng xác nhận hoặc hủy yêu cầu trước rồi gửi tin nhắn tiếp theo.')
+    const revision = Number(root.get('revision') || 0) + 1
+    const createdAt = Timestamp.now()
+    tx.set(userMessage, { role: 'user', content: text, source, status: 'normal', sequence: revision * 2, createdAt })
+    tx.set(reply, { role: 'assistant', content, intent: intent?.intent || null, actionData, status: actionData ? 'waiting_confirmation' : 'normal', replyTo: userMessage.id, sequence: revision * 2 + 1, createdAt })
+    tx.set(getDemoRoot(), { revision }, { merge: true })
   })
   return { id: reply.id, content, actionData }
 }
