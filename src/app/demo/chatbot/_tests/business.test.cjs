@@ -51,6 +51,8 @@ const { localIntent } = require('../_services/ai.ts')
 const { dashboard } = require('../_services/dashboard.ts')
 const { parseMoney, validate } = require('../_lib/model.ts')
 const { previewImport, exportWorkbook } = require('../_services/excel.ts')
+const { chat, cancelChat } = require('../_services/chat.ts')
+const { sortChatMessages } = require('../_lib/chat-order.ts')
 const save = async (entity, data, extra = {}) => mutate({ entity, data, operation: 'save', requestId: `request_${++counter}`, ...extra })
 async function fixture() {
   database = new Map()
@@ -112,6 +114,51 @@ test('chat needs pending confirmation and only executes once', async () => {
   await assert.rejects(mutate({ entity: 'harvests', operation: 'save', data: input, requestId: 'confirm_3', source: 'chat' }, { id: 'message_1' }), /đã được xử lý/)
 })
 function getDemoCollectionForTest(entity, id) { return new Ref(`demo/chatbot/${entity}/${id}`) }
+
+test('chat orders each turn and requires confirmation or cancellation before continuing', async () => {
+  await fixture()
+  const first = await chat('Chi 100 triệu tiền thức ăn', 'chat')
+  let data = await getDemoData()
+  let messages = sortChatMessages([...data.chatMessages].reverse())
+  assert.deepEqual(messages.map(m => m.role), ['user', 'assistant'])
+  assert.equal(messages[1].replyTo, messages[0].id)
+  assert.equal(messages[1].status, 'waiting_confirmation')
+  assert.equal(data.transactions.length, 0, 'Sending a message must not write business data')
+  await assert.rejects(chat('Hôm nay có việc gì?', 'chat'), /xác nhận hoặc hủy/)
+  assert.equal((await getDemoData()).chatMessages.length, 2)
+  await cancelChat(first.id)
+  await chat('Hôm nay có việc gì?', 'chat')
+  const next = await chat('Chi 200 triệu tiền thức ăn', 'voice')
+  await mutate({ entity: 'transactions', operation: 'save', source: 'voice', requestId: 'inline_confirm', data: { ...next.actionData.data, amount: 250000000 } }, { id: next.id })
+  data = await getDemoData()
+  assert.equal(data.transactions[0].amount, 250000000)
+  assert.equal(data.chatMessages.find(m => m.id === next.id).actionData.data.amount, 250000000, 'Transcript must show the edited and saved values')
+  await chat('Tháng này thu bao nhiêu?', 'chat')
+  messages = sortChatMessages((await getDemoData()).chatMessages.reverse())
+  assert.deepEqual(messages.map(m => m.role), ['user', 'assistant', 'user', 'assistant', 'user', 'assistant', 'user', 'assistant'])
+  for (let i = 1; i < messages.length; i++) assert.ok(messages[i].sequence > messages[i - 1].sequence)
+})
+
+test('concurrent chat requests cannot create two pending forms', async () => {
+  await fixture()
+  const results = await Promise.allSettled([chat('Chi 100 triệu tiền thức ăn', 'chat'), chat('Chi 200 triệu tiền thức ăn', 'chat')])
+  assert.equal(results.filter(result => result.status === 'fulfilled').length, 1)
+  const data = await getDemoData()
+  assert.equal(data.chatMessages.length, 2)
+  assert.equal(data.chatMessages.filter(m => m.status === 'waiting_confirmation').length, 1)
+  assert.equal(data.transactions.length, 0)
+})
+
+test('legacy chat messages remain before sequenced turns and ties put the user first', () => {
+  const createdAt = '2026-09-11T01:00:00.000Z'
+  const messages = [
+    { id: 'reply', role: 'assistant', sequence: 3, createdAt: '2026-09-11T01:01:00.000Z' },
+    { id: 'old-reply', role: 'assistant', createdAt },
+    { id: 'question', role: 'user', sequence: 2, createdAt: '2026-09-11T01:01:00.000Z' },
+    { id: 'old-question', role: 'user', createdAt },
+  ]
+  assert.deepEqual(sortChatMessages(messages).map(m => m.id), ['old-question', 'old-reply', 'question', 'reply'])
+})
 test('Vietnamese parser resolves pond/crop and harvest units; query has no write intent', async () => {
   await fixture(); const d = await getDemoData()
   const i = localIntent('Thu tôm ao A1 vụ 3, 3 tấn 2, size 30, giá 145 nghìn, bán Minh Phú', d)

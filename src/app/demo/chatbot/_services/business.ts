@@ -127,7 +127,7 @@ export async function mutate(input: Mutation, confirmation?: { id: string }) {
     }
     if (after) tx.set(ref, after); else tx.delete(ref)
     audit(tx, input.entity, id, input.operation === 'delete' ? 'delete' : before ? 'update' : 'create', before, after, source)
-    if (messageRef) tx.update(messageRef, { status: 'confirmed', confirmedAt: now })
+    if (messageRef) tx.update(messageRef, { status: 'confirmed', confirmedAt: now, actionData: { entity: input.entity, operation: input.operation, data: serialize(after), source } })
     tx.set(receipt, { result: { id }, createdAt: now })
     tx.set(lock, { revision: Number(lockData.get('revision') || 0) + 1 }, { merge: true })
     return { id }

@@ -12,7 +12,7 @@ export default function Provider({ children }: { children: React.ReactNode }) {
   const [chatBusy, setChatBusy] = useState(false)
   const chatLock = useRef(false)
   const runChatOperation = useCallback(async (operation: () => Promise<void>) => {
-    if (chatLock.current) throw new Error('Vui l?ng ch? thao t?c chat hi?n t?i ho?n t?t.')
+    if (chatLock.current) throw new Error('Vui lòng chờ thao tác chat hiện tại hoàn tất.')
     chatLock.current = true
     setChatBusy(true)
     try { await operation() } finally { chatLock.current = false; setChatBusy(false) }
