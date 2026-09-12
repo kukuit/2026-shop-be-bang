@@ -82,3 +82,15 @@
   .demo-shell-chat .demo-mic{width:42px;min-width:42px;height:44px}
   .demo-shell-chat .demo-chat-hint{display:none}
 }
+
+/* Match composer controls and collapse microphone space during manual input. */
+.demo-shell .demo-chat-input.demo-chat-voice-input{--voice-size:44px;--voice-gap:8px;gap:0;padding:8px}
+.demo-shell .demo-chat-input.demo-chat-voice-input:focus-within{border-color:var(--green)}
+.demo-shell .demo-chat-input.demo-chat-voice-input:focus-visible{outline:1px solid var(--green);outline-offset:0}
+.demo-shell .demo-chat-input.demo-chat-voice-input textarea{flex:1;width:0;min-height:44px;height:44px;padding:10px;border:0;line-height:24px;border-radius:8px}
+.demo-shell .demo-chat-input.demo-chat-voice-input textarea:focus-visible{outline:none;box-shadow:none}
+.demo-shell .demo-chat-input.demo-chat-voice-input button{width:44px;min-width:44px;height:44px;padding:10px;border:0;border-radius:8px}
+.demo-shell .demo-chat-input.demo-chat-voice-input button:focus-visible{outline:1px solid var(--green);outline-offset:-1px}
+.demo-shell .demo-chat-input.demo-chat-voice-input button svg{width:24px;height:24px;flex-shrink:0}
+.demo-chat-voice-input>.demo-primary{margin-left:var(--voice-gap)}
+@media(prefers-reduced-motion:reduce){.demo-shell .demo-mic.listening{animation:none}}

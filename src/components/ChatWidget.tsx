@@ -4,7 +4,9 @@ import { FormEvent, useEffect, useRef, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import Image from 'next/image'
 import { AnimatePresence, motion } from 'framer-motion'
-import { Bot, MessageCircle, SendHorizonal, X } from 'lucide-react'
+import { Bot, MessageCircle, Mic, SendHorizonal, X } from 'lucide-react'
+import { useVoice } from '@/hooks/useVoice'
+import VoiceInputSlot from '@/components/chat/VoiceInputSlot'
 import type { ChatContext } from '@/lib/chat/constants'
 import { useAuth } from '@/components/auth/AuthProvider'
 import LoginModal from '@/components/auth/LoginModal'
@@ -92,6 +94,7 @@ export default function ChatWidget() {
   const cappyPromptPath = useRef(pathname)
   const [messages, setMessages] = useState<ChatMessage[]>([{ role: 'assistant', content: config.greeting }])
   const [input, setInput] = useState('')
+  const [inputSource, setInputSource] = useState<'chat' | 'voice'>('chat')
   const [isSending, setIsSending] = useState(false)
   const [showLeadForm, setShowLeadForm] = useState(false)
   const [name, setName] = useState('')
@@ -105,6 +108,9 @@ export default function ChatWidget() {
   const busy = useRef(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const previousContext = useRef(context)
+  const [voiceError, setVoiceError] = useState('')
+  const hideVoice = inputSource === 'chat' && input.length > 0
+  const voice = useVoice(text => { setInput(text); setInputSource('voice'); setVoiceError('') }, setVoiceError, isOpen && context === 'game' && !isSending && !hideVoice)
 
   useEffect(() => {
     requestVersion.current += 1
@@ -234,7 +240,7 @@ export default function ChatWidget() {
 
   const handleSend = async () => {
     const content = input.trim()
-    if (!content || busy.current) return
+    if (!content || busy.current || voice.listening) return
     const newMessages: ChatMessage[] = [...messages, { role: 'user', content }]
     setMessages(newMessages)
     setInput('')
@@ -358,10 +364,16 @@ export default function ChatWidget() {
                 <div ref={messagesEndRef} />
               </div>
 
-              <form onSubmit={submitMessage} className="flex items-center gap-2 border-t border-slate-200 bg-white px-2 py-2">
-                <input value={input} onChange={(event) => setInput(event.target.value)} className={`h-9 flex-1 rounded-full border border-slate-300 px-3 text-sm outline-none focus:ring-1 ${config.focus}`} placeholder={config.placeholder} />
-                <button type="submit" disabled={isSending || !input.trim()} className={`flex h-9 w-9 items-center justify-center rounded-full text-white disabled:cursor-not-allowed disabled:bg-slate-300 ${config.button}`} aria-label="Gửi tin nhắn"><SendHorizonal className="h-4 w-4" /></button>
+              <form onSubmit={submitMessage} className="flex items-center border-t border-slate-200 bg-white px-2 py-2">
+                  {context === 'game' && <VoiceInputSlot hidden={hideVoice}>
+                    <button type="button" disabled={!voice.supported || isSending || hideVoice} tabIndex={hideVoice ? -1 : 0} onClick={() => { setVoiceError(''); voice.toggle() }} aria-label={voice.listening ? 'Dừng ghi âm' : 'Nhập bằng giọng nói'} aria-pressed={voice.listening} title={!voice.supported ? 'Trình duyệt chưa hỗ trợ nhập giọng nói' : undefined} className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full disabled:opacity-50 ${voice.listening ? 'animate-pulse bg-red-100 text-red-600 motion-reduce:animate-none' : 'bg-blue-50 text-blue-600'}`}><Mic className="h-5 w-5" /></button>
+                  </VoiceInputSlot>}
+                <div className="flex min-w-0 flex-1 items-center rounded-full border border-slate-300 bg-white p-1 focus-within:border-blue-400">
+                  <input value={input} onChange={(event) => { setInput(event.target.value); setInputSource('chat'); setVoiceError('') }} aria-label="Tin nhắn" className={`h-9 min-w-0 flex-1 rounded-full px-3 text-sm outline-none ${context === 'game' ? 'border-0 focus:ring-0' : `focus:ring-1 ${config.focus}`}`} placeholder={voice.listening ? 'Đang nghe…' : config.placeholder} />
+                </div>
+                <button type="submit" disabled={isSending || voice.listening || !input.trim()} className={`ml-2 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white disabled:cursor-not-allowed disabled:bg-slate-300 ${config.button}`} aria-label="Gửi tin nhắn"><SendHorizonal className="h-4 w-4" /></button>
               </form>
+              {context === 'game' && (voiceError || voice.listening) && <p role="status" className="bg-white px-3 pb-2 text-xs text-slate-600">{voiceError || 'Đang nghe…'}</p>}
             </div>
           </motion.div>
         )}
