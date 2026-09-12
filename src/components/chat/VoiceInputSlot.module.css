@@ -1,0 +1,24 @@
+.slot {
+  box-sizing: border-box;
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  width: calc(var(--voice-size, 36px) + var(--voice-gap, 8px));
+  padding-right: var(--voice-gap, 8px);
+  overflow: hidden;
+  opacity: 1;
+  transition: width 220ms ease, padding-right 220ms ease, opacity 160ms ease;
+}
+
+.hidden {
+  width: 0;
+  padding-right: 0;
+  opacity: 0;
+  pointer-events: none;
+  visibility: hidden;
+  transition: width 220ms ease, padding-right 220ms ease, opacity 160ms ease, visibility 0s 220ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .slot { transition: none; }
+}

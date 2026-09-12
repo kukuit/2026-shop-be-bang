@@ -6,6 +6,7 @@ import { sortChatMessages } from '../_lib/chat-order'
 import { api, useDemo } from './Provider'
 import EntityForm from './EntityForm'
 import { useVoice } from '../_hooks/useVoice'
+import VoiceInputSlot from '@/components/chat/VoiceInputSlot'
 
 type Action = { entity: Entity; data: Partial<Row>; operation: 'save'; source: string }
 
@@ -21,7 +22,8 @@ export default function Chat({ compact = false }: { compact?: boolean }) {
   const messages = sortChatMessages(data.chatMessages)
   const pending = messages.find(m => m.status === 'waiting_confirmation')
   const blocked = loading || Boolean(error) || chatBusy || Boolean(pending)
-  const voice = useVoice(t => { setText(t); setSource('voice') }, notify)
+  const hideVoice = source === 'chat' && text.length > 0
+  const voice = useVoice(t => { setText(t); setSource('voice') }, notify, !blocked && !sending && !hideVoice)
   const showOutgoing = outgoing && (!outgoing.replyId || !messages.some(m => m.id === outgoing.replyId))
 
   useEffect(() => {
@@ -113,8 +115,8 @@ export default function Chat({ compact = false }: { compact?: boolean }) {
         {sending && <p className="demo-muted" role="status">Aqua đang trả lời…</p>}
       </div>
       {pending && <p className="demo-chat-pending" role="status">Xác nhận hoặc hủy form phía trên để tiếp tục chat.</p>}
-      <form onSubmit={send} className="demo-chat-input">
-        <button type="button" className={voice.listening ? 'demo-mic listening' : 'demo-mic'} disabled={!voice.supported || blocked} onClick={voice.toggle} aria-label={voice.listening ? 'Dừng ghi âm' : 'Nhập bằng giọng nói'}><Mic size={24} /></button>
+      <form onSubmit={send} className="demo-chat-input demo-chat-voice-input">
+        <VoiceInputSlot hidden={hideVoice}><button type="button" className={voice.listening ? 'demo-mic listening' : 'demo-mic'} disabled={!voice.supported || blocked || sending || hideVoice} tabIndex={hideVoice ? -1 : 0} onClick={voice.toggle} aria-pressed={voice.listening} title={!voice.supported ? 'Trình duyệt chưa hỗ trợ nhập giọng nói' : undefined} aria-label={voice.listening ? 'Dừng ghi âm' : 'Nhập bằng giọng nói'}><Mic size={24} /></button></VoiceInputSlot>
         <textarea ref={inputRef} rows={1} maxLength={4000} disabled={blocked} aria-label="Tin nhắn" value={text} onChange={e => { setText(e.target.value); setSource('chat') }} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); void send(e) } }} />
         <button className="demo-primary" disabled={blocked || voice.listening || !text.trim()} aria-label="Gửi tin nhắn"><Send size={20} /></button>
       </form>
