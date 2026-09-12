@@ -20,7 +20,6 @@
 .demo-chat-messages{overscroll-behavior:contain}
 .demo-shell .demo-chat-launcher{position:fixed;right:16px;bottom:max(16px,env(safe-area-inset-bottom));z-index:60;display:flex;align-items:center;justify-content:center;width:56px;height:56px;padding:0;border:0;border-radius:50%;background:#2563eb;color:white;box-shadow:0 10px 25px #1d4ed044;transition:transform .2s,background .2s}
 .demo-shell .demo-chat-launcher:hover{background:#3b82f6;transform:scale(1.05)}
-.demo-chat-launcher-label{position:absolute;bottom:-4px;left:50%;transform:translateX(-50%);padding:2px 5px;border:2px solid white;border-radius:6px;background:#1d4ed8;font-size:8px;line-height:11px;letter-spacing:.5px}
 .demo-chat-widget{position:fixed;right:16px;bottom:calc(80px + env(safe-area-inset-bottom));z-index:60;display:flex;flex-direction:column;width:380px;max-width:calc(100vw - 32px);height:min(620px,calc(100dvh - 104px - env(safe-area-inset-bottom)));min-height:0;overflow:hidden;border:1px solid #e2e8f0;border-radius:16px;background:white;box-shadow:0 25px 50px -12px #0f172a55;animation:demo-widget-open .2s ease-out}
 .demo-chat-widget[hidden]{display:none}
 .demo-chat-widget-header{display:flex;align-items:center;gap:8px;flex-shrink:0;padding:10px 12px;color:white;background:linear-gradient(110deg,#2563eb,#06b6d4)}
@@ -62,3 +61,24 @@
 @keyframes demo-widget-open{from{opacity:0;transform:translateY(20px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
 @media(max-width:767px){.demo-chat-compact .demo-chat-input textarea{font-size:16px}.demo-chat-confirmation{max-width:100%}.demo-chat-turn .demo-message{max-width:95%}}
 @media(prefers-reduced-motion:reduce){.demo-shell *{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+
+/* Keep the full-page conversation and composer within the available viewport. */
+.demo-shell-chat{height:100dvh;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+.demo-shell-chat .demo-header{flex-shrink:0}
+.demo-shell-chat .demo-main{display:flex;flex-direction:column;flex:1;min-height:0;width:calc(100% - 238px);padding:12px 24px max(12px,env(safe-area-inset-bottom))}
+.demo-shell-chat .demo-main>.demo-alert{flex-shrink:0;max-height:25%;overflow:auto;margin:0 0 8px}
+.demo-shell-chat .demo-chat-view{display:flex;flex-direction:column;flex:1;min-height:0}
+.demo-chat-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px;flex-shrink:0}
+.demo-shell .demo-chat-heading h1{font-size:20px;letter-spacing:-.4px}
+.demo-shell .demo-chat-heading button{width:40px;height:40px;padding:0;flex-shrink:0}
+.demo-shell-chat .demo-chat{display:flex;flex-direction:column;flex:1;min-height:0}
+.demo-shell-chat .demo-chat-messages{flex:1;min-height:0;height:auto}
+.demo-shell-chat .demo-chat-input,.demo-shell-chat .demo-chat-pending,.demo-shell-chat .demo-chat-hint{flex-shrink:0}
+@media(max-width:767px){
+  .demo-shell-chat .demo-main{width:100%;padding:8px 8px max(8px,env(safe-area-inset-bottom))}
+  .demo-shell-chat .demo-chat-heading{margin-bottom:4px}
+  .demo-shell-chat .demo-chat-input{gap:6px;margin:6px;padding:6px}
+  .demo-shell-chat .demo-chat-input textarea{max-height:min(240px,25dvh)}
+  .demo-shell-chat .demo-mic{width:42px;min-width:42px;height:44px}
+  .demo-shell-chat .demo-chat-hint{display:none}
+}

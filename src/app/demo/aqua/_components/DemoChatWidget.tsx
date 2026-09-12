@@ -19,7 +19,6 @@ export default function DemoChatWidget() {
   return <>
     <button ref={launcher} type="button" className="demo-chat-launcher" onClick={() => { setMounted(true); setOpen(value => !value) }} aria-label={open ? 'Đóng chatbot demo' : 'Mở chatbot demo'} aria-expanded={open} aria-controls={mounted ? 'demo-chat-widget' : undefined}>
       {open ? <X size={27} /> : <MessageCircle size={28} />}
-      <span className="demo-chat-launcher-label">DEMO</span>
     </button>
     {mounted && <div ref={panel} id="demo-chat-widget" role="dialog" aria-label="Aqua · Chatbot demo" className="demo-chat-widget" hidden={!open} onKeyDown={event => { if (event.key === 'Escape') { event.stopPropagation(); close() } }}>
       <div className="demo-chat-widget-header">
