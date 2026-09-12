@@ -81,13 +81,13 @@ export default function Chat({ compact = false }: { compact?: boolean }) {
     catch (e) { notify(e instanceof Error ? e.message : 'Không thể hủy yêu cầu') }
   }
   const clear = async () => {
-    if (chatBusy || !confirm('Xóa toàn bộ lịch sử chat demo?')) return
+    if (chatBusy || !confirm('Xóa toàn bộ lịch sử chat của aqua?')) return
     try { await runChatOperation(async () => { await api({ action: 'clearChat', confirmation: 'CLEAR CHAT' }); setOutgoing(null); await refresh() }) }
     catch (e) { notify(e instanceof Error ? e.message : 'Không thể xóa lịch sử') }
   }
 
   return <div className={compact ? 'demo-chat-view demo-chat-compact' : 'demo-chat-view'}>
-    {!compact && <div className="demo-page-heading"><div><small>TRỢ LÝ CỦA BẠN</small><h1>Trò chuyện cùng Aqua</h1><p>Hỏi số liệu, thêm công việc, ghi nhận thu chi và thu hoạch.</p></div><button disabled={chatBusy || loading} onClick={clear}><Trash2 size={17} />Xóa lịch sử</button></div>}
+    {!compact && <div className="demo-chat-heading"><h1>Trợ lý Aqua</h1><button type="button" disabled={chatBusy || loading} onClick={clear} aria-label="Xóa lịch sử chat" title="Xóa lịch sử chat"><Trash2 size={18} /></button></div>}
     <section className="demo-chat">
       {compact && <div className="demo-chat-toolbar"><span>Lịch sử chat demo</span><button disabled={chatBusy || loading} onClick={clear} aria-label="Xóa lịch sử chat demo"><Trash2 size={14} /></button></div>}
       <div className="demo-chat-messages" ref={messageList} aria-label="Cuộc trò chuyện">

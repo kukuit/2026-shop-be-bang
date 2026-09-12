@@ -2,7 +2,7 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
 import { Dataset, emptyDataset, formatDate } from '../_lib/model'
 export async function api(body: unknown, path = 'data') {
-  const response = await fetch(`/demo/chatbot/api/${path}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+  const response = await fetch(`/demo/aqua/api/${path}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
   const data = await response.json(); if (!response.ok) throw new Error(data.error || 'Thao tác thất bại'); return data
 }
 const Context = createContext<{ data: Dataset; loading: boolean; error: string; refresh: () => Promise<void>; notify: (text: string) => void; chatBusy: boolean; runChatOperation: (operation: () => Promise<void>) => Promise<void> }>({ data: emptyDataset(), loading: true, error: '', refresh: async () => {}, notify: () => {}, chatBusy: false, runChatOperation: async () => {} })
@@ -17,7 +17,7 @@ export default function Provider({ children }: { children: React.ReactNode }) {
     setChatBusy(true)
     try { await operation() } finally { chatLock.current = false; setChatBusy(false) }
   }, [])
-  const refresh = useCallback(async () => { try { const response = await fetch('/demo/chatbot/api/data', { cache: 'no-store' }); const result = await response.json(); if (!response.ok) throw new Error(result.error); setData(result); setError('') } catch (e) { setError(e instanceof Error ? e.message : 'Không tải được dữ liệu') } finally { setLoading(false) } }, [])
+  const refresh = useCallback(async () => { try { const response = await fetch('/demo/aqua/api/data', { cache: 'no-store' }); const result = await response.json(); if (!response.ok) throw new Error(result.error); setData(result); setError('') } catch (e) { setError(e instanceof Error ? e.message : 'Không tải được dữ liệu') } finally { setLoading(false) } }, [])
   useEffect(() => { void refresh() }, [refresh])
   useEffect(() => { if (!toast) return; const timer = setTimeout(() => setToast(''), 5000); return () => clearTimeout(timer) }, [toast])
   const reminders = data.reminders.filter(r => r.status === 'pending' && String(r.remindAt) <= new Date().toISOString())

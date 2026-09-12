@@ -2,8 +2,13 @@ const nextConfig = {
   async redirects() {
     return [
       {
+        source: '/demo/chatbot/:path*',
+        destination: '/demo/aqua/:path*',
+        permanent: true,
+      },
+      {
         source: '/chatbot/demo/:path*',
-        destination: '/demo/chatbot/:path*',
+        destination: '/demo/aqua/:path*',
         permanent: true,
       },
     ]
