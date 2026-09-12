@@ -12,6 +12,7 @@ export type GoldMinerQuestion = {
   inputMode?: import('../general/learning-question').QuestionInputMode
   answerMode?: import('../general/learning-question').QuestionAnswerMode
   instructionVoice?: string
+  voiceFallback?: { instruction?: string; target?: string }
   voice?: string
 }
 

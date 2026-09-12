@@ -141,7 +141,7 @@ function ReadyDragDropGame({ config }: { config: DragDropGameConfig }) {
 
   useEffect(() => {
     if (gameStarted && !gameCompleted && !isTransitioning) {
-      questionVoiceRef.current?.play([level.instructionVoice, level.voice])
+      questionVoiceRef.current?.play([level.instructionVoice, level.voice], level.voiceFallback)
     }
     return () => questionVoiceRef.current?.stop()
   }, [gameStarted, gameCompleted, isTransitioning, level])
@@ -190,16 +190,26 @@ function ReadyDragDropGame({ config }: { config: DragDropGameConfig }) {
   }, [config.gameId, config.lessonId, level.answers])
 
   const restart = useCallback(() => {
+    const reset = () => {
     questionVoiceRef.current?.stop()
     voices.reset()
     if (config.introVoice) voices.scheduleIntro('drag-intro')
-    void Promise.resolve(config.loadLevels(levels)).then(setLevels)
     setCurrentLevel(0); setScore(0); setCompletedTargets({}); setIsTransitioning(false)
     setGameCompleted(false); setGamePaused(false); setGameStarted(true); setDrag(null); setTrackingTask(undefined)
     setCappyReaction(null)
     setStolenNumber(null)
     setWolfRounds(createWolfRounds())
     startTracking()
+    }
+    if (config.awaitLevelReload) {
+      questionVoiceRef.current?.stop()
+      setGameStarted(false)
+      setIsTransitioning(true)
+      void Promise.resolve(config.loadLevels(levels)).then(next => { setLevels(next); reset() })
+    } else {
+      void Promise.resolve(config.loadLevels(levels)).then(setLevels)
+      reset()
+    }
   }, [config, levels, startTracking, voices])
 
   const finishDrop = useCallback((clientX: number, clientY: number, value: DragAnswerValue) => {
@@ -295,14 +305,14 @@ function ReadyDragDropGame({ config }: { config: DragDropGameConfig }) {
             <p>{level.instruction}</p>
           </div>
           <div className={styles.questionArea}>
-            {(level.instructionVoice || (level.spokenInstruction && canSpeak)) && <button type="button" className={styles.listenButton} onClick={() => level.instructionVoice ? questionVoiceRef.current?.play([level.instructionVoice, level.voice]) : speakInstruction()} disabled={!gameStarted || !soundEnabled || gamePaused || gameCompleted || isTransitioning} aria-label="Nghe hướng dẫn"><Volume2 size={28} aria-hidden="true" /></button>}
-            {level.groups && <CountGroups groups={level.groups} completed={completedTargets} wrongTarget={wrongTarget} correctTarget={correctTarget} voiceButton={level.voice ? <button type="button" disabled={!gameStarted || gamePaused || gameCompleted || isTransitioning} onClick={() => questionVoiceRef.current?.play([level.instructionVoice, level.voice])} className="grid h-24 w-24 max-w-full shrink-0 place-items-center rounded-full border-[3px] border-sky-400 bg-sky-100 text-sky-700 active:scale-95 disabled:opacity-50" aria-label="Nghe lại"><Volume2 className="h-16 w-16" aria-hidden="true" /></button> : undefined} />}
+            {(level.instructionVoice || (level.spokenInstruction && canSpeak)) && <button type="button" className={styles.listenButton} onClick={() => level.instructionVoice ? questionVoiceRef.current?.play([level.instructionVoice, level.voice], level.voiceFallback) : speakInstruction()} disabled={!gameStarted || !soundEnabled || gamePaused || gameCompleted || isTransitioning} aria-label="Nghe hướng dẫn"><Volume2 size={28} aria-hidden="true" /></button>}
+            {level.groups && <CountGroups groups={level.groups} completed={completedTargets} wrongTarget={wrongTarget} correctTarget={correctTarget} voiceButton={level.voice && !Object.values(level.inputModes ?? {}).includes('text') ? <button type="button" disabled={!gameStarted || gamePaused || gameCompleted || isTransitioning} onClick={() => questionVoiceRef.current?.play([level.instructionVoice, level.voice], level.voiceFallback)} className="grid h-24 w-24 max-w-full shrink-0 place-items-center rounded-full border-[3px] border-sky-400 bg-sky-100 text-sky-700 active:scale-95 disabled:opacity-50" aria-label="Nghe lại"><Volume2 className="h-16 w-16" aria-hidden="true" /></button> : undefined} />}
             {level.sequence && <SequenceRow cells={level.sequence} completed={completedTargets} wrongTarget={wrongTarget} correctTarget={correctTarget} />}
           </div>
-          <div ref={answerTrayRef} className={styles.answerTray} style={config.images ? { gridTemplateColumns: 'repeat(4, minmax(0, 1fr))' } : undefined}>
+          <div ref={answerTrayRef} className={styles.answerTray} style={config.answerTrayColumns === 'auto' ? { gridTemplateColumns: `repeat(${displayedAnswers.length}, minmax(0, 1fr))`, fontFamily: 'Arial, sans-serif' } : config.images ? { gridTemplateColumns: 'repeat(4, minmax(0, 1fr))' } : undefined}>
             {displayedAnswers.map((value) => {
               const stolen = stolenNumber === value
-              return <button key={value} data-answer-tile data-answer-value={value} type="button" disabled={stolen} onPointerDown={(event) => beginDrag(event, value)} onPointerMove={moveDrag} onPointerUp={(event) => endDrag(event, value)} onPointerCancel={() => setDrag(null)} className={`${styles.answerButton} ${stolen ? styles.answerButtonStolen : ''}`} style={{ backgroundColor: stolen ? undefined : colorFor(value) }} aria-label={stolen ? 'Ô số đã bị Sói lấy' : `Kéo số ${value}`}>{stolen ? '' : <GameImageValue value={value} />}</button>
+              return <button key={value} data-answer-tile data-answer-value={value} type="button" disabled={stolen} onPointerDown={(event) => beginDrag(event, value)} onPointerMove={moveDrag} onPointerUp={(event) => endDrag(event, value)} onPointerCancel={() => setDrag(null)} className={`${styles.answerButton} ${stolen ? styles.answerButtonStolen : ''}`} style={{ backgroundColor: stolen ? undefined : colorFor(value) }} aria-label={stolen ? 'Ô số đã bị Sói lấy' : `Kéo ${config.answerNoun ?? 'số'} ${value}`}>{stolen ? '' : <GameImageValue value={value} />}</button>
             })}
           </div>
         </div>
@@ -326,7 +336,9 @@ function DropTarget({ id, completed, wrong, correct, large = false }: { id: stri
 
 function CountGroups({ groups, completed, wrongTarget, correctTarget, voiceButton }: { groups: CountGroup[]; completed: Record<string, DragAnswerValue>; wrongTarget: string | null; correctTarget: string | null; voiceButton?: ReactNode }) {
   return <div className={styles.countGroups} data-count={groups.length} style={{ display: 'flex', flexDirection: 'column' }}>
-    {groups.map((group) => group.capacity !== undefined ? <div key={group.id} data-target-id={group.id} className={`${styles.completionGroup} ${wrongTarget === group.id ? styles.shake : ''}`}>
+    {groups.map((group) => group.textMatch ? <div key={group.id} data-target-id={group.id} className={`${styles.countGroup} ${wrongTarget === group.id ? styles.shake : ''}`} style={{ width: '100%', justifyContent: 'center', gap: 4, fontFamily: 'Arial, sans-serif', fontSize: 56, fontWeight: 700 }} aria-label={group.label}>
+      <span>{group.textMatch.before}</span><span><DropTarget large id={group.id} completed={completed[group.id]} wrong={false} correct={correctTarget === group.id} /></span><span>{group.textMatch.after}</span>
+    </div> : group.capacity !== undefined ? <div key={group.id} data-target-id={group.id} className={`${styles.completionGroup} ${wrongTarget === group.id ? styles.shake : ''}`}>
       <div className={styles.cakeTray} role="img" aria-label={`${group.capacity} chỗ, ${group.count} cái bánh, ${group.capacity - group.count} chỗ cần thêm`}>
         {Array.from({ length: group.capacity }, (_, index) => {
           const missing = index >= group.count

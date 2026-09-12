@@ -43,6 +43,7 @@ export class GoldMinerScene extends Phaser.Scene {
   private hook!: Phaser.GameObjects.Container
   private claw!: Phaser.GameObjects.Image
   private taskImage?: Phaser.GameObjects.Image | Phaser.GameObjects.Container
+  private taskVoiceButton?: Phaser.GameObjects.Container
   private taskItems!: Phaser.GameObjects.Text
   private feedback!: Phaser.GameObjects.Text
   private cappyFace!: Phaser.GameObjects.Text
@@ -67,6 +68,7 @@ export class GoldMinerScene extends Phaser.Scene {
   constructor(private readonly lesson: GoldMinerGameConfig) { super('GoldMinerScene') }
 
   preload() {
+    preloadVoiceIcon(this, '/games/gold-mining/images/optimize/icon_voice.png')
     preloadGameImages(this, this.lesson.images)
     this.load.on(Phaser.Loader.Events.PROGRESS, (progress: number) => {
       this.game.events.emit('gold-miner:progress', progress)
@@ -203,11 +205,21 @@ export class GoldMinerScene extends Phaser.Scene {
     this.wolfAppeared = false
     this.taskItems.setText(this.question.prompt ?? Array.from({ length: this.question.count }, () => TASK_EMOJI[this.question.objectType]).join(' '))
     this.taskImage?.destroy()
+    this.taskVoiceButton?.destroy()
+    this.taskVoiceButton = undefined
+    this.taskItems.setPosition(TASK_PANEL_CENTER.x, TASK_PANEL_CENTER.y)
     this.taskImage = createGameImage(this, this.lesson.images?.[this.question.prompt ?? ''], TASK_PANEL_CENTER.x, TASK_PANEL_CENTER.y, 160, 115)
     if (this.question.inputMode === 'audio' && this.question.voice) {
+      this.taskImage?.destroy()
       this.taskImage = createVoiceButton(this, () => {
         if (this.state === GoldMinerState.AIMING) playQuestionVoice(this, this.question)
       }).setPosition(TASK_PANEL_CENTER.x, TASK_PANEL_CENTER.y)
+    } else if (this.question.instructionVoice || this.question.voice || this.question.voiceFallback?.instruction) {
+      this.taskItems.y = TASK_PANEL_CENTER.y - 32
+      if (this.taskImage) this.taskImage.y = TASK_PANEL_CENTER.y - 32
+      this.taskVoiceButton = createVoiceButton(this, () => {
+        if (!this.paused && this.state === GoldMinerState.AIMING) playQuestionVoice(this, this.question)
+      }).setPosition(TASK_PANEL_CENTER.x, TASK_PANEL_CENTER.y + 58).setScale(0.7)
     }
     this.taskItems.setVisible(!this.taskImage)
     this.game.events.emit('game-ui:round', this.round + 1)
@@ -604,4 +616,4 @@ export class GoldMinerScene extends Phaser.Scene {
     this.voiceManager = undefined
   }
 }
-import { createVoiceButton } from '../general/createVoiceButton'
+import { createVoiceButton, preloadVoiceIcon } from '../general/createVoiceButton'

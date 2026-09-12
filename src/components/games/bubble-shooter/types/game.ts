@@ -11,6 +11,7 @@ export interface MathQuestion {
   inputMode?: QuestionInputMode
   answerMode?: QuestionAnswerMode
   instructionVoice?: string
+  voiceFallback?: { instruction?: string; target?: string }
   voice?: string
   images?: import('../../general/game-image').GameImages
   presentation?:
@@ -18,9 +19,11 @@ export interface MathQuestion {
     | { type: 'recognizeNumber'; number: number }
     | { type: 'fitToPanel' }
     | { type: 'generic'; prompt: string }
+    | { type: 'voice'; prompt?: string }
 }
 
 export interface BubbleShooterGameConfig {
+  wolfWrongAnswersOnly?: boolean
   id: string
   title: string
   totalRounds: number

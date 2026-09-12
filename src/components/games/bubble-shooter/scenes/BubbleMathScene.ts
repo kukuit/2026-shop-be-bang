@@ -70,6 +70,7 @@ export class BubbleMathScene extends Phaser.Scene {
   }
 
   preload() {
+    preloadVoiceIcon(this, '/games/bubble-shooter/images/optimize/icon_voice.png')
     preloadGameImages(this, this.lesson.images)
     this.load.on('progress', (progress: number) => {
       this.game.events.emit('bubble-shooter:load-progress', progress)
@@ -434,7 +435,8 @@ export class BubbleMathScene extends Phaser.Scene {
 
   private fireWolfArrow() {
     if (this.roundState !== 'PLAYING' || this.isPauseMenuOpen) return
-    const targets = (this.bubbles.getChildren() as Bubble[]).filter((bubble) => bubble.active)
+    const targets = (this.bubbles.getChildren() as Bubble[]).filter((bubble) =>
+      bubble.active && (!this.lesson.wolfWrongAnswersOnly || bubble.value !== this.currentQuestion.answer))
     const target = Phaser.Utils.Array.GetRandom(targets)
     if (!target) {
       this.scheduleWolfShot(1000)
@@ -553,11 +555,23 @@ export class BubbleMathScene extends Phaser.Scene {
         })
     }
     this.questionText.removeAll(true)
-    if (question.inputMode === 'audio' && question.voice) {
+    if (question.presentation?.type === 'voice' || (question.inputMode === 'audio' && question.voice)) {
       this.questionText.disableInteractive()
-      this.questionText.add(createVoiceButton(this, () => {
+      const voiceButton = createVoiceButton(this, () => {
         if (this.roundState === 'PLAYING') playQuestionVoice(this, question)
-      }))
+      })
+      const word = question.presentation?.type === 'voice' ? question.presentation.prompt : undefined
+      if (word) {
+        const label = this.add.text(65, 0, word, {
+          fontFamily: 'Arial Black, Arial, sans-serif', fontSize: '58px',
+          fontStyle: 'bold', color: '#2563eb', stroke: '#ffffff', strokeThickness: 4,
+        }).setOrigin(0, 0.5)
+        const center = (label.x + label.width - 53) / 2
+        voiceButton.x = -center
+        label.x -= center
+        this.questionText.add(label)
+      }
+      this.questionText.add(voiceButton)
       return
     }
     const picture = createGameImage(this, this.lesson.images?.[question.text], 0, 0, 150, 100)
@@ -1072,4 +1086,4 @@ export class BubbleMathScene extends Phaser.Scene {
     this.game.events.off('game-ui:start', this.startGameplay, this)
   }
 }
-import { createVoiceButton } from '../../general/createVoiceButton'
+import { createVoiceButton, preloadVoiceIcon } from '../../general/createVoiceButton'

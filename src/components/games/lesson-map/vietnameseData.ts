@@ -16,7 +16,7 @@ const locations: readonly { nodeType: AdventureNodeType; mapTitle: string }[] = 
 ]
 export const vietnameseLessonDefinitions: VietnameseLessonDefinition[] = locations.map(({ nodeType, mapTitle }, index) => {
   const id = index + 1
-  return { id, lessonId: `tieng-viet-1-bai-${id}`, title: `Bài ${id}`, mapTitle, href: `/game/lop-1/tieng-viet/bai-${id}`, nodeType, isCheckpoint: [3, 5, 8, 10].includes(id) }
+  return { id, lessonId: `tieng-viet-1-bai-${id}`, title: id === 1 ? 'Bài 1: A a' : `Bài ${id}`, mapTitle, href: `/game/lop-1/tieng-viet/bai-${id}`, nodeType, isCheckpoint: [3, 5, 8, 10].includes(id) }
 })
 
 // Demo only: one completed lesson, one current and one additional unlocked stop.
