@@ -1,4 +1,13 @@
 const nextConfig = {
+  async redirects() {
+    return [
+      {
+        source: '/chatbot/demo/:path*',
+        destination: '/demo/chatbot/:path*',
+        permanent: true,
+      },
+    ]
+  },
   async headers() {
     return [
       {

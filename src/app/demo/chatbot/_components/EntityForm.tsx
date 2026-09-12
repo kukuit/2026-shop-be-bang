@@ -1,0 +1,29 @@
+'use client'
+import { useId, useState } from 'react'
+import { Entity, Row, modules, labels, displayName, today, formatVND, parseMoney } from '../_lib/model'
+import { api, useDemo } from './Provider'
+export default function EntityForm({ entity, initial, onClose, confirmationId, source = 'form', onSaved, inline = false }: { entity: Entity; initial?: Partial<Row>; onClose: () => void; confirmationId?: string; source?: string; onSaved?: () => void; inline?: boolean }) {
+  const { data, refresh, notify, chatBusy, runChatOperation } = useDemo()
+  const formId = useId()
+  const [values, setValues] = useState<Record<string, any>>(() => Object.fromEntries(modules[entity].fields.map(f => { let v = initial?.[f.key] ?? (f.options?.[0] || (f.kind === 'date' ? today() : '')); if (v && f.kind === 'date') v = String(v).slice(0, 10); if (v && f.kind === 'datetime-local' && String(v).endsWith('Z')) v = new Date(new Date(String(v)).getTime() + 7 * 3600000).toISOString().slice(0, 16); return [f.key, v] })))
+  const [busy, setBusy] = useState(false); const [error, setError] = useState(''); const [requestId, setRequestId] = useState(() => crypto.randomUUID())
+  const change = (key: string, value: string) => { setValues(v => ({ ...v, [key]: value, ...(key === 'pondId' ? { cropId: '' } : {}) })); setRequestId(crypto.randomUUID()) }
+  const disabled = busy || Boolean(confirmationId && chatBusy)
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (disabled) return
+    setBusy(true)
+    setError('')
+    const save = async () => {
+      await api({ entity, operation: 'save', id: initial?.id, data: values, source, confirmationId, requestId })
+      await refresh()
+      notify('Lưu thành công')
+      onSaved?.()
+      if (!inline) onClose()
+    }
+    try { if (confirmationId) await runChatOperation(save); else await save() }
+    catch (e) { setError(e instanceof Error ? e.message : 'Lỗi lưu dữ liệu') }
+    finally { setBusy(false) }
+  }
+  return <div className={inline ? "demo-inline-confirmation" : "demo-modal-backdrop"}><section role={inline ? "region" : "dialog"} aria-modal={inline ? undefined : true} aria-label={modules[entity].title} className={inline ? "demo-inline-confirmation-body" : "demo-modal"}><div className="demo-section-heading"><div><small>{confirmationId ? 'XÁC NHẬN YÊU CẦU' : initial?.id ? 'CHỈNH SỬA' : 'TẠO MỚI'}</small><h2>{modules[entity].title}</h2></div>{!inline && <button disabled={disabled} onClick={onClose} aria-label="Đóng">✕</button>}</div><form onSubmit={submit}><div className="demo-form-grid">{modules[entity].fields.map(field => <label key={field.key} className={field.kind === 'textarea' ? 'demo-full' : ''}>{field.label}{field.required && ' *'}{field.ref ? <><input disabled={disabled} list={`${formId}-ref-${field.key}`} value={values[field.key]} required={field.required} placeholder="Nhập tên để tìm, chọn ID gợi ý" onChange={e => change(field.key, e.target.value)} /><datalist id={`${formId}-ref-${field.key}`}>{data[field.ref].filter(r => field.key !== 'cropId' || !values.pondId || r.pondId === values.pondId).map(r => <option value={r.id} key={r.id}>{displayName(r)}</option>)}</datalist><small>{displayName(data[field.ref].find(r => r.id === values[field.key]))}</small></> : field.options ? <select disabled={disabled} value={values[field.key]} onChange={e => change(field.key, e.target.value)}>{field.options.map(o => <option key={o} value={o}>{labels[o] || o}</option>)}</select> : field.kind === 'textarea' ? <textarea disabled={disabled} value={values[field.key]} onChange={e => change(field.key, e.target.value)} /> : <input disabled={disabled} required={field.required} type={field.kind === 'money' ? 'text' : field.kind || 'text'} inputMode={field.kind === 'money' ? 'decimal' : undefined} step="any" min={field.kind === 'number' ? 0 : undefined} value={values[field.key]} onChange={e => change(field.key, e.target.value)} onBlur={() => { if (field.kind === 'money' && values[field.key] !== '' && Number.isFinite(parseMoney(values[field.key]))) setValues(v => ({ ...v, [field.key]: parseMoney(v[field.key]).toLocaleString('vi-VN') })) }} />}</label>)}</div>{entity === 'harvests' && <div className="demo-total">Thành tiền <strong>{formatVND(Number(values.quantityKg || 0) * parseMoney(values.pricePerKg || 0))}</strong></div>}{error && <p role="alert" className="demo-alert">{error}</p>}<div className="demo-form-actions"><button type="button" disabled={disabled} onClick={onClose}>Hủy</button><button className="demo-primary" disabled={disabled}>{busy ? 'Đang lưu…' : confirmationId ? 'Xác nhận và lưu' : 'Lưu dữ liệu'}</button></div></form></section></div>
+}

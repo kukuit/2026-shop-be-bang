@@ -4,15 +4,15 @@ import type { LearningSkill, QuestionAnswerMode, QuestionInputMode } from '../ge
 
 export type Lane = 0 | 1 | 2
 
-type BaseQuestion = { id: string; learningKey: LearningKey; answer: string | number; learningSkill?: LearningSkill; inputMode?: QuestionInputMode; answerMode?: QuestionAnswerMode; instructionVoice?: string; voice?: string }
+type BaseQuestion = { id: string; learningKey: LearningKey; answer: string | number; learningSkill?: LearningSkill; inputMode?: QuestionInputMode; answerMode?: QuestionAnswerMode; instructionVoice?: string; voice?: string; voiceFallback?: { instruction?: string; target?: string } }
 export type RacingQuestion =
   | BaseQuestion & { type: 'count'; object: string; quantity: number; options: number[]; skill: 'recognize_quantity' | 'recognize_zero' }
   | BaseQuestion & { type: 'numberToQuantity'; number: number; object: string; quantities: number[]; skill: 'number_to_quantity' }
   | BaseQuestion & { type: 'missingNumber'; sequence: Array<number | null>; options: number[]; skill: 'missing_number' }
   | BaseQuestion & { type: 'attributeCount'; prompt: string; object: string; quantity: number; options: number[]; skill: 'attribute_count' }
-  | BaseQuestion & { type: 'generic'; prompt: string; options: Array<string | number>; skill: 'language_choice' }
+  | BaseQuestion & { type: 'generic'; prompt: string; options: Array<string | number>; skill: 'language_choice'; showVoiceButton?: boolean }
 
-export type RacingGameConfig = GameLessonConfig<RacingQuestion>
+export type RacingGameConfig = GameLessonConfig<RacingQuestion> & { wolfEnabled?: boolean }
 
 export enum RacingState {
   RUNNING = 'RUNNING',

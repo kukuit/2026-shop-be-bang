@@ -60,6 +60,7 @@ export class RacingScene extends Phaser.Scene {
   constructor(private readonly lesson: RacingGameConfig) { super('RacingScene') }
 
   preload() {
+    preloadVoiceIcon(this, '/games/racing/images/optimize/icon_voice.png')
     preloadGameImages(this, this.lesson.images)
     this.load.on(Phaser.Loader.Events.PROGRESS, (progress: number) => this.game.events.emit('racing:progress', progress))
     this.load.audio('racing-background', GAME_BACKGROUND_MUSIC)
@@ -143,7 +144,7 @@ export class RacingScene extends Phaser.Scene {
     this.wolfEventActive = false
     this.wolfImpactActive = false
     this.wolfEventPhase = 'IDLE'
-    this.wolfRounds = new Set(shuffle([2, 3, 4, 5, 6, 7, 8, 9]).slice(0, 4))
+    this.wolfRounds = this.lesson.wolfEnabled === false ? new Set() : new Set(shuffle([2, 3, 4, 5, 6, 7, 8, 9]).slice(0, 4))
     this.wolfTriggeredRounds.clear()
     this.wolfTimers.clear()
   }
@@ -302,12 +303,13 @@ export class RacingScene extends Phaser.Scene {
     const picture = createGameImage(this, this.lesson.images?.[content], 0, 0, 145, 100)
     if (picture) { this.questionText.add(picture); return }
     const tokens = content.split(/\s+/).filter(Boolean)
+    const showVoiceButton = question.type === 'generic' && question.showVoiceButton
     const palette = Phaser.Utils.Array.Shuffle(['#2563eb', '#22c55e', '#a855f7', '#f59e0b', '#0891b2'])
     const gap = 14
     const labels = tokens.map((token, index) => {
       const label = this.add.text(0, 0, token, {
         fontFamily: 'Arial Black, Arial, sans-serif',
-        fontSize: '58px',
+        fontSize: showVoiceButton ? '44px' : '58px',
         fontStyle: 'bold',
         color: token === '?' ? '#ef2f36' : palette[index % palette.length],
         stroke: '#ffffff',
@@ -322,9 +324,16 @@ export class RacingScene extends Phaser.Scene {
     labels.forEach((label) => {
       label.setX((cursor + label.width / 2) * rowScale)
       label.setScale(rowScale)
+      if (showVoiceButton) label.setY(-40)
       cursor += label.width + gap
       this.questionText.add(label)
     })
+    if (showVoiceButton) {
+      this.questionText.disableInteractive()
+      this.questionText.add(createVoiceButton(this, () => {
+        if (this.state === RacingState.RUNNING) playQuestionVoice(this, question)
+      }).setPosition(0, 35).setScale(0.7))
+    }
   }
 
   private arrangeObjects(object: string, quantity: number) {
@@ -745,4 +754,4 @@ export class RacingScene extends Phaser.Scene {
     this.voiceManager?.destroy()
   }
 }
-import { createVoiceButton } from '../general/createVoiceButton'
+import { createVoiceButton, preloadVoiceIcon } from '../general/createVoiceButton'
