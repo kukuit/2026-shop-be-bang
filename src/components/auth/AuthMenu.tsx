@@ -10,6 +10,10 @@ export default function AuthMenu({ game = false, children }: { game?: boolean; c
   const [loginOpen, setLoginOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
+  const nameCharacters = Array.from(user?.displayName.normalize('NFC') ?? '')
+  const headerName = game && nameCharacters.length > 10
+    ? `${nameCharacters.slice(0, 10).join('')}...`
+    : user?.displayName
   useEffect(() => {
     if (!menuOpen) return
     const dismiss = (event: PointerEvent) => {
@@ -66,7 +70,7 @@ export default function AuthMenu({ game = false, children }: { game?: boolean; c
         <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-blue-100 text-xs font-black uppercase text-blue-700">
           {user?.displayName.trim().charAt(0) || <Menu size={18} />}
         </span>
-        {user && <span className="hidden max-w-32 truncate sm:inline">{user.displayName}</span>}
+        {user && <span className="hidden max-w-32 truncate sm:inline" title={user.displayName}>{headerName}</span>}
       </button>
       {menuOpen && (
         <div className="absolute right-0 z-50 mt-2 max-h-[calc(100dvh-5rem)] w-64 max-w-[calc(100vw-2rem)] overflow-y-auto rounded-2xl border border-slate-200 bg-white py-1 text-slate-800 shadow-xl">

@@ -17,8 +17,10 @@ export class FirestoreGameTrackingRepository implements GameTrackingRepository {
     // Refresh thất bại đã clear cookie; retry cuối cho phép phiên vẫn được lưu dưới dạng guest.
     if (response.status === 401) response = await fetch('/api/game-tracking/sessions', request)
     if (!response.ok) throw new Error(`Game tracking request failed (${response.status})`)
+    const result = await response.json()
     window.dispatchEvent(new Event('game-tracking:saved'))
-    return response.json() as Promise<{ sessionId: string }>
+    if (result.progressScope) window.dispatchEvent(new CustomEvent('game-progress:saved', { detail: result.progressScope }))
+    return result as { sessionId: string }
   }
 
   async getLearningProgress(lessonId: LessonId) {
