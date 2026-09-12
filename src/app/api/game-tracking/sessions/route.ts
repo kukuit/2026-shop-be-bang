@@ -13,6 +13,9 @@ import { GUEST_COOKIE, REFRESH_COOKIE } from '@/lib/auth/config'
 import { setGuestCookie } from '@/lib/auth/cookies'
 import { rejectCrossSiteMutation } from '@/lib/auth/request-security'
 import { gameSessionRef } from '@/lib/gameTrackingPaths'
+import { subjectProgressRef } from '@/lib/game-progress/paths'
+import { getSubjectLessons } from '@/lib/game-progress/config'
+import { buildSubjectProgress, summarizeLesson, type SubjectProgress } from '@/lib/game-progress/model'
 
 export const runtime = 'nodejs'
 
@@ -133,6 +136,9 @@ export async function POST(request: Request) {
       ? db.collection('shopbebangcom').doc('game').collection('learning_progress').doc(progressId)
       : null
     const progressUserId = user?.activeGame ? user.id : null
+    const grade = lesson ? Number(lesson.gradeId.replace(/\D/g, '')) : null
+    const subjectRef = progressUserId && lesson && grade
+      ? subjectProgressRef(progressUserId, grade, lesson.subjectId) : null
 
     await db.runTransaction(async (transaction) => {
       const existingSession = await transaction.get(sessionRef)
@@ -140,6 +146,7 @@ export async function POST(request: Request) {
 
       const progressSnapshot =
         progressRef && progressUserId ? await transaction.get(progressRef) : null
+      const subjectSnapshot = subjectRef ? await transaction.get(subjectRef) : null
       const existingKeys = (progressSnapshot?.data()?.keys ?? {}) as Record<
         string,
         Partial<Aggregate>
@@ -184,25 +191,42 @@ export async function POST(request: Request) {
         startedAt: Timestamp.fromMillis(session.startedAt),
         completedAt: FieldValue.serverTimestamp(),
       })
-      if (progressRef && progressSnapshot && progressUserId)
+      if (progressRef && progressSnapshot && progressUserId) {
+        const games = {
+          ...(progressSnapshot.data()?.games ?? {}),
+          [session.gameId]: {
+            completedAt: progressSnapshot.data()?.games?.[session.gameId]?.completedAt ?? FieldValue.serverTimestamp(),
+          },
+        }
         transaction.set(progressRef, {
           userId: progressUserId,
           grade: lesson ? Number(lesson.gradeId.replace(/\D/g, '')) : null,
           subject: lesson?.subjectId ?? null,
           lessonId: session.lessonId,
-          games: {
-            ...(progressSnapshot.data()?.games ?? {}),
-            [session.gameId]: {
-              completedAt: progressSnapshot.data()?.games?.[session.gameId]?.completedAt ?? FieldValue.serverTimestamp(),
-            },
-          },
+          games,
           keys,
           totalSessions: (progressSnapshot.data()?.totalSessions ?? 0) + 1,
           updatedAt: FieldValue.serverTimestamp(),
         })
+        if (subjectRef && lesson && grade) {
+          const definition = getSubjectLessons(grade, lesson.subjectId).find(item => item.lessonId === session.lessonId)
+          if (definition) {
+            const old = subjectSnapshot?.data() as SubjectProgress | undefined
+            const now = new Date().toISOString()
+            const summary = summarizeLesson(definition, keys, games, now, old?.lessons?.[session.lessonId])
+            transaction.set(subjectRef, {
+              ...buildSubjectProgress(progressUserId, grade, lesson.subjectId,
+                { ...old?.lessons, [session.lessonId]: summary }, now),
+              updatedAt: FieldValue.serverTimestamp(),
+            })
+          }
+        }
+      }
     })
 
-    const response = NextResponse.json({ sessionId: session.sessionId })
+    const response = NextResponse.json({ sessionId: session.sessionId,
+      progressScope: progressUserId && lesson ? { userId: progressUserId, grade, subjectId: lesson.subjectId, lessonId: session.lessonId } : null,
+    })
     if (guestId && !existingGuestId) setGuestCookie(response, guestId)
     return response
   } catch (error) {

@@ -9,6 +9,12 @@ export type ProgressLesson = LessonDefinition & {
 }
 export type CompletedGame = { lessonId: string; gameId: string; completedAt?: unknown }
 
+export function isLessonCompleted({ completedGames, totalGames, requiredGames }: {
+  completedGames: number; totalGames: number; requiredGames: number
+}) {
+  return totalGames > 0 && completedGames >= Math.max(1, Math.min(totalGames, requiredGames))
+}
+
 export function getLessonStarCount({ completedGameCount, totalGames, requiredGames, starMilestones }: {
   completedGameCount: number
   totalGames: number
@@ -45,7 +51,7 @@ export function buildLessonMapItems(definitions: readonly ProgressLesson[], reco
     const requiredGames = totalGames ? Math.max(1, Math.min(totalGames, lesson.requiredGames)) : 0
     return {
       ...lesson, totalGames, completedGames, requiredGames,
-      completed: totalGames > 0 && completedGames >= requiredGames,
+      completed: isLessonCompleted({ completedGames, totalGames, requiredGames }),
       stars: getLessonStarCount({ completedGameCount: completedGames, totalGames, requiredGames, starMilestones: lesson.starMilestones }),
     }
   })

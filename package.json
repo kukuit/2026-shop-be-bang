@@ -20,7 +20,9 @@
     "auth:bootstrap-users": "node scripts/bootstrap-auth-users.mjs",
     "auth:cleanup-sessions": "node scripts/cleanup-auth-sessions.mjs",
     "game:normalize-sessions": "node scripts/normalize-game-sessions.mjs",
-    "game:migrate-session-storage": "node scripts/migrate-game-session-storage.mjs"
+    "game:migrate-session-storage": "node scripts/migrate-game-session-storage.mjs",
+    "game:backfill-progress": "node scripts/backfill-game-progress.cjs",
+    "test:game-me": "node scripts/test-game-me-progress.cjs"
   },
   "dependencies": {
     "@next/third-parties": "^16.1.1",
