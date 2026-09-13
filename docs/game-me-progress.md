@@ -1,5 +1,38 @@
 # User progress architecture
 
+## Current report behavior (September 2026)
+
+The report now separates lifetime accuracy from current goal assessment. Goal
+details read at most 50 most recent sessions of the authenticated account, ordered
+by completion timestamp and document ID. Within that bounded history, answers are
+ordered newest first per goal (including reverse result order inside each session).
+The latest 20 answers determine the current status; the preceding 20 form the
+comparison window. Status requires 5 answers, and a percentage-point trend requires
+5 answers in both windows. Older errors remain in lifetime totals but do not lower
+the current rating. A goal absent from these 50 sessions has no recent assessment;
+the UI explicitly describes this limit rather than falling back to a lifetime rating.
+
+Subject reads reconcile each published lesson against its legacy aggregate, even
+when a partial subject summary already exists. Missing completed game types are
+checked with owner-scoped lesson/game equality queries, each limited to one session
+and projecting only `completedAt`. Replays count once per game type. Historical
+attempts with no completion evidence show unknown completion rather than a false
+`0/4`. These reads do not migrate or write data. The explicit backfill remains useful
+for materializing summaries, but a missing subject document no longer hides existing
+lesson counters. Session-only history without a lesson aggregate still needs backfill.
+
+These changes supersede the older read-budget and empty-subject behavior below:
+
+- Subject: one subject document plus one aggregate per published lesson; up to one
+  existence query per missing game type when the lesson has answer history.
+- Expanded goals: one aggregate plus up to 50 projected session documents. This
+  applies per cold goal query; the existing 5-minute client cache still avoids reads
+  when closing and reopening the same lesson.
+- Overview and session pagination behavior are unchanged.
+
+Completion remains participation across different game types, not a skill rating.
+The UI labels it accordingly and presents lifetime accuracy as reference only.
+
 `/game/me` is a navigation screen. It does not call a progress service or load sessions. Auth and the existing game profile provider are unchanged.
 
 ## Routes and UI

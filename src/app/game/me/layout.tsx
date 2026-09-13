@@ -20,10 +20,12 @@ export default async function GameMeLayout({ children }: { children: React.React
     redirect(auth.status === 401 ? '/game?auth=required' : '/game?game=disabled')
   }
   return (
-    <div className="min-h-screen bg-slate-100">
+    <div className="min-h-screen bg-gray-50">
       <GameAuthHeader />
       <MeNavigation />
-      <main className="game-container py-7">{children}</main>
+      <main className="py-7">
+        <div className="game-container">{children}</div>
+      </main>
     </div>
   )
 }

@@ -74,6 +74,64 @@ test('subject totals are weighted by attempts, current follows lesson order and 
   assert.equal(empty.accuracy,null)
 })
 
+test('recent mastery replaces early mistakes without erasing history; trends need evidence', () => {
+  const improved = model.recentGoalProgress([...Array(20).fill(true), ...Array(20).fill(false), ...Array(900).fill(false)])
+  assert.equal(improved.recent.accuracy, 100)
+  assert.equal(improved.improvement, 100)
+  assert.equal(model.goalStatus(improved.recent.correct, improved.recent.attempts).label, 'Xuất sắc')
+  const declined = model.recentGoalProgress([...Array(20).fill(false), ...Array(20).fill(true)])
+  assert.equal(declined.improvement, -100)
+  assert.equal(model.recentGoalProgress(Array(24).fill(true)).improvement, null)
+  assert.equal(model.goalStatus(4, 4).label, 'Chưa đủ dữ liệu')
+  assert.equal(model.recentGoalProgress([]).recent.accuracy, null)
+})
+
+test('legacy lesson counts and unique completion evidence recover a missing subject summary', async () => {
+  const ctx = context({ [goalPath()]: { keys: { 'recognize-number-0': {correct:38,wrong:56,attempts:94} } } })
+  const completedAt = ctx.firestore.Timestamp.fromMillis(1700000000000)
+  for (const [id, gameId] of [['a','racing'],['b','racing'],['c','bubble-shooter']]) {
+    ctx.documents.set(`${sessionsPath('child')}/${id}`, { lessonId:'toan-1-bai-1',gameId,completedAt })
+  }
+  ctx.documents.set(`${sessionsPath('other')}/d`, {lessonId:'toan-1-bai-1',gameId:'drag-drop',completedAt})
+  const progress = await ctx.load('src/lib/game-progress/service.ts').getSubjectProgress('child',1,'toan')
+  assert.equal(progress.lessons['toan-1-bai-1'].attempts,94)
+  assert.equal(progress.lessons['toan-1-bai-1'].completedGames,2)
+  assert.equal(progress.completedLessons,1)
+  assert.equal(ctx.writes.length,0)
+  assert.ok(ctx.reads.filter(read=>read.filters?.length).every(read=>read.limit===1))
+  // A later live save may create a partial subject summary; reconciliation must
+  // still retain historical game types, even when attempts are no longer zero.
+  ctx.documents.set(subjectPath(),model.buildSubjectProgress('child',1,'toan',{
+    'toan-1-bai-1':{...progress.lessons['toan-1-bai-1'],completedGames:1,completed:false},
+  }))
+  const refreshed = await ctx.load('src/lib/game-progress/service.ts').getSubjectProgress('child',1,'toan')
+  assert.equal(refreshed.lessons['toan-1-bai-1'].completedGames,2)
+})
+
+test('legacy attempts without completion evidence are unknown rather than zero games', async () => {
+  const ctx = context({ [goalPath()]: {keys:{'recognize-number-0':{correct:1,wrong:1,attempts:2}}} })
+  const progress = await ctx.load('src/lib/game-progress/service.ts').getSubjectProgress('child',1,'toan')
+  assert.equal(progress.lessons['toan-1-bai-1'].completionKnown,false)
+  assert.equal(progress.lessons['toan-1-bai-1'].attempts,2)
+})
+
+test('recent goals use chronological answers, preserve lifetime counts and isolate owner/lesson', async () => {
+  const ctx = context({[goalPath()]:{keys:{'recognize-number-0':{correct:20,wrong:980,attempts:1000}}}})
+  const at = n => ctx.firestore.Timestamp.fromMillis(1700000000000+n)
+  const results = correct => Array.from({length:20},()=>({learningKey:'recognize-number-0',correct}))
+  ctx.documents.set(`${sessionsPath('child')}/old`,{lessonId:'toan-1-bai-1',completedAt:at(0),results:results(false)})
+  ctx.documents.set(`${sessionsPath('child')}/new`,{lessonId:'toan-1-bai-1',completedAt:at(1),results:results(true)})
+  ctx.documents.set(`${sessionsPath('child')}/unrelated`,{lessonId:'toan-1-bai-2',completedAt:at(2),results:results(false)})
+  ctx.documents.set(`${sessionsPath('other')}/other`,{lessonId:'toan-1-bai-1',completedAt:at(3),results:results(false)})
+  const report = await ctx.load('src/lib/game-progress/service.ts').getLessonGoalProgress('child','toan-1-bai-1')
+  assert.equal(report.goals[0].accuracy,2)
+  assert.equal(report.goals[0].recent.accuracy,100)
+  assert.equal(report.goals[0].improvement,100)
+  assert.equal(report.goals[1].recent.accuracy,null)
+  assert.equal(ctx.reads.at(-1).limit,50)
+  assert.equal(ctx.writes.length,0)
+})
+
 test('overview renders navigation with zero progress reads', () => {
   const React = require('react')
   const {renderToStaticMarkup} = require('react-dom/server')
@@ -85,18 +143,21 @@ test('overview renders navigation with zero progress reads', () => {
   assert.ok(html.includes('/game/me/session'))
 })
 
-test('subject GET reads exactly one owned doc, goal GET exactly one lesson doc, no session scans', async () => {
+test('subject fills missing summaries from owned lessons; goals use bounded recent history', async () => {
   const ctx = context()
   const {GET} = ctx.load('src/app/api/game/me/route.ts')
   let response = await GET(new Request('http://localhost/api/game/me?resource=subject&grade=1&subject=toan&userId=other'))
   assert.equal(response.status,200)
   assert.equal((await response.json()).accuracy,null)
-  assert.deepEqual(ctx.reads.map(read=>read.path),[subjectPath()])
+  const subjectReads = [subjectPath(), goalPath(), goalPath('toan-1-bai-2')]
+  assert.deepEqual(ctx.reads.map(read=>read.path),subjectReads)
   response = await GET(new Request('http://localhost/api/game/me?resource=goals&grade=1&subject=toan&lessonId=toan-1-bai-1'))
   const goals = await response.json()
   assert.equal(goals.goals.length,6)
   assert.equal(goals.goals[0].accuracy,null)
-  assert.deepEqual(ctx.reads.map(read=>read.path),[subjectPath(),goalPath()])
+  assert.equal(goals.goals[0].recent.accuracy,null)
+  assert.deepEqual(ctx.reads.map(read=>read.path),[...subjectReads,goalPath(),sessionsPath('child')])
+  assert.equal(ctx.reads.at(-1).limit,50)
 })
 
 test('auth, invalid grade/subject/lesson/cursor are rejected without progress reads', async () => {

@@ -66,15 +66,21 @@ require.resolve=(name,options)=>{
 }
 const entryId=bundle('__entry')
 const script=`(()=>{const process={env:{NODE_ENV:'development'}};const modules=[${modules.join(',')}];const cache={};function __require(id){if(cache[id])return cache[id].exports;const module={exports:{}};cache[id]=module;modules[id](module,module.exports,__require);return module.exports;}__require(${entryId});})();`
-const cssRoot=path.join(root,'.next/static/css')
-const css=fs.existsSync(cssRoot)?fs.readdirSync(cssRoot).filter(file=>file.endsWith('.css')).map(file=>fs.readFileSync(path.join(cssRoot,file),'utf8')).join('\n'):''
+// Compile current styles: Next dev stores CSS in nested folders, and stale/missing
+// build CSS would otherwise let an unstyled page pass the overflow checks.
+let css=''
+const cssReady=require('postcss')([require('tailwindcss')(path.join(root,'tailwind.config.ts'))])
+  .process(fs.readFileSync(path.join(root,'src/app/globals.css'),'utf8'), {from:path.join(root,'src/app/globals.css')})
+  .then(result=>{css=result.css})
 const store=firestoreMock()
 const now=store.firestore.Timestamp.fromMillis(1700000000000)
 for(let index=0;index<25;index++)store.documents.set(`shopbebangcom/game/user_sessions/child/sessions/s${String(index).padStart(2,'0')}`,{
   gameId:'racing',lessonId:'toan-1-bai-1',score:90,totalQuestions:10,correctCount:9,wrongCount:1,duration:138000,completedAt:now,
   results:[{learningKey:'recognize-number-0',correct:true,expectedAnswer:0,selectedAnswer:0,attempt:1,responseTime:250}],
 })
-store.documents.set('shopbebangcom/game/learning_progress/child_toan-1-bai-1',{keys:{'recognize-number-0':{correct:1,wrong:0,attempts:1}}})
+store.documents.set('shopbebangcom/game/learning_progress/child_toan-1-bai-1',{
+  keys:{'recognize-number-0':{correct:25,wrong:975,attempts:1000}}, games:{racing:{completedAt:now}},
+})
 let requests=[]
 const server=http.createServer(async(req,res)=>{
   if(req.url.startsWith('/api/game/me')){
@@ -91,6 +97,7 @@ const server=http.createServer(async(req,res)=>{
 })
 
 ;(async()=>{
+  await cssReady
   await new Promise(resolve=>server.listen(3248,'127.0.0.1',resolve))
   const targets=await(await fetch('http://localhost:9348/json')).json()
   const ws=new WebSocket(targets.find(target=>target.type==='page').webSocketDebuggerUrl)
@@ -109,9 +116,12 @@ const server=http.createServer(async(req,res)=>{
     assert.equal(requests.length,0)
     await click('main a[href="/game/me/toan"]')
     await wait(`document.querySelector('[aria-controls="goals-toan-1-bai-1"]')`)
-    assert.equal(requests.length,1);assert.equal(store.reads.length,1)
+    assert.equal(requests.length,1);assert.equal(store.reads.length,6)
+    assert.ok(await evaluate(`document.querySelector('main').textContent.includes('1/4 loại game')`))
     await click('[aria-controls="goals-toan-1-bai-1"]')
-    await wait(`document.querySelector('#goals-toan-1-bai-1').textContent.includes('Chưa đủ dữ liệu')`)
+    await wait(`document.querySelector('#goals-toan-1-bai-1').textContent.includes('Xuất sắc')`)
+    assert.ok(await evaluate(`document.querySelector('#goals-toan-1-bai-1').textContent.includes('100% gần đây')`))
+    assert.ok(await evaluate(`document.querySelector('#goals-toan-1-bai-1').textContent.includes('Toàn bộ lịch sử: 25 đúng')`))
     assert.equal(requests.length,2)
     await click('[aria-controls="goals-toan-1-bai-1"]');await click('[aria-controls="goals-toan-1-bai-1"]')
     await new Promise(resolve=>setTimeout(resolve,200));assert.equal(requests.length,2)
@@ -136,6 +146,6 @@ const server=http.createServer(async(req,res)=>{
     await cdp('Emulation.setDeviceMetricsOverride',{width:1280,height:900,deviceScaleFactor:1,mobile:false})
     fs.writeFileSync(path.join(output,'sessions-desktop.png'),Buffer.from((await cdp('Page.captureScreenshot',{format:'png',captureBeyondViewport:false})).data,'base64'))
     assert.deepEqual(errors,[])
-    console.log('PASS browser: overview 0 reads, subject 1, lazy goals/cache, grade isolation, 20+5 sessions, lazy details, mobile no overflow. Screenshots: '+output)
+    console.log('PASS browser: legacy completion recovery, recent mastery despite low lifetime accuracy, lazy goals/cache, grade isolation, 20+5 sessions, lazy details, mobile no overflow. Screenshots: '+output)
   }finally{ws.close();server.closeAllConnections();server.close()}
 })().catch(error=>{console.error(error);server.closeAllConnections();server.close();process.exitCode=1})

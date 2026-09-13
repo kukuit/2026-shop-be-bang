@@ -16,6 +16,7 @@ export function goalStatus(correct: number, attempts: number) {
 
 export type Counts = { correct: number; wrong: number; attempts: number; accuracy: number | null }
 export type LessonSummary = Counts & {
+  completionKnown?: boolean
   completed: boolean
   completedGames: number
   totalGames: number
@@ -33,9 +34,26 @@ export type SubjectProgress = Counts & {
   lessons: Record<string, LessonSummary>
   updatedAt: string | null
 }
-export type GoalProgress = Counts & { id: string; title: string }
+export type GoalProgress = Counts & {
+  id: string; title: string
+  recent: Counts
+  previous: Counts
+  improvement: number | null
+}
 export type LessonGoalProgress = Counts & { userId: string; lessonId: string; goals: GoalProgress[] }
 export type LegacyGoalCounts = Partial<Pick<Counts, 'correct' | 'wrong' | 'attempts'>>
+
+// Input is newest first. Keep lifetime counters separate from current assessment.
+export function recentGoalProgress(answers: boolean[]) {
+  const count = (items: boolean[]): Counts => {
+    const correct = items.filter(Boolean).length
+    return { correct, wrong: items.length - correct, attempts: items.length, accuracy: accuracyOf(correct, items.length) }
+  }
+  const recent = count(answers.slice(0, 20))
+  const previous = count(answers.slice(20, 40))
+  return { recent, previous, improvement: recent.attempts >= 5 && previous.attempts >= 5
+    ? recent.accuracy! - previous.accuracy! : null }
+}
 
 export function sumCounts(values: LegacyGoalCounts[]): Counts {
   const totals = values.reduce<Pick<Counts, 'correct' | 'wrong' | 'attempts'>>((sum, value) => ({

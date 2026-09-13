@@ -4,8 +4,8 @@ import { z } from 'zod'
 import { getLessonDefinition } from '@/components/games/general/tracking/lesson-catalog'
 import { userGameSessions } from '@/lib/gameTrackingPaths'
 import type { AdminGameSession, AdminSessionResult } from '@/lib/gameTrackingAdmin'
-import { SESSION_PAGE_SIZE, type SubjectId } from './config'
-import { accuracyOf, buildSubjectProgress, sumCounts, type LegacyGoalCounts, type LessonGoalProgress, type SubjectProgress } from './model'
+import { SESSION_PAGE_SIZE, getSubjectLessons, type SubjectId } from './config'
+import { accuracyOf, buildSubjectProgress, summarizeLesson, recentGoalProgress, sumCounts, type LegacyGoalCounts, type LessonGoalProgress, type SubjectProgress } from './model'
 import { lessonGoalProgressRef, subjectProgressRef } from './paths'
 
 export function dateString(value: unknown): string | null {
@@ -18,16 +18,51 @@ export function dateString(value: unknown): string | null {
 export async function getSubjectProgress(userId: string, grade: number, subject: SubjectId) {
   const snapshot = await subjectProgressRef(userId, grade, subject).get()
   const stored = snapshot.data() as SubjectProgress | undefined
-  return buildSubjectProgress(userId, grade, subject, stored?.lessons, dateString(stored?.updatedAt))
+  const lessons = { ...stored?.lessons }
+  // Reconcile published lessons with authoritative legacy counters. This also
+  // handles a new save that populated only part of an older account's history.
+  await Promise.all(getSubjectLessons(grade, subject).filter(lesson => lesson.available).map(async lesson => {
+    const legacy = (await lessonGoalProgressRef(userId, lesson.lessonId).get()).data()
+    if (!legacy) return
+    const games: Record<string, { completedAt?: unknown }> = { ...legacy.games }
+    if (sumCounts(Object.values(legacy.keys ?? {})).attempts > 0) {
+      // One existence lookup per game, rather than counting every replay.
+      await Promise.all(Array.from(new Set(lesson.games)).filter(gameId => !games[gameId]?.completedAt).map(async gameId => {
+        const evidence = await userGameSessions(userId).where('lessonId', '==', lesson.lessonId)
+          .where('gameId', '==', gameId).limit(1).select('completedAt').get()
+        const completedAt = evidence.docs[0]?.data().completedAt
+        if (completedAt) games[gameId] = { completedAt }
+      }))
+    }
+    lessons[lesson.lessonId] = {
+      ...summarizeLesson(lesson, legacy.keys ?? {}, games, dateString(legacy.updatedAt), lessons[lesson.lessonId]),
+      completionKnown: Object.values(games).some(game => !!game.completedAt),
+    }
+  }))
+  return buildSubjectProgress(userId, grade, subject, lessons, dateString(stored?.updatedAt))
 }
 
 export async function getLessonGoalProgress(userId: string, lessonId: string): Promise<LessonGoalProgress> {
   const definition = getLessonDefinition(lessonId)
   const snapshot = await lessonGoalProgressRef(userId, lessonId).get()
   const keys = (snapshot.data()?.keys ?? {}) as Record<string, LegacyGoalCounts>
+  // Bounded, owner-scoped history; no new composite index or historical full scan.
+  const sessions = await userGameSessions(userId).orderBy('completedAt', 'desc')
+    .orderBy(FieldPath.documentId(), 'desc').limit(50)
+    .select('lessonId', 'results').get()
+  const answers: Record<string, boolean[]> = {}
+  for (const document of sessions.docs) {
+    const data = document.data()
+    if (data.lessonId !== lessonId || !Array.isArray(data.results)) continue
+    for (const result of [...data.results].reverse()) {
+      if (typeof result.learningKey !== 'string' || typeof result.correct !== 'boolean') continue
+      const values = answers[result.learningKey] ??= []
+      if (values.length < 40) values.push(result.correct)
+    }
+  }
   const goals = (definition?.learningGoals ?? []).map(goal => {
     const counts = sumCounts([keys[goal.key] ?? {}])
-    return { id: goal.key, title: goal.title, ...counts }
+    return { id: goal.key, title: goal.title, ...counts, ...recentGoalProgress(answers[goal.key] ?? []) }
   })
   return { userId, lessonId, goals, ...sumCounts(goals) }
 }
