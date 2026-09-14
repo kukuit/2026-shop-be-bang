@@ -1,5 +1,64 @@
 # User progress architecture
 
+## Lazy subject cards on `/game/me`
+
+The overview renders three static subject cards initially. No progress, goal, or
+session request runs until the parent clicks **Xem** on a card. **Xem tiến trình**
+and **Xem lịch sử** remain separate links with prefetch disabled.
+
+`resource=overview&grade=1&subject=toan` reuses `getSubjectProgress` reconciliation
+and returns up to three goals with the lowest accuracy, including scores at or
+above 80%. Unplayed goals are excluded. No data means no practice section; the
+overview never displays “Đang học tốt”.
+`weakGoals` is response-only, not a persisted Firestore field. Goal IDs and lesson
+IDs come from the existing catalog; titles, lesson numbers and lesson links are
+resolved from `getSubjectLessons` locally. Overview and lesson details share
+`currentGoalAccuracy`: use the latest 20 answers when at least 5 recent answers
+exist; otherwise use lifetime correct / (correct + wrong). No answers means null.
+Both read the same newest 50 sessions **per owned lesson**, with the same timestamp
+and document-ID ordering and reversed result order inside each session. This
+replaces the older account-wide 50-session window, keeping other subjects out of
+the query. Overview fetches history only for published lessons with aggregate
+answer data, after Xem. The summary omits calculation explanations for readability.
+Accuracy on the card uses correct / (correct + wrong); missing answers show `--`.
+Completion still uses the existing unique game requirements. The card no longer
+shows a subject-wide game total. `getOverviewLesson` selects the first started but
+incomplete lesson in curriculum order, otherwise reuses `currentLessonId`. Started
+means existing attempts, completed game types, or last-played timestamp. Only that
+lesson shows `completedGames / totalGames`; replays never add game types. Unknown
+legacy completion is labelled as unknown, not zero. Lesson links use static `href`,
+not a game route. Unpublished lessons show “Sắp có” without a launch link. Empty
+curriculum and completed curriculum have separate states. A subject with no study
+history shows “Bài bắt đầu”; no goal-data means no practice section. None of these
+presentation changes add queries or change detailed subject pages.
+
+Cold Toán grade 1 costs 1 subject document + 2 published lesson aggregates = 3
+document reads, plus 0–8 existing completion existence queries if legacy games
+lack completion evidence. Each query is owner/lesson/game scoped and limited to 1
+document; empty queries can still bill a minimum read. Thus the expected budget is
+3–11 aggregate/completion reads, plus up to 50 session documents per played lesson
+for recent accuracy (up to 100 for the two published Toán lessons). Empty queries
+can bill a minimum read. No other subject or full history is read. Initial entry
+still costs zero progress reads; cache/collapse behavior is unchanged.
+
+Before rollout, create the composite index specified in `firestore.indexes.json`:
+collection `sessions`, collection query scope, `lessonId ASC`, `completedAt DESC`
+(document ID follows the descending final sort). This file is a required index
+definition, not a deployment of the index; retain any other production indexes.
+
+TanStack key: `[game, me, subject-overview, uid, grade, subjectId, v3]`. The response
+version avoids reusing old single-goal or below-80-only cached responses.
+Missing `weakGoals` never counts as evidence of no weak goals; a legacy
+`weakestGoal` can still be rendered during a rolling update. The query is
+disabled until that card is requested, with 5-minute freshness and 30-minute GC.
+Collapse/expand retains the mounted query and does not refetch, even after becoming
+stale. Returning to the overview still requires clicking Xem; fresh cached data
+is reused. Focus/reconnect do not refetch. Save events invalidate only the matching
+subject cache; account/grade changes reset the card selection. Existing subject
+routes and their query behavior are unchanged.
+
+This section supersedes the older description of the overview as navigation only.
+
 ## Current report behavior (September 2026)
 
 The report now separates lifetime accuracy from current goal assessment. Goal

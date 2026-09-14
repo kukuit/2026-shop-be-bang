@@ -7,6 +7,7 @@ import type { AdminGameSession, AdminSessionResult } from '@/lib/gameTrackingAdm
 import { SESSION_PAGE_SIZE, getSubjectLessons, type SubjectId } from './config'
 import { accuracyOf, buildSubjectProgress, summarizeLesson, recentGoalProgress, sumCounts, type LegacyGoalCounts, type LessonGoalProgress, type SubjectProgress } from './model'
 import { lessonGoalProgressRef, subjectProgressRef } from './paths'
+import { currentGoalAccuracy, type SubjectOverview } from './model'
 
 export function dateString(value: unknown): string | null {
   if (typeof value === 'string') return value
@@ -15,7 +16,7 @@ export function dateString(value: unknown): string | null {
   return null
 }
 
-export async function getSubjectProgress(userId: string, grade: number, subject: SubjectId) {
+export async function getSubjectProgress(userId: string, grade: number, subject: SubjectId, onGoals?: (lessonId: string, keys: Record<string, LegacyGoalCounts>) => void) {
   const snapshot = await subjectProgressRef(userId, grade, subject).get()
   const stored = snapshot.data() as SubjectProgress | undefined
   const lessons = { ...stored?.lessons }
@@ -24,6 +25,7 @@ export async function getSubjectProgress(userId: string, grade: number, subject:
   await Promise.all(getSubjectLessons(grade, subject).filter(lesson => lesson.available).map(async lesson => {
     const legacy = (await lessonGoalProgressRef(userId, lesson.lessonId).get()).data()
     if (!legacy) return
+    onGoals?.(lesson.lessonId, legacy.keys ?? {})
     const games: Record<string, { completedAt?: unknown }> = { ...legacy.games }
     if (sumCounts(Object.values(legacy.keys ?? {})).attempts > 0) {
       // One existence lookup per game, rather than counting every replay.
@@ -42,12 +44,27 @@ export async function getSubjectProgress(userId: string, grade: number, subject:
   return buildSubjectProgress(userId, grade, subject, lessons, dateString(stored?.updatedAt))
 }
 
-export async function getLessonGoalProgress(userId: string, lessonId: string): Promise<LessonGoalProgress> {
-  const definition = getLessonDefinition(lessonId)
-  const snapshot = await lessonGoalProgressRef(userId, lessonId).get()
-  const keys = (snapshot.data()?.keys ?? {}) as Record<string, LegacyGoalCounts>
-  // Bounded, owner-scoped history; no new composite index or historical full scan.
-  const sessions = await userGameSessions(userId).orderBy('completedAt', 'desc')
+// Reuse aggregate reads; only fetch recent answers for this subject's played lessons.
+export async function getSubjectOverview(userId: string, grade: number, subject: SubjectId): Promise<SubjectOverview> {
+  const lessonKeys = new Map<string, Record<string, LegacyGoalCounts>>()
+  const progress = await getSubjectProgress(userId, grade, subject, (lessonId, keys) => { lessonKeys.set(lessonId, keys) })
+  const goals = (await Promise.all(Array.from(lessonKeys, async ([lessonId, keys]) => {
+    const answers = Object.values(keys).some(counts => (counts.correct ?? 0) + (counts.wrong ?? 0) > 0)
+      ? await getRecentLessonAnswers(userId, lessonId) : {}
+    return (getLessonDefinition(lessonId)?.learningGoals ?? []).flatMap(goal => {
+      const assessment = currentGoalAccuracy(keys[goal.key] ?? {}, recentGoalProgress(answers[goal.key] ?? []).recent)
+      return assessment.accuracy === null ? [] : [{ id: goal.key, title: goal.title, lessonId, accuracy: assessment.accuracy, source: assessment.source }]
+    })
+  }))).flat()
+  goals.sort((a, b) => a.accuracy - b.accuracy || a.lessonId.localeCompare(b.lessonId) || a.title.localeCompare(b.title))
+  const weakGoals = goals.slice(0, 3)
+  return { ...progress, accuracy: accuracyOf(progress.correct, progress.correct + progress.wrong),
+    hasGoalData: goals.length > 0, weakestGoal: weakGoals[0] ?? null, weakGoals }
+}
+
+// Shared window for overview and details, scoped to one owned lesson.
+async function getRecentLessonAnswers(userId: string, lessonId: string) {
+  const sessions = await userGameSessions(userId).where('lessonId', '==', lessonId).orderBy('completedAt', 'desc')
     .orderBy(FieldPath.documentId(), 'desc').limit(50)
     .select('lessonId', 'results').get()
   const answers: Record<string, boolean[]> = {}
@@ -60,6 +77,14 @@ export async function getLessonGoalProgress(userId: string, lessonId: string): P
       if (values.length < 40) values.push(result.correct)
     }
   }
+  return answers
+}
+
+export async function getLessonGoalProgress(userId: string, lessonId: string): Promise<LessonGoalProgress> {
+  const definition = getLessonDefinition(lessonId)
+  const snapshot = await lessonGoalProgressRef(userId, lessonId).get()
+  const keys = (snapshot.data()?.keys ?? {}) as Record<string, LegacyGoalCounts>
+  const answers = await getRecentLessonAnswers(userId, lessonId)
   const goals = (definition?.learningGoals ?? []).map(goal => {
     const counts = sumCounts([keys[goal.key] ?? {}])
     return { id: goal.key, title: goal.title, ...counts, ...recentGoalProgress(answers[goal.key] ?? []) }

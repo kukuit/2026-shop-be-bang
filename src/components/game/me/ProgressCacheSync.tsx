@@ -22,6 +22,7 @@ export default function ProgressCacheSync() {
       const detail = (event as CustomEvent).detail
       if (!user || detail?.userId !== user.id || !isSubjectId(detail.subjectId)) return
       void client.invalidateQueries({ queryKey: progressKeys.subject(user.id, detail.grade, detail.subjectId), exact: true })
+      void client.invalidateQueries({ queryKey: progressKeys.overview(user.id, detail.grade, detail.subjectId), exact: true })
       void client.invalidateQueries({ queryKey: progressKeys.goals(user.id, detail.lessonId), exact: true })
       // Session rows are immutable. Drop the list cache so the next visit starts with one fresh page.
       client.removeQueries({ queryKey: progressKeys.sessions(user.id), exact: true, type: 'inactive' })
