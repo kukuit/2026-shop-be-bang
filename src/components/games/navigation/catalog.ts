@@ -12,6 +12,9 @@ export function getSubjectItems(gradeSlug: 'lop-1' | 'lop-2') {
 }
 
 export function getMathLessonItems(gradeSlug: 'lop-1' | 'lop-2') {
+  if (gradeSlug === 'lop-2') return Array.from({ length: 10 }, (_, index) => ({
+    title: `Bài ${index + 1}`, href: `/game/lop-2/toan/bai-${index + 1}`,
+  }))
   return [
     { title: 'Bài 1', href: `/game/${gradeSlug}/toan/bai-1` },
     { title: 'Bài 2', href: `/game/${gradeSlug}/toan/bai-2` },

@@ -12,10 +12,11 @@ export async function GET(request: Request) {
   if (!user) return NextResponse.json({ message: 'Authentication required.' }, { status: 401, headers })
   const params = new URL(request.url).searchParams
   const subject = params.get('subject') ?? ''
-  if (params.get('grade') !== 'lop-1' || !isMapSubject(subject))
+  const grade = params.get('grade')
+  if ((grade !== 'lop-1' && grade !== 'lop-2') || !isMapSubject(subject) || (grade === 'lop-2' && subject !== 'toan'))
     return NextResponse.json({ message: 'Invalid map.' }, { status: 400, headers })
   try {
-    return NextResponse.json({ userId: user.id, items: await getLessonMapProgress(user.id, subject) }, { headers })
+    return NextResponse.json({ userId: user.id, items: await getLessonMapProgress(user.id, subject, grade) }, { headers })
   } catch (error) {
     console.error('[LessonMap] Could not load progress', error)
     return NextResponse.json({ message: 'Could not load progress.' }, { status: 500, headers })
