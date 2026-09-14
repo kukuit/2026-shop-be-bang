@@ -8,7 +8,7 @@ module.exports = function createLoader(mocks = {}) {
   const root = path.resolve(__dirname, '../..')
   function load(filename) {
     filename = path.resolve(root, filename)
-    if (!path.extname(filename)) filename += '.ts'
+    if (!path.extname(filename)) filename += fs.existsSync(filename + '.ts') ? '.ts' : '.tsx'
     const alias = '@/' + path.relative(path.join(root, 'src'), filename).replace(/\\/g, '/').replace(/\.tsx?$/, '')
     if (alias in mocks) return mocks[alias]
     if (cache.has(filename)) return cache.get(filename).exports

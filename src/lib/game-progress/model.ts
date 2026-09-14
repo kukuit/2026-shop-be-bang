@@ -42,6 +42,17 @@ export type GoalProgress = Counts & {
 }
 export type LessonGoalProgress = Counts & { userId: string; lessonId: string; goals: GoalProgress[] }
 export type LegacyGoalCounts = Partial<Pick<Counts, 'correct' | 'wrong' | 'attempts'>>
+export type SubjectOverview = SubjectProgress & {
+  weakestGoal: { title: string; accuracy: number; lessonId: string; source: 'recent' | 'lifetime' } | null
+  weakGoals: { id: string; title: string; accuracy: number; lessonId: string; source: 'recent' | 'lifetime' }[]
+  hasGoalData: boolean
+}
+
+export function currentGoalAccuracy(lifetime: LegacyGoalCounts, recent: Counts) {
+  return recent.attempts >= 5
+    ? { accuracy: recent.accuracy, source: 'recent' as const }
+    : { accuracy: accuracyOf(lifetime.correct ?? 0, (lifetime.correct ?? 0) + (lifetime.wrong ?? 0)), source: 'lifetime' as const }
+}
 
 // Input is newest first. Keep lifetime counters separate from current assessment.
 export function recentGoalProgress(answers: boolean[]) {

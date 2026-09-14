@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { requireGameUser } from '@/lib/auth/current-user'
 import { getSubjectLessons, isSubjectId } from '@/lib/game-progress/config'
 import { isValidGrade } from '@/lib/game-profile'
+import { getSubjectOverview } from '@/lib/game-progress/service'
 import { getLessonGoalProgress, getSessionDetail, getSessionPage, getSubjectProgress, InvalidCursorError } from '@/lib/game-progress/service'
 
 export const runtime = 'nodejs'
@@ -27,6 +28,7 @@ export async function GET(request: Request) {
     const subject = params.get('subject') ?? ''
     if (!isValidGrade(grade) || !isSubjectId(subject)) return json({ message: 'Lớp hoặc môn không hợp lệ.' }, 400)
     if (resource === 'subject') return json(await getSubjectProgress(userId, grade, subject))
+    if (resource === 'overview') return json(await getSubjectOverview(userId, grade, subject))
     if (resource === 'goals') {
       const lessonId = params.get('lessonId') ?? ''
       if (!getSubjectLessons(grade, subject).some(lesson => lesson.lessonId === lessonId))
