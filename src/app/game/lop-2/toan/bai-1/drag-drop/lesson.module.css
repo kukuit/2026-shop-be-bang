@@ -1,0 +1,6 @@
+.lesson { width: 100%; height: 100%; }
+.lesson [class*='answerTray'] { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+.lesson [class*='animals'] span { font-size: 24px; }
+.lesson [data-answer-tile] { font-size: clamp(14px, 3.8cqw, 20px); padding: 4px; line-height: 1.15; overflow-wrap: anywhere; }
+.lesson [data-target-id] > div:last-child { min-width: 110px; width: auto; max-width: 65%; padding: 6px; height: auto; min-height: 64px; }
+.lesson [data-target-id] > div:last-child span { font-size: 18px; line-height: 1.2; overflow-wrap: anywhere; }

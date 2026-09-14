@@ -3,5 +3,10 @@ import GameNavigationGrid from '@/components/games/navigation/GameNavigationGrid
 import { getSubjectItems } from '@/components/games/navigation/catalog'
 
 export default function GradeTwoPage() {
-  return <><GameAuthHeader /><GameNavigationGrid title="Lớp 2" breadcrumbs={[{ label: 'Game', href: '/game' }, { label: 'Lớp 2' }]} items={getSubjectItems('lop-2')} /></>
+  const images = ['toan-square.png', 'tieng-viet-square.png', 'tieng-anh-square.png']
+  const items = getSubjectItems('lop-2').map((item, index) => ({
+    ...item,
+    imageSrc: `/games/lessons/lop-1/images/optimize/${images[index]}`,
+  }))
+  return <><GameAuthHeader /><GameNavigationGrid breadcrumbs={[{ label: 'Game', href: '/game' }, { label: 'Lớp 2' }]} items={items} /></>
 }

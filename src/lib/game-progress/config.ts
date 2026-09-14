@@ -2,6 +2,7 @@ import { PROGRESS_SUBJECTS } from '@/lib/chat/learning-progress'
 import { getProgressLessons, isMapSubject, type MapSubject } from '@/components/games/lesson-map/progress-config'
 import type { ProgressLesson } from '@/components/games/lesson-map/progress'
 import { LESSON_CATALOG } from '@/components/games/general/tracking/lesson-catalog'
+import { TOAN_2_MATH_LESSONS } from '@/app/game/lop-2/toan/bai-1/lesson'
 import type { GameProfile } from '@/lib/game-profile'
 
 export type SubjectId = MapSubject
@@ -13,6 +14,7 @@ export const getActiveProgressGrade = (profile: Pick<GameProfile, 'activeGrade' 
   profile.activeGrade ?? profile.primaryGrade ?? 1
 
 export function getSubjectLessons(grade: number, subject: SubjectId): ProgressLesson[] {
+  if (grade === 2 && subject === 'toan') return TOAN_2_MATH_LESSONS
   // The full maps currently exist for grade 1 only. Never substitute these for another grade.
   if (grade === 1) return getProgressLessons(subject).sort((a, b) => a.id - b.id)
   return Object.values(LESSON_CATALOG)

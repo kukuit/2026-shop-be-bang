@@ -2,10 +2,10 @@ import 'server-only'
 import { getAdminDb } from './firebaseAdmin'
 import { userGameSessions } from './gameTrackingPaths'
 import { buildLessonMapItems, type CompletedGame } from '@/components/games/lesson-map/progress'
-import { getProgressLessons, type MapSubject } from '@/components/games/lesson-map/progress-config'
+import { getProgressLessons, type MapSubject, type MapGrade } from '@/components/games/lesson-map/progress-config'
 
-export async function getLessonMapProgress(userId: string, subject: MapSubject) {
-  const lessons = getProgressLessons(subject)
+export async function getLessonMapProgress(userId: string, subject: MapSubject, grade: MapGrade = 'lop-1') {
+  const lessons = getProgressLessons(subject, grade)
   const lessonIds = new Set(lessons.map(lesson => lesson.lessonId))
   // Query by user alone to support legacy documents without grade/subject fields
   // and avoid requiring a new composite Firestore index.
