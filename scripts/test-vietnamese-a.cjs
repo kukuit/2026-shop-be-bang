@@ -126,6 +126,17 @@ async function main() {
       const answers = q.answers ? Object.values(q.answers) : [q.answer ?? q.correctAnswer]
       assert.ok(answers.every(answer => typeof answer === 'number' && answer >= 0 && answer <= 5))
       assert.ok(!q.voiceFallback)
+      if (config === math[0]) {
+        if (q.answer === 0) assert.deepEqual(q.presentation, { type: 'generic', prompt: '0' })
+        else {
+          assert.equal(q.presentation.type, 'recognizeNumber')
+          assert.equal(q.presentation.number, q.answer)
+          assert.ok(['🍎', '🐟', '⭐', '🐥', '🍓', '🌸'].includes(q.presentation.icon))
+        }
+        assert.equal(config.questionLayout, undefined)
+        assert.equal(q.voiceSequence, undefined)
+        assert.deepEqual([...q.options].sort(), [0, 1, 2, 3, 4, 5])
+      }
       const goals = q.learningKeys ? Object.values(q.learningKeys) : [q.learningKey]
       assert.ok(goals.every(goal => isLearningKeyForLesson('toan-1-bai-1', goal)))
     }

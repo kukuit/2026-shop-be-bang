@@ -12,6 +12,7 @@ import type {
 
 const VALUES = [0, 1, 2, 3, 4, 5] as const
 const TOTAL_ROUNDS = 10
+const COUNT_ICONS = ['🍎', '🐟', '⭐', '🐥', '🍓', '🌸'] as const
 
 const shuffle = <T,>(items: readonly T[]) => {
   const result = [...items]
@@ -27,6 +28,9 @@ const createQuestion = (answer: number): MathQuestion => ({
   answer,
   options: shuffle(VALUES),
   learningKey: getRecognizeNumberKey(answer),
+  presentation: answer === 0
+    ? { type: 'generic', prompt: '0' }
+    : { type: 'recognizeNumber', number: answer, icon: COUNT_ICONS[Math.floor(Math.random() * COUNT_ICONS.length)] },
 })
 
 const createRandomQuestions = () => {

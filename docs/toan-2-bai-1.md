@@ -49,7 +49,11 @@ progress API. Its reserved rounds sample fresh tasks from weak goals; remaining
 rounds cycle through shuffled supported goals. Normal sessions cover every
 supported goal, with counts differing by at most one.
 
-Dynamic Vietnamese instructions use the existing `voiceFallback` TTS path.
+Bubble-shooter uses the shared recorded math voice sequences in
+`public/games/general/voices/toan/`, with a replay button beside the question.
+See `docs/math-voices.md` for the recording inventory and reuse instructions.
+Missing recordings fall back to TTS per segment. Other games' dynamic
+Vietnamese instructions use the existing `voiceFallback` TTS path.
 Number-to-reading questions ask the child to read the displayed number without
 speaking the matching answer. Other voices state the task without its solution.
 Shared intro, feedback, completion voices, scoring and session persistence are

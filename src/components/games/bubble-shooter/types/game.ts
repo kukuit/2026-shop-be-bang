@@ -13,16 +13,18 @@ export interface MathQuestion {
   instructionVoice?: string
   voiceFallback?: { instruction?: string; target?: string }
   voice?: string
+  voiceSequence?: Array<{ src: string; text: string; playbackRate?: number; overlapNext?: number }>
   images?: import('../../general/game-image').GameImages
   presentation?:
     | { type: 'completeQuantity'; startNumber: number; targetNumber: number }
-    | { type: 'recognizeNumber'; number: number }
+    | { type: 'recognizeNumber'; number: number; icon?: string }
     | { type: 'fitToPanel' }
     | { type: 'generic'; prompt: string }
     | { type: 'voice'; prompt?: string }
 }
 
 export interface BubbleShooterGameConfig {
+  questionLayout?: { panelWidth: number; panelHeight?: number; fontFamily: string }
   wolfWrongAnswersOnly?: boolean
   id: string
   title: string
