@@ -6,6 +6,7 @@ import type { RacingGameConfig, RacingQuestion } from '@/components/games/racing
 import type { DragDropGameConfig, DragDropLevel } from '@/components/games/drag-drop/types'
 import { GAME_GOALS, generateQuestionSet, readNumber, shuffle, type MathGame, type MathReviewQuestion } from './content'
 import { TOAN_2_BAI_1 } from './lesson'
+import { createMathVoiceSequence } from '@/components/games/general/math-voice'
 
 const lessonId = TOAN_2_BAI_1.lessonId
 export async function loadMathQuestions(game: MathGame) {
@@ -17,9 +18,22 @@ export async function loadMathQuestions(game: MathGame) {
   return generateQuestionSet(game, { weakTargets, adaptiveCount: ADAPTIVE_ENABLED ? Math.round(10 * ADAPTIVE_RATIO) : 0 })
 }
 const voice = (q: MathReviewQuestion) => ({ voiceFallback: { instruction: q.voiceText } })
+const bubblePrompt = (q: MathReviewQuestion): string => {
+  const n = q.number
+  switch (q.questionType) {
+    case 'READ_WRITE': return readNumber(n)
+    case 'COMPOSE': return `${Math.floor(n / 10)} chục ${n % 10} đơn vị`
+    case 'TENS_ONES': return `${n}: mấy ${q.variant === 'TENS' ? 'chục' : 'đơn vị'}?`
+    case 'COMPARE': return q.variant === 'BETWEEN' ? `${n} < ? < ${n + 10}`
+      : q.variant === 'GT' ? `Số lớn hơn ${n}` : `Số bé hơn ${n}`
+    case 'ORDER': return q.variant === 'MAX' ? 'Số lớn nhất' : 'Số bé nhất'
+    default: return q.prompt
+  }
+}
 export const toBubble = (q: MathReviewQuestion): MathQuestion => ({
-  id: q.id, text: q.prompt, answer: q.answer, options: q.options, learningKey: q.goalKey,
-  inputMode: 'text', answerMode: 'select-text', ...voice(q), presentation: { type: 'generic', prompt: q.prompt },
+  voiceSequence: createMathVoiceSequence(q.voiceText),
+  id: q.id, text: bubblePrompt(q), answer: q.answer, options: q.options, learningKey: q.goalKey,
+  inputMode: 'text', answerMode: 'select-text', ...voice(q), presentation: { type: 'generic', prompt: bubblePrompt(q) },
 })
 export const toGold = (q: MathReviewQuestion): GoldMinerQuestion => ({
   id: q.id, objectType: 'star', count: 0,
@@ -34,14 +48,14 @@ export const toRacing = (q: MathReviewQuestion): RacingQuestion => ({
   inputMode: 'text', answerMode: 'select-text', ...voice(q),
 })
 export function toDrag(q: MathReviewQuestion, index: number): DragDropLevel {
-  const base = { id: index + 1, questionId: q.id, type: 'count' as const,
+  const base = { id: index + 1, questionId: q.id, type: 'count' as const, voiceSequence: createMathVoiceSequence(q.voiceText),
     title: q.prompt, instruction: 'Kéo đáp án vào ô trống', ...voice(q) }
   if (q.questionType === 'FORM') {
     const tens = String(Math.floor(q.number / 10)), ones = String(q.number % 10)
-    const extra = shuffle(Array.from({ length: 10 }, (_, n) => String(n)).filter(v => v !== tens && v !== ones))[0]
+    const extra = shuffle(Array.from({ length: 10 }, (_, n) => String(n)).filter(v => v !== tens && v !== ones)).slice(0, 4)
     return { ...base,
       groups: [{ id: 'tens', icon: 'Chục', count: 1, label: 'Chục' }, { id: 'ones', icon: 'Đơn vị', count: 1, label: 'Đơn vị' }],
-      answers: { tens, ones }, answerDomain: shuffle([tens, ones, extra]),
+      answers: { tens, ones }, answerDomain: shuffle([tens, ones, ...extra]),
       learningKeys: { tens: q.goalKey, ones: q.goalKey },
       inputModes: { tens: 'text', ones: 'text' }, answerModes: { tens: 'drag-text', ones: 'drag-text' },
     }
@@ -54,6 +68,7 @@ export function toDrag(q: MathReviewQuestion, index: number): DragDropLevel {
 }
 const common = { lessonId, totalRounds: 10, answerDomain: [] }
 export const BUBBLE_CONFIG: BubbleShooterGameConfig = {
+  questionLayout: { panelWidth: 672, fontFamily: 'Arial, Helvetica, sans-serif' },
   id: `${lessonId}-bubble`, title: TOAN_2_BAI_1.title, totalRounds: 10,
   tracking: { lessonId, gameId: GAME_IDS.BUBBLE_SHOOTER },
   loadQuestions: async () => (await loadMathQuestions('bubble-shooter')).map(toBubble),
@@ -67,6 +82,7 @@ export const RACING_CONFIG: RacingGameConfig = {
   loadQuestions: async () => (await loadMathQuestions('racing')).map(toRacing),
 }
 export const DRAG_CONFIG: DragDropGameConfig = {
+  showQuestionVoiceButton: true,
   ...common, gameId: GAME_IDS.DRAG_DROP, supportedTargets: GAME_GOALS['drag-drop'],
   answerTrayColumns: 'auto', answerNoun: 'đáp án', awaitLevelReload: true,
   // Placeholder only; the engine waits for loadLevels before allowing play.

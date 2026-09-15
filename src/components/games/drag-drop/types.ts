@@ -14,6 +14,7 @@ export type DragDropLevel = {
   title: string
   instruction: string
   instructionVoice?: string
+  voiceSequence?: Array<{ src: string; text: string; playbackRate?: number; overlapNext?: number }>
   voiceFallback?: { instruction?: string; target?: string }
   spokenInstruction?: string
   voice?: string
@@ -37,6 +38,7 @@ export type DragDropGameConfig = {
   loadLevels: (previous?: DragDropLevel[]) => DragDropLevel[] | Promise<DragDropLevel[]>
   introVoice?: string
   hideQuestionText?: boolean
+  showQuestionVoiceButton?: boolean
   answerTrayColumns?: 'auto'
   answerNoun?: string
   awaitLevelReload?: boolean

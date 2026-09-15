@@ -43,7 +43,7 @@ const domain = Array.from({ length: 101 }, (_, n) => n)
 /** Parameterized bank: identities describe the task, never the option order. */
 export function createQuestionPool(game: MathGame, random = Math.random): MathReviewQuestion[] {
   const pool: MathReviewQuestion[] = []
-  const size = game === 'racing' ? 3 : 4
+  const size = game === 'racing' ? 3 : game === 'drag-drop' ? 6 : 4
   function add(goalKey: MathGoal, type: string, n: number, variant: string, prompt: string, voiceText: string,
     answer: number, accepts = (v: number) => v === answer, format: (v: number) => string = String, preferred: number[] = []) {
     if (!GAME_GOALS[game].includes(goalKey)) return

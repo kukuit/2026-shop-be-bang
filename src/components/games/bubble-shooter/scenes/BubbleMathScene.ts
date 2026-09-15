@@ -19,7 +19,6 @@ const QUESTION_Y = 170
 const QUESTION_PANEL_WIDTH = 570
 const QUESTION_PANEL_HEIGHT = 185
 const QUESTION_SAFE_WIDTH = 510
-const SHOOTING_AREA_TOP = QUESTION_Y + QUESTION_PANEL_HEIGHT / 2 + 16
 type RoundState = 'PLAYING' | 'CORRECT' | 'SHOW_RESULT' | 'ROUND_TRANSITION' | 'NEW_QUESTION' | 'COMPLETE'
 
 export class BubbleMathScene extends Phaser.Scene {
@@ -31,6 +30,7 @@ export class BubbleMathScene extends Phaser.Scene {
   private projectiles!: Phaser.Physics.Arcade.Group
   private shooter!: Shooter
   private questionText!: Phaser.GameObjects.Container
+  private panelVoiceButton?: Phaser.GameObjects.Container
   private scoreText!: Phaser.GameObjects.Text
   private feedbackText!: Phaser.GameObjects.Text
   private progressText!: Phaser.GameObjects.Text
@@ -69,8 +69,11 @@ export class BubbleMathScene extends Phaser.Scene {
     return this.lesson.totalRounds
   }
 
+  private get questionY() {
+    return QUESTION_Y + (this.lesson.questionLayout ? 12 : 0)
+  }
+
   preload() {
-    preloadVoiceIcon(this, '/games/bubble-shooter/images/optimize/icon_voice.png')
     preloadGameImages(this, this.lesson.images)
     this.load.on('progress', (progress: number) => {
       this.game.events.emit('bubble-shooter:load-progress', progress)
@@ -80,7 +83,8 @@ export class BubbleMathScene extends Phaser.Scene {
     this.load.image('player-avatar-preload', '/games/general/images/optimize/player-avatar.png')
     this.load.image('cannon-base', '/games/bubble-shooter/images/optimize/cannon-base.png')
     this.load.image('cannon-barrel', '/games/bubble-shooter/images/optimize/cannon-barrel.png')
-    this.load.image('question-panel', '/games/bubble-shooter/images/optimize/question-panel.png')
+    this.load.image('question-panel', '/games/bubble-shooter/images/question-panel-shared.png')
+    this.load.image('panel-voice-speaker', '/games/bubble-shooter/images/voice-speaker-shared.png')
     this.load.image('balloon', '/games/bubble-shooter/images/optimize/balloon.png')
     this.load.image('cappy', '/games/bubble-shooter/images/optimize/cappy.png')
     this.load.spritesheet('ammo', '/games/bubble-shooter/images/optimize/ammo.png', {
@@ -121,11 +125,11 @@ export class BubbleMathScene extends Phaser.Scene {
     this.bubbles = this.add.group({ runChildUpdate: false })
     this.projectiles = this.physics.add.group({ maxSize: 8, allowGravity: false })
 
-    this.add.image(WIDTH / 2, QUESTION_Y, 'question-panel')
-      .setDisplaySize(QUESTION_PANEL_WIDTH, QUESTION_PANEL_HEIGHT)
+    this.add.image(WIDTH / 2, this.questionY, 'question-panel')
+      .setDisplaySize(this.lesson.questionLayout?.panelWidth ?? QUESTION_PANEL_WIDTH, this.lesson.questionLayout?.panelHeight ?? QUESTION_PANEL_HEIGHT)
       .setDepth(9)
-    this.questionText = this.add.container(WIDTH / 2, QUESTION_Y).setDepth(10)
-    this.feedbackText = this.add.text(WIDTH / 2, QUESTION_Y + 120, '', {
+    this.questionText = this.add.container(WIDTH / 2, this.questionY).setDepth(10)
+    this.feedbackText = this.add.text(WIDTH / 2, this.questionY + 120, '', {
       fontFamily: 'Arial, sans-serif', fontSize: '34px', fontStyle: 'bold', color: '#047857',
       stroke: '#ffffff', strokeThickness: 7,
     }).setOrigin(0.5).setDepth(30)
@@ -548,30 +552,16 @@ export class BubbleMathScene extends Phaser.Scene {
   private renderQuestion(question: MathQuestion, showCheck = false) {
     if (!showCheck) playQuestionVoice(this, question)
     this.questionText.off('pointerdown').disableInteractive()
-    if (question.voice && !showCheck) {
-      this.questionText.setSize(600, 100).setInteractive({ useHandCursor: true })
-        .off('pointerdown').on('pointerdown', () => {
-          if (this.roundState === 'PLAYING') playQuestionVoice(this, question)
-        })
-    }
     this.questionText.removeAll(true)
+    this.renderPanelVoiceButton(question, showCheck)
     if (question.presentation?.type === 'voice' || (question.inputMode === 'audio' && question.voice)) {
-      this.questionText.disableInteractive()
-      const voiceButton = createVoiceButton(this, () => {
-        if (this.roundState === 'PLAYING') playQuestionVoice(this, question)
-      })
       const word = question.presentation?.type === 'voice' ? question.presentation.prompt : undefined
-      if (word) {
-        const label = this.add.text(65, 0, word, {
-          fontFamily: 'Arial Black, Arial, sans-serif', fontSize: '58px',
-          fontStyle: 'bold', color: '#2563eb', stroke: '#ffffff', strokeThickness: 4,
-        }).setOrigin(0, 0.5)
-        const center = (label.x + label.width - 53) / 2
-        voiceButton.x = -center
-        label.x -= center
-        this.questionText.add(label)
-      }
-      this.questionText.add(voiceButton)
+      const label = this.add.text(0, -8, word || 'Nghe và chọn', {
+        fontFamily: 'Arial, sans-serif', fontSize: '46px', fontStyle: 'bold',
+        color: '#2563eb', stroke: '#ffffff', strokeThickness: 3,
+      }).setOrigin(0.5)
+      label.setScale(Math.min(1, QUESTION_SAFE_WIDTH / Math.max(1, label.width)))
+      this.questionText.add(label)
       return
     }
     const picture = createGameImage(this, this.lesson.images?.[question.text], 0, 0, 150, 100)
@@ -589,6 +579,84 @@ export class BubbleMathScene extends Phaser.Scene {
     const displayText = question.presentation?.type === 'generic'
       ? question.presentation.prompt
       : showCheck ? question.text.replace('?', `${question.answer}`) : question.text
+    if (this.lesson.questionLayout) {
+      // Measure the whole question before coloring individual words, keeping
+      // the same font metrics so Vietnamese accents do not shift the baseline.
+      const panelWidth = this.lesson.questionLayout.panelWidth
+      const panelHeight = this.lesson.questionLayout.panelHeight ?? QUESTION_PANEL_HEIGHT
+      const safeWidth = panelWidth - 128
+      const textCenterY = -8
+      const safeHeight = panelHeight - 88
+      const curveHeight = 5
+      const curveInset = 4
+      const textLength = displayText.trim().length
+      const preferredSize = textLength <= 16 ? 56 : textLength <= 24 ? 40 : 32
+      const label = this.add.text(0, 0, displayText.normalize('NFC'), {
+        fontFamily: this.lesson.questionLayout.fontFamily,
+        fontSize: `${preferredSize}px`, fontStyle: 'bold', color: '#1e40af',
+        stroke: '#ffffff', strokeThickness: 3,
+        align: 'center', padding: { x: 4, y: 2 },
+        wordWrap: { width: safeWidth - 8, useAdvancedWrap: true },
+      }).setOrigin(0.5).setResolution(2)
+      // Leave room for accents, panel decoration, and the success indicator.
+      // The available height, not the starting font size, limits the visible
+      // text. Binary search avoids hundreds of canvas redraws for large caps.
+      let minSize = 12
+      let maxSize = preferredSize
+      let fittedSize = minSize
+      while (minSize <= maxSize) {
+        const size = Math.floor((minSize + maxSize) / 2)
+        label.setFontSize(size)
+        if (label.width <= safeWidth - curveInset && label.height <= safeHeight - curveInset) {
+          fittedSize = size
+          minSize = size + 1
+        } else maxSize = size - 1
+      }
+      label.setFontSize(fittedSize)
+      const palette = ['#0891b2', '#16b85b', '#0968ef', '#a443ee', '#ed940b']
+      const curvedText = this.add.container(0, 0)
+      const lines = label.getWrappedText()
+      const metrics = label.style.getTextMetrics()
+      const lineHeight = metrics.fontSize + label.lineSpacing
+      let wordIndex = 0
+      lines.forEach((line, lineIndex) => {
+        const words = line.split(/\s+/).filter(Boolean)
+        const spaceWidth = label.context.measureText(' ').width
+        const wordLabels = words.map(word => this.add.text(0, 0, word, {
+          fontFamily: this.lesson.questionLayout!.fontFamily,
+          fontSize: label.style.fontSize, fontStyle: 'bold', metrics,
+          stroke: '#ffffff', strokeThickness: 3,
+          color: word === '?' ? '#ef2f36' : word === '✓' ? '#22c55e' : palette[wordIndex++ % palette.length],
+          padding: { top: 2, bottom: 2 },
+        }).setOrigin(0.5).setResolution(2))
+        const rowWidth = wordLabels.reduce((sum, word) => sum + word.width, 0)
+          + spaceWidth * Math.max(0, words.length - 1)
+        const rowScale = Math.min(1, (safeWidth - curveInset) / Math.max(1, rowWidth))
+        let x = -rowWidth * rowScale / 2
+        wordLabels.forEach(word => {
+          const wordCenter = x + word.width * rowScale / 2
+          const relativeX = wordCenter / Math.max(1, rowWidth * rowScale / 2)
+          word.setPosition(wordCenter, (lineIndex - (lines.length - 1) / 2) * lineHeight + curveHeight * relativeX ** 2)
+            .setAngle(relativeX * 2)
+            .setScale(rowScale)
+          x += (word.width + spaceWidth) * rowScale
+          curvedText.add(word)
+        })
+      })
+      // Include rotated corners, accents and outline in the final fit and center.
+      // This also keeps multiline questions separate from the replay button.
+      const bounds = curvedText.getBounds()
+      const fit = Math.min(1, safeWidth / Math.max(1, bounds.width), safeHeight / Math.max(1, bounds.height))
+      curvedText.setScale(fit).setPosition(-bounds.centerX * fit, textCenterY - bounds.centerY * fit)
+      this.questionText.add(curvedText)
+      label.destroy()
+      if (showCheck) {
+        this.questionText.add(this.add.text(0, panelHeight / 2 - 36, '✓', {
+          fontFamily: 'Arial, sans-serif', fontSize: '28px', color: '#15803d',
+        }).setOrigin(0.5).setResolution(2))
+      }
+      return
+    }
     const tokens = displayText.split(/\s+/).filter(Boolean)
     const palette = Phaser.Utils.Array.Shuffle([
       '#2563eb', // xanh dương
@@ -638,23 +706,48 @@ export class BubbleMathScene extends Phaser.Scene {
     }
   }
 
+  private renderPanelVoiceButton(question: MathQuestion, showCheck: boolean) {
+    this.panelVoiceButton?.destroy()
+    const width = this.lesson.questionLayout?.panelWidth ?? QUESTION_PANEL_WIDTH
+    const height = this.lesson.questionLayout?.panelHeight ?? QUESTION_PANEL_HEIGHT
+    const available = Boolean(question.voiceSequence?.length || question.instructionVoice || question.voice
+      || question.voiceFallback?.instruction || question.voiceFallback?.target)
+    const icon = this.add.image(0, 0, 'panel-voice-speaker')
+    const size = Math.min(48, height * 0.19)
+    icon.setDisplaySize(size, size).setAlpha(available ? 1 : 0.28)
+    if (!available) icon.setTint(0x999999)
+    const button = this.add.container(WIDTH / 2 + width * 0.418, this.questionY + height * 0.278, [icon])
+      .setSize(44, 44).setDepth(11)
+    if (available && !showCheck) {
+      button.setInteractive({ useHandCursor: true }).on('pointerdown', () => {
+        if (this.gameStarted && !this.isPauseMenuOpen && this.roundState === 'PLAYING') playQuestionVoice(this, question)
+      })
+    }
+    this.panelVoiceButton = button
+  }
   private renderRecognizeNumberQuestion(question: MathQuestion, showCheck: boolean) {
     const presentation = question.presentation
     if (!presentation || presentation.type !== 'recognizeNumber') return
     const number = presentation.number
+    const centerX = 0
+    const safeWidth = QUESTION_SAFE_WIDTH
     const createObjectRow = (quantity: number, y: number) => {
-      const label = this.add.text(0, y, Array.from({ length: quantity }, () => '⭐').join('  '), {
-        fontFamily: 'Arial, sans-serif', fontSize: '39px', fontStyle: 'bold',
-        color: '#f59e0b', stroke: '#ffffff', strokeThickness: 2,
-      }).setOrigin(0.5)
-      label.setScale(Math.min(1, QUESTION_SAFE_WIDTH / label.width))
-      this.questionText.add(label)
+      // Separate, equally sized cells keep different emoji centered consistently.
+      const spacing = Math.min(68, safeWidth / Math.max(1, quantity))
+      for (let i = 0; i < quantity; i++) {
+        const label = this.add.text(centerX + (i - (quantity - 1) / 2) * spacing, y, presentation.icon ?? '⭐', {
+          fontFamily: 'Arial, sans-serif', fontSize: '46px',
+          padding: { y: 4 },
+        }).setOrigin(0.5).setResolution(2)
+        label.setScale(Math.min(1, (spacing - 8) / label.width, 56 / label.height))
+        this.questionText.add(label)
+      }
     }
 
-    const firstRow = Math.ceil(number / 2)
-    createObjectRow(firstRow, -29)
-    createObjectRow(number - firstRow, 29)
-
+    const rows = Math.ceil(number / 3)
+    for (let row = 0; row < rows; row++) {
+      createObjectRow(Math.min(3, number - row * 3), (row - (rows - 1) / 2) * 60)
+    }
     if (showCheck) {
       const check = this.add.text(250, 0, '✓', {
         fontFamily: 'Arial Black, Arial, sans-serif', fontSize: '36px', fontStyle: 'bold',
@@ -718,7 +811,7 @@ export class BubbleMathScene extends Phaser.Scene {
 
   private isInShootingArea(pointer: Phaser.Input.Pointer) {
     return pointer.worldX >= 0 && pointer.worldX <= WIDTH
-      && pointer.worldY > SHOOTING_AREA_TOP && pointer.worldY < HUD_TOP
+      && pointer.worldY > this.questionY + (this.lesson.questionLayout?.panelHeight ?? QUESTION_PANEL_HEIGHT) / 2 + 16 && pointer.worldY < HUD_TOP
   }
 
   private beginAim(pointer: Phaser.Input.Pointer) {
@@ -903,7 +996,7 @@ export class BubbleMathScene extends Phaser.Scene {
     this.updateLevelHud()
     this.animateProgress()
     this.renderQuestion(this.currentQuestion)
-    this.questionText.setPosition(WIDTH / 2 + 90, QUESTION_Y).setAlpha(0).setScale(0.9)
+    this.questionText.setPosition(WIDTH / 2 + 90, this.questionY).setAlpha(0).setScale(0.9)
     this.tweens.add({
       targets: this.questionText,
       x: WIDTH / 2,
@@ -1086,4 +1179,3 @@ export class BubbleMathScene extends Phaser.Scene {
     this.game.events.off('game-ui:start', this.startGameplay, this)
   }
 }
-import { createVoiceButton, preloadVoiceIcon } from '../../general/createVoiceButton'

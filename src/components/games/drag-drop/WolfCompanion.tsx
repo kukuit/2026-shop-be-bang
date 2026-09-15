@@ -1,6 +1,7 @@
 'use client'
 
 import GameImageValue from '../general/GameImageValue'
+import FittedTileContent from './FittedTileContent'
 
 import Image from 'next/image'
 import { RefObject, useEffect, useRef, useState } from 'react'
@@ -68,6 +69,6 @@ export default function WolfCompanion({ active, round, correctValues, dragActive
     <span className={styles.frame}>
       <Image src="/games/drag-drop/images/optimize/wolf-thief-sprites.png" alt="" width={1536} height={1024} draggable={false} unoptimized />
     </span>
-    {stolenValue !== null && (state === 'CARRY' || state === 'LAUGH') && <span className={styles.stolenTile} style={{ backgroundColor: colorFor(stolenValue) }}><GameImageValue value={stolenValue} size={30} /></span>}
+    {stolenValue !== null && (state === 'CARRY' || state === 'LAUGH') && <span className={styles.stolenTile} style={{ backgroundColor: colorFor(stolenValue) }}><FittedTileContent><GameImageValue value={stolenValue} size={30} /></FittedTileContent></span>}
   </div>
 }

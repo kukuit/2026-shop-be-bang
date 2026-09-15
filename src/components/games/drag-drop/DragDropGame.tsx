@@ -14,6 +14,7 @@ import type { ReactNode } from 'react'
 import { QuestionVoicePlayer } from '../general/QuestionVoicePlayer'
 import CappyCompanion, { type CappyReaction } from './CappyCompanion'
 import WolfCompanion from './WolfCompanion'
+import FittedTileContent from './FittedTileContent'
 import { resolveIntroVoice } from '../general/intro-voice'
 
 type DragState = { value: DragAnswerValue; x: number; y: number; pointerId: number } | null
@@ -139,12 +140,15 @@ function ReadyDragDropGame({ config }: { config: DragDropGameConfig }) {
     return voices.channel.subscribe((busy) => questionVoiceRef.current?.setBlocked(!soundEnabled || gamePaused || busy))
   }, [soundEnabled, gamePaused, voices.channel])
 
+  const playLevelVoice = useCallback(() => {
+    if (level.voiceSequence?.length) questionVoiceRef.current?.playSequence(level.voiceSequence)
+    else questionVoiceRef.current?.play([level.instructionVoice, level.voice], level.voiceFallback)
+  }, [level])
+
   useEffect(() => {
-    if (gameStarted && !gameCompleted && !isTransitioning) {
-      questionVoiceRef.current?.play([level.instructionVoice, level.voice], level.voiceFallback)
-    }
+    if (gameStarted && !gameCompleted && !isTransitioning) playLevelVoice()
     return () => questionVoiceRef.current?.stop()
-  }, [gameStarted, gameCompleted, isTransitioning, level])
+  }, [gameStarted, gameCompleted, isTransitioning, playLevelVoice])
   const colorFor = useCallback((value: DragAnswerValue) => {
     const index = typeof value === 'number' ? Math.abs(value) : Array.from(value).reduce((sum, char) => sum + char.charCodeAt(0), 0)
     return NUMBER_COLORS[index % NUMBER_COLORS.length]
@@ -305,8 +309,8 @@ function ReadyDragDropGame({ config }: { config: DragDropGameConfig }) {
             <p>{level.instruction}</p>
           </div>
           <div className={styles.questionArea}>
-            {(level.instructionVoice || (level.spokenInstruction && canSpeak)) && <button type="button" className={styles.listenButton} onClick={() => level.instructionVoice ? questionVoiceRef.current?.play([level.instructionVoice, level.voice], level.voiceFallback) : speakInstruction()} disabled={!gameStarted || !soundEnabled || gamePaused || gameCompleted || isTransitioning} aria-label="Nghe hướng dẫn"><Volume2 size={28} aria-hidden="true" /></button>}
-            {level.groups && <CountGroups groups={level.groups} completed={completedTargets} wrongTarget={wrongTarget} correctTarget={correctTarget} voiceButton={level.voice && !Object.values(level.inputModes ?? {}).includes('text') ? <button type="button" disabled={!gameStarted || gamePaused || gameCompleted || isTransitioning} onClick={() => questionVoiceRef.current?.play([level.instructionVoice, level.voice], level.voiceFallback)} className="grid h-24 w-24 max-w-full shrink-0 place-items-center rounded-full border-[3px] border-sky-400 bg-sky-100 text-sky-700 active:scale-95 disabled:opacity-50" aria-label="Nghe lại"><Volume2 className="h-16 w-16" aria-hidden="true" /></button> : undefined} />}
+            {(level.instructionVoice || (level.spokenInstruction && canSpeak) || (config.showQuestionVoiceButton && (level.voice || level.voiceFallback?.instruction || level.voiceFallback?.target))) && <button type="button" className={styles.listenButton} onClick={() => level.instructionVoice || config.showQuestionVoiceButton ? playLevelVoice() : speakInstruction()} disabled={!gameStarted || !soundEnabled || gamePaused || gameCompleted || isTransitioning} aria-label="Nghe lại câu hỏi"><Volume2 size={28} aria-hidden="true" /></button>}
+            {level.groups && <CountGroups groups={level.groups} completed={completedTargets} wrongTarget={wrongTarget} correctTarget={correctTarget} voiceButton={level.voice && !Object.values(level.inputModes ?? {}).includes('text') ? <button type="button" disabled={!gameStarted || gamePaused || gameCompleted || isTransitioning} onClick={playLevelVoice} className="grid h-24 w-24 max-w-full shrink-0 place-items-center rounded-full border-[3px] border-sky-400 bg-sky-100 text-sky-700 active:scale-95 disabled:opacity-50" aria-label="Nghe lại"><Volume2 className="h-16 w-16" aria-hidden="true" /></button> : undefined} />}
             {level.sequence && <SequenceRow cells={level.sequence} completed={completedTargets} wrongTarget={wrongTarget} correctTarget={correctTarget} />}
           </div>
           <div ref={answerTrayRef} className={styles.answerTray} style={config.answerTrayColumns === 'auto' ? { gridTemplateColumns: `repeat(${displayedAnswers.length}, minmax(0, 1fr))`, fontFamily: 'Arial, sans-serif' } : config.images ? { gridTemplateColumns: 'repeat(4, minmax(0, 1fr))' } : undefined}>
@@ -318,7 +322,7 @@ function ReadyDragDropGame({ config }: { config: DragDropGameConfig }) {
         </div>
         <CappyCompanion active={gameStarted && !gamePaused} round={currentLevel} dragPosition={drag ? { x: drag.x, y: drag.y } : null} reaction={cappyReaction} celebrating={gameCompleted} finalRound={currentLevel === levels.length - 1} gameRef={gameAreaRef} trayRef={answerTrayRef} />
         <WolfCompanion active={gameStarted && !gamePaused && !isTransitioning && !gameCompleted && wolfRounds.has(currentLevel)} round={currentLevel} correctValues={wolfCorrectValues} dragActive={drag !== null} gameRef={gameAreaRef} trayRef={answerTrayRef} onSteal={handleWolfSteal} onLaugh={playWolfLaugh} answerDomain={answerDomain} colorFor={colorFor} />
-        {drag && <div className="pointer-events-none fixed z-[100] grid h-14 w-14 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-2xl border-[3px] border-white text-3xl font-black text-white shadow-2xl" style={{ left: drag.x, top: drag.y, backgroundColor: colorFor(drag.value), transform: 'translate(-50%, -50%) scale(1.08)' }}><GameImageValue value={drag.value} /></div>}
+        {drag && <div className="pointer-events-none fixed z-[100] grid h-14 w-14 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-2xl border-[3px] border-white text-3xl font-black text-white shadow-2xl" style={{ left: drag.x, top: drag.y, backgroundColor: colorFor(drag.value), transform: 'translate(-50%, -50%) scale(1.08)' }}><FittedTileContent><GameImageValue value={drag.value} /></FittedTileContent></div>}
         {floatingScore && <div key={floatingScore.id} className={`pointer-events-none fixed z-[110] text-xl font-black ${styles.floatingScore} ${floatingScore.correct ? 'text-emerald-600' : 'text-red-500'}`} style={{ left: floatingScore.x, top: floatingScore.y, textShadow: '0 2px 0 white, 0 -2px 0 white, 2px 0 0 white, -2px 0 0 white' }}>{floatingScore.value}</div>}
         {isTransitioning && !gameCompleted && <div className="pointer-events-none absolute inset-0 z-30" aria-hidden="true"><div className={styles.fireworks}>{Array.from({ length: 12 }, (_, index) => <span key={index} className={styles.fireworkParticle} />)}</div></div>}
         {gameCompleted && trackingTask && <GameCompletion score={score} trackingTask={trackingTask} onRestart={restart} />}

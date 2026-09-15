@@ -27,7 +27,7 @@ for (const game of Object.keys(GAME_GOALS)) {
   for (const q of pool) {
     assert.equal(q.numericOptions.filter(q.accepts).length, 1)
     assert.equal(q.options.filter(a => a === q.answer).length, 1)
-    assert.equal(new Set(q.options).size, game === 'racing' ? 3 : 4)
+    assert.equal(new Set(q.options).size, game === 'racing' ? 3 : game === 'drag-drop' ? 6 : 4)
     assert.ok(q.voiceText && q.prompt)
     assert.ok(catalog.isLearningKeyForLesson(q.lessonId, q.goalKey))
     if (q.questionType === 'COMPARE') {
@@ -47,7 +47,7 @@ for (const game of Object.keys(GAME_GOALS)) {
       if (q.questionType === 'FORM') {
         assert.equal(mapped.answers.tens + mapped.answers.ones, String(q.number))
         assert.equal(mapped.groups.length, 2)
-        assert.equal(new Set(mapped.answerDomain).size, 3)
+        assert.equal(new Set(mapped.answerDomain).size, 6)
       }
     } else assert.equal(mapped.learningKey, q.goalKey)
   }
@@ -70,7 +70,7 @@ for (const game of Object.keys(GAME_GOALS)) {
   }
   assert.equal(sets.size, 60)
   assert.ok(ids.size > 100)
-  assert.equal(positions.size, game === 'racing' ? 3 : 4)
+  assert.equal(positions.size, game === 'racing' ? 3 : game === 'drag-drop' ? 6 : 4)
   assert.ok(adaptiveWeak > normalWeak)
   console.log(`${game}: ${pool.length} question identities; 60 random + 60 adaptive sessions passed`)
 }
