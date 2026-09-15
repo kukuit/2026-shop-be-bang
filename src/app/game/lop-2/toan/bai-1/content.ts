@@ -8,15 +8,8 @@ export const GAME_GOALS: Record<MathGame, MathGoal[]> = {
   racing: ['TENS_ONES', 'COMPOSE_NUMBER', 'DECOMPOSE_NUMBER', 'COMPARE_NUMBERS_100', 'ORDER_NUMBERS_100'],
   'drag-drop': ['READ_WRITE_NUMBERS_100', 'TENS_ONES', 'COMPOSE_NUMBER', 'DECOMPOSE_NUMBER', 'ORDER_NUMBERS_100', 'FORM_TWO_DIGIT_NUMBERS'],
 }
-const digits = ['không', 'một', 'hai', 'ba', 'bốn', 'năm', 'sáu', 'bảy', 'tám', 'chín']
-export function readNumber(n: number): string {
-  if (!Number.isInteger(n) || n < 0 || n > 100) throw new RangeError('Expected a number from 0 to 100')
-  if (n === 100) return 'một trăm'
-  if (n < 10) return digits[n]
-  const tens = Math.floor(n / 10), ones = n % 10
-  const prefix = tens === 1 ? 'mười' : `${digits[tens]} mươi`
-  return prefix + (ones === 0 ? '' : ` ${ones === 5 ? 'lăm' : tens > 1 && ones === 1 ? 'mốt' : tens > 1 && ones === 4 ? 'tư' : digits[ones]}`)
-}
+import { readNumber } from '@/components/games/general/number-voice'
+export { readNumber } from '@/components/games/general/number-voice'
 export function shuffle<T>(items: readonly T[], random = Math.random): T[] {
   const result = [...items]
   for (let i = result.length - 1; i > 0; i--) {

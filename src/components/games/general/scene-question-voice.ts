@@ -4,7 +4,7 @@ import { QuestionVoicePlayer } from './QuestionVoicePlayer'
 
 const players = new WeakMap<Phaser.Scene, QuestionVoicePlayer>()
 
-export function playQuestionVoice(scene: Phaser.Scene, question: { voiceSequence?: Array<{ src: string; text: string; playbackRate?: number; overlapNext?: number }>; instructionVoice?: string; voice?: string; voiceFallback?: { instruction?: string; target?: string } }) {
+export function playQuestionVoice(scene: Phaser.Scene, question: { voiceSequence?: Array<{ src: string; text: string; playbackRate?: number }>; instructionVoice?: string; voice?: string; voiceFallback?: { instruction?: string; target?: string } }) {
   let player = players.get(scene)
   if (!player) {
     player = new QuestionVoicePlayer()
