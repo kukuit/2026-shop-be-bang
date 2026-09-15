@@ -70,26 +70,26 @@ assert.equal(played.at(-1).src, sequence[1].src)
 player.stop()
 console.log('34 recordings, numbers 0–100, all bubble-shooter and drag-drop questions, playback order/replay/pause/stop passed')
 
-async function testOverlap() {
-  assert.equal(sequence[0].overlapNext, undefined)
-  assert.equal(sequence[1].overlapNext, 0.15)
-  assert.equal(sequence[2].overlapNext, 0.15)
-  assert.equal(sequence[3].overlapNext, undefined)
+async function testSequentialNumbers() {
+  const { createNumberVoiceSequence } = load('src/components/games/general/number-voice.ts')
+  for (let n = 0; n <= 100; n++) {
+    assert.deepEqual(createNumberVoiceSequence(n), createMathVoiceSequence(readNumber(n)))
+  }
+  for (const n of [-1, 101, 1.5, NaN]) assert.throws(() => createNumberVoiceSequence(n), RangeError)
+  assert.ok(sequence.every(part => !('overlapNext' in part) && part.playbackRate === 1))
+  const numberSequence = createNumberVoiceSequence(36)
+  assert.deepEqual(numberSequence.map(part => path.basename(part.src)), ['ba.mp3', 'muoi-hang-chuc.mp3', 'sau.mp3'])
   const start = played.length
-  player.playSequence(sequence.slice(1))
+  player.playSequence(numberSequence)
   const first = played.at(-1)
   first.duration = 1
-  first.currentTime = 0.86
-  await new Promise(resolve => setTimeout(resolve, 50))
-  assert.equal(played.length, start + 2)
-  const second = played.at(-1)
+  first.currentTime = 0.99
+  await new Promise(resolve => setTimeout(resolve, 60))
+  assert.equal(played.length, start + 1, 'next word must wait for ended')
   first.onended()
-  assert.equal(played.length, start + 2, 'old ending must not skip another word')
-  player.setBlocked(true)
-  assert.equal(second.paused, true)
+  assert.equal(played.length, start + 2)
+  assert.equal(played.at(-1).src, numberSequence[1].src)
   player.stop()
-  assert.equal(second.onended, null)
-  player.setBlocked(false)
-  console.log('Number-only 150ms overlap, normal speed, old ending and cancellation passed')
+  console.log('Shared number module 0-100, normal speed and strictly sequential playback passed')
 }
-testOverlap().catch(error => { player.stop(); console.error(error); process.exitCode = 1 })
+testSequentialNumbers().catch(error => { player.stop(); console.error(error); process.exitCode = 1 })

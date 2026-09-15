@@ -2,8 +2,8 @@
 export class QuestionVoicePlayer {
   private audio?: HTMLAudioElement
   private activeAudio = new Set<HTMLAudioElement>()
-  private overlapTimer?: ReturnType<typeof setInterval>
-  private queue: Array<{ src?: string; text?: string; playbackRate?: number; overlapNext?: number }> = []
+
+  private queue: Array<{ src?: string; text?: string; playbackRate?: number }> = []
   private blocked = false
   private utterance?: SpeechSynthesisUtterance
   private speechText?: string
@@ -13,7 +13,7 @@ export class QuestionVoicePlayer {
     this.playSequence(sources.map((src, index) => ({ src, text: texts[index] })))
   }
 
-  playSequence(sequence: Array<{ src?: string; text?: string; playbackRate?: number; overlapNext?: number }>) {
+  playSequence(sequence: Array<{ src?: string; text?: string; playbackRate?: number }>) {
     this.stop()
     this.queue = sequence.filter(item => item.src || item.text)
     this.next()
@@ -37,7 +37,7 @@ export class QuestionVoicePlayer {
     this.queue = []
     this.speechText = undefined
     this.cancelSpeech()
-    this.clearOverlapTimer()
+
     for (const audio of Array.from(this.activeAudio)) {
       audio.onended = audio.onerror = null
       audio.pause()
@@ -48,17 +48,12 @@ export class QuestionVoicePlayer {
     this.audio = undefined
   }
 
-  private clearOverlapTimer() {
-    if (this.overlapTimer) clearInterval(this.overlapTimer)
-    this.overlapTimer = undefined
-  }
-
   private next() {
     if (this.blocked) return
     const item = this.queue.shift()
     if (!item) { this.audio = undefined; return }
-    this.clearOverlapTimer()
-    const { src, text, playbackRate = 1, overlapNext = 0 } = item
+
+    const { src, text, playbackRate = 1 } = item
     if (!src) { if (text) this.speak(text); return }
     const audio = new Audio(src)
     this.audio = audio
@@ -78,21 +73,12 @@ export class QuestionVoicePlayer {
       audio.onended = audio.onerror = null
       audio.pause()
       if (this.audio !== audio) return
-      this.clearOverlapTimer()
+  
       if (!text) { this.next(); return }
       audio.onended = audio.onerror = null
       audio.pause()
       this.audio = undefined
       this.speak(text)
-    }
-    if (overlapNext > 0 && this.queue[0]?.src) {
-      // Poll media time so pause/buffering do not consume the overlap window.
-      this.overlapTimer = setInterval(() => {
-        if (this.blocked || this.audio !== audio || audio.paused || !Number.isFinite(audio.duration)) return
-        if (audio.duration > overlapNext && audio.currentTime >= audio.duration - overlapNext) {
-          this.next()
-        }
-      }, 20)
     }
     void audio.play().catch(() => undefined)
   }

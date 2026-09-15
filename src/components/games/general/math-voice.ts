@@ -1,13 +1,11 @@
+import { NUMBER_VOICE_FILES, numberWordVoice } from './number-voice'
 /** Shared Vietnamese math recordings. Keep filenames in sync with docs/math-voices.md. */
 export const MATH_VOICE_FILES: Record<string, string> = {
   'hãy kéo cách đọc đúng của số trên bảng vào ô': 'hay-keo-cach-doc-dung',
   'gồm mấy chục và mấy đơn vị': 'gom-may-chuc-va-may-don-vi',
   'hãy kéo cách phân tích đúng của số': 'hay-keo-cach-phan-tich-dung-cua-so',
   'hãy kéo các thẻ để tạo số': 'hay-keo-cac-the-de-tao-so',
-  'không': 'khong', 'một': 'mot', 'hai': 'hai', 'ba': 'ba', 'bốn': 'bon',
-  'năm': 'nam', 'sáu': 'sau', 'bảy': 'bay', 'tám': 'tam', 'chín': 'chin',
-  'mười': 'muoi', 'mươi': 'muoi-hang-chuc', 'mốt': 'mot-hang-don-vi',
-  'tư': 'tu', 'lăm': 'lam', 'trăm': 'tram',
+  ...NUMBER_VOICE_FILES,
   'hãy chọn số': 'hay-chon-so', 'số': 'so',
   'có mấy chục': 'co-may-chuc', 'có mấy đơn vị': 'co-may-don-vi',
   'chục và': 'chuc-va', 'đơn vị là số nào': 'don-vi-la-so-nao',
@@ -21,18 +19,16 @@ export const MATH_VOICE_FILES: Record<string, string> = {
 const phrases = Object.keys(MATH_VOICE_FILES).sort((a, b) => b.length - a.length)
 
 /** Input uses spoken numbers (e.g. "hai mươi tư"). Unknown text falls back to TTS as a whole. */
-export function createMathVoiceSequence(text: string): Array<{ src: string; text: string; playbackRate?: number; overlapNext?: number }> | undefined {
+export function createMathVoiceSequence(text: string): Array<{ src: string; text: string; playbackRate?: number }> | undefined {
   let remaining = text.normalize('NFC').toLocaleLowerCase('vi').replace(/[.,!?;:“”"']/g, '').replace(/\s+/g, ' ').trim()
-  const sequence: Array<{ src: string; text: string; playbackRate?: number; overlapNext?: number }> = []
-  let previousWasNumber = false
+  const sequence: Array<{ src: string; text: string; playbackRate?: number }> = []
+
   while (remaining) {
     const phrase = phrases.find(part => remaining === part || remaining.startsWith(`${part} `))
     if (!phrase) return undefined
-    const isNumberWord = ['không', 'một', 'hai', 'ba', 'bốn', 'năm', 'sáu', 'bảy', 'tám', 'chín', 'mười', 'mươi', 'mốt', 'tư', 'lăm', 'trăm'].includes(phrase)
-    if (isNumberWord && previousWasNumber) sequence[sequence.length - 1].overlapNext = 0.15
-    previousWasNumber = isNumberWord
-    sequence.push({ src: `/games/general/voices/toan/${MATH_VOICE_FILES[phrase]}.mp3`, text: phrase,
-      playbackRate: 1 })
+    sequence.push(numberWordVoice(phrase) ?? {
+      src: `/games/general/voices/toan/${MATH_VOICE_FILES[phrase]}.mp3`, text: phrase, playbackRate: 1,
+    })
     remaining = remaining.slice(phrase.length).trimStart()
   }
   return sequence.length ? sequence : undefined

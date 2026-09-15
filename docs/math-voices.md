@@ -73,10 +73,18 @@ tuần tự, dùng TTS cho từng đoạn nếu file báo lỗi, dừng chuỗi 
 hoặc đổi câu, tuân theo mute/pause của game.
 Kéo thả Toán lớp 2 bài 1 cũng dùng `voiceSequence` cho tự phát và nút nghe lại,
 gồm bốn cụm bổ sung ở trên. Câu hỏi cách đọc không phát số trên bảng để tránh lộ đáp án.
-Tất cả bản thu phát ở tốc độ 1×. Trong cùng số ghép, từ sau được gọi phát
-khi từ trước còn khoảng 0,15 giây (kiểm tra media time mỗi 20ms). Không nối sớm
-giữa số và cụm hướng dẫn. Độ nối thực tế còn phụ thuộc thời gian tải/phát MP3
-của trình duyệt. Pause/stop/nghe lại quản lý cả phần đuôi còn phát của từ trước.
+Tất cả bản thu phát ở tốc độ 1×, đợi file trước kết thúc (`ended`) mới phát
+file tiếp theo. Đã bỏ nối sớm ở cả bắn bóng và kéo thả, không dùng timer chồng âm.
+
+Module số dùng chung: `src/components/games/general/number-voice.ts`.
+`readNumber(n)` chuyển số 0–100 thành chữ; `createNumberVoiceSequence(n)` tạo
+chuỗi MP3 đọc số; `numberWordVoice(word)` lấy bản thu của từng từ đọc số.
+`math-voice.ts` dùng module này khi ghép câu hỏi, không lặp lại quy tắc đọc số.
+
+```ts
+player.playSequence(createNumberVoiceSequence(36))
+// ba.mp3 → muoi-hang-chuc.mp3 → sau.mp3, từng file phát xong mới chuyển.
+```
 Nút nghe lại dùng ảnh loa riêng tại ô tròn góc dưới phải của bảng dùng chung.
 Xem `docs/bubble-shooter-panel.md` về asset, trạng thái nút và phần nền ảnh còn cần hoàn thiện.
 

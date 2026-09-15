@@ -14,7 +14,7 @@ export type DragDropLevel = {
   title: string
   instruction: string
   instructionVoice?: string
-  voiceSequence?: Array<{ src: string; text: string; playbackRate?: number; overlapNext?: number }>
+  voiceSequence?: Array<{ src: string; text: string; playbackRate?: number }>
   voiceFallback?: { instruction?: string; target?: string }
   spokenInstruction?: string
   voice?: string
