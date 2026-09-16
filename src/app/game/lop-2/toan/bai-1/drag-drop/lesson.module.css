@@ -1,6 +1,13 @@
 .lesson { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; min-width: 0; }
-.lesson [class*='answerTray'] { grid-template-columns: repeat(6, minmax(0, 1fr)) !important; gap: 4px; }
+.lesson [data-answer-tile],
+.lesson [data-drag-answer],
+.lesson [data-target-id] > div:last-child {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+  font-weight: 700;
+  line-height: 1.3;
+  word-break: normal;
+  overflow-wrap: normal;
+}
 .lesson [class*='animals'] span { font-size: 24px; }
-.lesson [data-answer-tile] { font-family: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"; font-weight: 600; font-size: clamp(11px, 3cqw, 16px); padding: 4px 2px; line-height: 1.15; overflow-wrap: anywhere; height: auto; min-height: 64px; }
 .lesson [data-target-id] > div:last-child { min-width: 110px; width: auto; max-width: 65%; padding: 6px; height: auto; min-height: 64px; }
-.lesson [data-target-id] > div:last-child span { font-size: 18px; line-height: 1.2; overflow-wrap: anywhere; }
+.lesson [data-target-id] > div:last-child span { font-size: 18px; line-height: 1.3; overflow-wrap: normal; }

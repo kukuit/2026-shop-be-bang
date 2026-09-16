@@ -94,6 +94,9 @@ function ReadyDragDropGame({ config }: { config: DragDropGameConfig }) {
   const answerDomain = level.answerDomain ?? config.answerDomain
   const displayedAnswers = numberTray.length === answerDomain.length && numberTray.every((value) => answerDomain.includes(value))
     ? numberTray : answerDomain
+  const longestAnswer = Math.max(0, ...displayedAnswers.map(value => String(value).length))
+  const hasLongAnswers = config.answerTrayColumns === 'auto' && !config.images && longestAnswer > 3
+  const answerColumns = hasLongAnswers ? 3 : 6
   const density = level.groups && level.groups.length >= 4 ? 'dense' : level.groups && level.groups.length === 1 ? 'simple' : 'standard'
   const startMusic = useBackgroundMusic(soundEnabled, isReady && gameStarted)
   const voiceAssets = useMemo(() => config.introVoice
@@ -133,7 +136,7 @@ function ReadyDragDropGame({ config }: { config: DragDropGameConfig }) {
   useEffect(() => {
     const player = new QuestionVoicePlayer()
     questionVoiceRef.current = player
-    return () => { player.stop(); questionVoiceRef.current = null }
+    return () => { player.dispose(); questionVoiceRef.current = null }
   }, [])
 
   useEffect(() => {
@@ -141,7 +144,7 @@ function ReadyDragDropGame({ config }: { config: DragDropGameConfig }) {
   }, [soundEnabled, gamePaused, voices.channel])
 
   const playLevelVoice = useCallback(() => {
-    if (level.voiceSequence?.length) questionVoiceRef.current?.playSequence(level.voiceSequence)
+    if (level.voiceSequence?.length) questionVoiceRef.current?.playComposedSequence(level.voiceSequence)
     else questionVoiceRef.current?.play([level.instructionVoice, level.voice], level.voiceFallback)
   }, [level])
 
@@ -313,7 +316,7 @@ function ReadyDragDropGame({ config }: { config: DragDropGameConfig }) {
             {level.groups && <CountGroups groups={level.groups} completed={completedTargets} wrongTarget={wrongTarget} correctTarget={correctTarget} voiceButton={level.voice && !Object.values(level.inputModes ?? {}).includes('text') ? <button type="button" disabled={!gameStarted || gamePaused || gameCompleted || isTransitioning} onClick={playLevelVoice} className="grid h-24 w-24 max-w-full shrink-0 place-items-center rounded-full border-[3px] border-sky-400 bg-sky-100 text-sky-700 active:scale-95 disabled:opacity-50" aria-label="Nghe lại"><Volume2 className="h-16 w-16" aria-hidden="true" /></button> : undefined} />}
             {level.sequence && <SequenceRow cells={level.sequence} completed={completedTargets} wrongTarget={wrongTarget} correctTarget={correctTarget} />}
           </div>
-          <div ref={answerTrayRef} className={styles.answerTray} style={config.answerTrayColumns === 'auto' ? { gridTemplateColumns: `repeat(${displayedAnswers.length}, minmax(0, 1fr))`, fontFamily: 'Arial, sans-serif' } : config.images ? { gridTemplateColumns: 'repeat(4, minmax(0, 1fr))' } : undefined}>
+          <div ref={answerTrayRef} className={styles.answerTray} data-long-answers={hasLongAnswers || undefined} style={config.answerTrayColumns === 'auto' ? { gridTemplateColumns: `repeat(${answerColumns}, minmax(0, 1fr))`, fontFamily: 'Arial, sans-serif' } : config.images ? { gridTemplateColumns: 'repeat(4, minmax(0, 1fr))' } : undefined}>
             {displayedAnswers.map((value) => {
               const stolen = stolenNumber === value
               return <button key={value} data-answer-tile data-answer-value={value} type="button" disabled={stolen} onPointerDown={(event) => beginDrag(event, value)} onPointerMove={moveDrag} onPointerUp={(event) => endDrag(event, value)} onPointerCancel={() => setDrag(null)} className={`${styles.answerButton} ${stolen ? styles.answerButtonStolen : ''}`} style={{ backgroundColor: stolen ? undefined : colorFor(value) }} aria-label={stolen ? 'Ô số đã bị Sói lấy' : `Kéo ${config.answerNoun ?? 'số'} ${value}`}>{stolen ? '' : <GameImageValue value={value} />}</button>
@@ -322,7 +325,7 @@ function ReadyDragDropGame({ config }: { config: DragDropGameConfig }) {
         </div>
         <CappyCompanion active={gameStarted && !gamePaused} round={currentLevel} dragPosition={drag ? { x: drag.x, y: drag.y } : null} reaction={cappyReaction} celebrating={gameCompleted} finalRound={currentLevel === levels.length - 1} gameRef={gameAreaRef} trayRef={answerTrayRef} />
         <WolfCompanion active={gameStarted && !gamePaused && !isTransitioning && !gameCompleted && wolfRounds.has(currentLevel)} round={currentLevel} correctValues={wolfCorrectValues} dragActive={drag !== null} gameRef={gameAreaRef} trayRef={answerTrayRef} onSteal={handleWolfSteal} onLaugh={playWolfLaugh} answerDomain={answerDomain} colorFor={colorFor} />
-        {drag && <div className="pointer-events-none fixed z-[100] grid h-14 w-14 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-2xl border-[3px] border-white text-3xl font-black text-white shadow-2xl" style={{ left: drag.x, top: drag.y, backgroundColor: colorFor(drag.value), transform: 'translate(-50%, -50%) scale(1.08)' }}><FittedTileContent><GameImageValue value={drag.value} /></FittedTileContent></div>}
+        {drag && <div data-drag-answer className="pointer-events-none fixed z-[100] grid h-14 w-14 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-2xl border-[3px] border-white text-3xl font-black text-white shadow-2xl" style={{ left: drag.x, top: drag.y, backgroundColor: colorFor(drag.value), transform: 'translate(-50%, -50%) scale(1.08)' }}><FittedTileContent><GameImageValue value={drag.value} /></FittedTileContent></div>}
         {floatingScore && <div key={floatingScore.id} className={`pointer-events-none fixed z-[110] text-xl font-black ${styles.floatingScore} ${floatingScore.correct ? 'text-emerald-600' : 'text-red-500'}`} style={{ left: floatingScore.x, top: floatingScore.y, textShadow: '0 2px 0 white, 0 -2px 0 white, 2px 0 0 white, -2px 0 0 white' }}>{floatingScore.value}</div>}
         {isTransitioning && !gameCompleted && <div className="pointer-events-none absolute inset-0 z-30" aria-hidden="true"><div className={styles.fireworks}>{Array.from({ length: 12 }, (_, index) => <span key={index} className={styles.fireworkParticle} />)}</div></div>}
         {gameCompleted && trackingTask && <GameCompletion score={score} trackingTask={trackingTask} onRestart={restart} />}

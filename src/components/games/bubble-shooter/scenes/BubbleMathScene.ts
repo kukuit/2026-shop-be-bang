@@ -290,26 +290,24 @@ export class BubbleMathScene extends Phaser.Scene {
   }
 
   private createAmmoSelector() {
-    const leftX = 12
-    const leftWidth = 220
-
-    this.add.graphics()
-      .fillStyle(0x123b62, 0.92)
-      .fillRoundedRect(leftX, 1202, leftWidth, 66, 22)
-      .lineStyle(3, 0x80d9ff, 0.85)
-      .strokeRoundedRect(leftX, 1202, leftWidth, 66, 22)
-      .setDepth(44)
-
-    const ammoXs = [52, 122, 192]
-    this.ammoSelectionRings = ammoXs.map((x, frame) => {
-      const ring = this.add.circle(x, 1235, 25, 0x071f3d, 0.85)
+    const positions = [
+      { x: WIDTH / 2 - 60, y: HUD_TOP - 6, angle: -9 },
+      { x: WIDTH / 2, y: HUD_TOP - 16, angle: 5 },
+      { x: WIDTH / 2 + 60, y: HUD_TOP - 6, angle: 10 },
+    ]
+    this.ammoSelectionRings = positions.map(({ x, y, angle }, frame) => {
+      const ring = this.add.circle(x, y, 25, 0x071f3d, 0.78)
         .setStrokeStyle(frame === this.selectedAmmo ? 5 : 2, frame === this.selectedAmmo ? 0xffd43b : 0x9bdcff)
-        .setDepth(45)
-      this.add.image(x, 1235, 'ammo', frame)
+        .setDepth(21)
+      this.add.image(x, y, 'ammo', frame)
         .setDisplaySize(frame === 0 ? 29 : 39, frame === 0 ? 44 : 39)
-        .setDepth(46)
+        .setAngle(angle)
+        .setDepth(22)
         .setInteractive({ useHandCursor: true })
-        .on('pointerdown', () => this.selectAmmo(frame))
+        .on('pointerdown', (_pointer: Phaser.Input.Pointer, _localX: number, _localY: number, event: Phaser.Types.Input.EventData) => {
+          event.stopPropagation()
+          this.selectAmmo(frame)
+        })
       return ring
     })
     this.updateLevelHud()

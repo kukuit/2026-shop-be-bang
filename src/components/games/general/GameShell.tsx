@@ -36,6 +36,7 @@ export default function GameShell({
   const pathname = usePathname()
   const lessonPath = pathname.replace(/\/+$/, '').replace(/\/(?:luyen-tap\/)?[^/]+$/, '') || '/game'
   const [showExit, setShowExit] = useState(false)
+  const [showRewards, setShowRewards] = useState(false)
   const { user, loading: authLoading } = useAuth()
   const displayName = playerName ?? user?.displayName ?? (authLoading ? '...' : 'Khách')
   const displayNameCharacters = Array.from(displayName)
@@ -45,6 +46,11 @@ export default function GameShell({
 
   const setExitOpen = (open: boolean) => {
     setShowExit(open)
+    onPauseChange?.(open)
+  }
+
+  const setRewardsOpen = (open: boolean) => {
+    setShowRewards(open)
     onPauseChange?.(open)
   }
 
@@ -95,7 +101,45 @@ export default function GameShell({
         </div>
       </div>
 
+      <button
+        type="button"
+        onClick={() => setRewardsOpen(true)}
+        className="absolute bottom-[0.94%] left-[1.667cqw] z-40 flex h-[9.167cqw] w-[30.556cqw] items-center justify-center gap-[2cqw] rounded-[3.056cqw] border-[0.556cqw] border-[#80d9ff]/85 bg-[#123b62]/95 px-[2cqw] text-white shadow-xl transition active:scale-95"
+        aria-label="Mở quà của bé"
+        aria-haspopup="dialog"
+      >
+        <span className="text-[clamp(20px,5.8cqw,25px)] leading-none" aria-hidden="true">🎁</span>
+        <span className="flex items-center gap-[1.2cqw] text-[clamp(12px,3.4cqw,15px)] leading-none" aria-hidden="true">
+          <span className="text-amber-300">●</span><span className="text-white">○</span><span className="text-white">○</span>
+        </span>
+      </button>
+
       <GameProgress currentRound={currentRound} totalRounds={totalRounds} />
+
+      {showRewards && (
+        <div className="absolute inset-0 z-50 grid place-items-center bg-slate-950/70 p-6" role="dialog" aria-modal="true" aria-labelledby="reward-popup-title">
+          <div className="relative w-full max-w-sm rounded-[2rem] border-4 border-amber-300 bg-white p-7 text-center shadow-2xl">
+            <button type="button" onClick={() => setRewardsOpen(false)} className="absolute right-4 top-4 rounded-full p-2 text-slate-500 hover:bg-slate-100" aria-label="Đóng quà của bé">
+              <X />
+            </button>
+            <h2 id="reward-popup-title" className="text-3xl font-black text-blue-600">Quà của bé</h2>
+            <p className="mt-2 flex items-center justify-center gap-1.5 font-black text-amber-500">
+              Hiện có: 0
+              <Image src="/games/general/images/optimize/xu_icon.png" alt="xu" width={24} height={24} className="h-6 w-6 object-contain" />
+            </p>
+            <div className="mt-6 grid gap-3 text-left text-sm font-bold text-slate-700">
+              <div className="flex items-center justify-between rounded-2xl bg-amber-50 px-4 py-3"><span className="flex items-center gap-1">20 <Image src="/games/general/images/optimize/xu_icon.png" alt="xu" width={20} height={20} className="h-5 w-5 object-contain" /></span><span className="flex items-center gap-1 text-lg" aria-label="Phần thưởng bí mật, một hộp quà"><span>?</span><span aria-hidden="true">🎁</span></span></div>
+              <div className="flex items-center justify-between rounded-2xl bg-sky-50 px-4 py-3"><span className="flex items-center gap-1">50 <Image src="/games/general/images/optimize/xu_icon.png" alt="xu" width={20} height={20} className="h-5 w-5 object-contain" /></span><span className="flex items-center gap-1 text-lg" aria-label="Phần thưởng bí mật, hai hộp quà"><span>?</span><span aria-hidden="true">🎁🎁</span></span></div>
+              <div className="flex items-center justify-between rounded-2xl bg-violet-50 px-4 py-3"><span className="flex items-center gap-1">100 <Image src="/games/general/images/optimize/xu_icon.png" alt="xu" width={20} height={20} className="h-5 w-5 object-contain" /></span><span className="flex items-center gap-1 text-lg" aria-label="Phần thưởng bí mật, ba hộp quà"><span>?</span><span aria-hidden="true">🎁🎁🎁</span></span></div>
+            </div>
+            <p className="mt-6 flex flex-wrap items-center justify-center gap-x-1 text-sm font-bold leading-6 text-slate-500">
+              <span>Chơi game để tích</span>
+              <Image src="/games/general/images/optimize/xu_icon.png" alt="xu" width={20} height={20} className="h-5 w-5 object-contain" />
+              <span>và mở quà nhé!</span>
+            </p>
+          </div>
+        </div>
+      )}
 
       {showExit && (
         <div className="absolute inset-0 z-50 grid place-items-center bg-slate-950/70 p-6" role="dialog" aria-modal="true" aria-labelledby="game-menu-title">

@@ -6,7 +6,7 @@ import type { RacingGameConfig, RacingQuestion } from '@/components/games/racing
 import type { DragDropGameConfig, DragDropLevel } from '@/components/games/drag-drop/types'
 import { GAME_GOALS, generateQuestionSet, readNumber, shuffle, type MathGame, type MathReviewQuestion } from './content'
 import { TOAN_2_BAI_1 } from './lesson'
-import { createMathVoiceSequence } from '@/components/games/general/math-voice'
+import { createMathQuestionVoice } from '@/components/games/general/math-voice'
 
 const lessonId = TOAN_2_BAI_1.lessonId
 export async function loadMathQuestions(game: MathGame) {
@@ -17,7 +17,7 @@ export async function loadMathQuestions(game: MathGame) {
   }
   return generateQuestionSet(game, { weakTargets, adaptiveCount: ADAPTIVE_ENABLED ? Math.round(10 * ADAPTIVE_RATIO) : 0 })
 }
-const voice = (q: MathReviewQuestion) => ({ voiceFallback: { instruction: q.voiceText } })
+const voice = (q: MathReviewQuestion) => createMathQuestionVoice(q.voiceText)
 const bubblePrompt = (q: MathReviewQuestion): string => {
   const n = q.number
   switch (q.questionType) {
@@ -31,7 +31,6 @@ const bubblePrompt = (q: MathReviewQuestion): string => {
   }
 }
 export const toBubble = (q: MathReviewQuestion): MathQuestion => ({
-  voiceSequence: createMathVoiceSequence(q.voiceText),
   id: q.id, text: bubblePrompt(q), answer: q.answer, options: q.options, learningKey: q.goalKey,
   inputMode: 'text', answerMode: 'select-text', ...voice(q), presentation: { type: 'generic', prompt: bubblePrompt(q) },
 })
@@ -44,11 +43,11 @@ export const toGold = (q: MathReviewQuestion): GoldMinerQuestion => ({
 })
 export const toRacing = (q: MathReviewQuestion): RacingQuestion => ({
   id: q.id, type: 'generic', prompt: q.prompt, answer: q.answer, options: q.options,
-  learningKey: q.goalKey, skill: 'language_choice', showVoiceButton: true,
+  learningKey: q.goalKey, skill: 'language_choice', showVoiceButton: true, voiceButtonStyle: 'panel-gem',
   inputMode: 'text', answerMode: 'select-text', ...voice(q),
 })
 export function toDrag(q: MathReviewQuestion, index: number): DragDropLevel {
-  const base = { id: index + 1, questionId: q.id, type: 'count' as const, voiceSequence: createMathVoiceSequence(q.voiceText),
+  const base = { id: index + 1, questionId: q.id, type: 'count' as const,
     title: q.prompt, instruction: 'Kéo đáp án vào ô trống', ...voice(q) }
   if (q.questionType === 'FORM') {
     const tens = String(Math.floor(q.number / 10)), ones = String(q.number % 10)
@@ -61,7 +60,7 @@ export function toDrag(q: MathReviewQuestion, index: number): DragDropLevel {
     }
   }
   return { ...base,
-    groups: [{ id: 'answer', icon: '?', count: 1, label: q.prompt }],
+    groups: [{ id: 'answer', icon: q.questionType === 'READ_WRITE' && q.variant === 'READ' ? String(q.number) : '?', count: 1, label: q.prompt }],
     answers: { answer: q.answer }, answerDomain: q.options, learningKeys: { answer: q.goalKey },
     inputModes: { answer: 'text' }, answerModes: { answer: 'drag-text' },
   }

@@ -14,6 +14,9 @@ const MIN_ANGLE = -65
 const MAX_ANGLE = 65
 const MAX_LENGTH = 720
 const TASK_PANEL_CENTER = { x: 522, y: 270 }
+// Safe inset inside the light paper area of the 720 × 1280 background.
+const TASK_TEXT_BOUNDS = { width: 212, height: 208 }
+const TASK_VOICE_POSITION = { x: 650, y: 393 }
 const MINING_AREA_TOP = ANCHOR.y + 16
 const MINING_AREA_BOTTOM = 1175
 const GOLD_SIZE_SCALES = [0.8, 0.9, 1, 1.1, 1.2]
@@ -163,11 +166,13 @@ export class GoldMinerScene extends Phaser.Scene {
   private createTopScene() {
     this.cappyFace = this.add.text(235, 327, '', { fontSize: '1px' })
     this.taskItems = this.add.text(TASK_PANEL_CENTER.x, TASK_PANEL_CENTER.y, '', {
+      fontFamily: 'Arial, "Segoe UI", sans-serif',
       fontSize: '46px',
+      fontStyle: 'bold',
       color: '#4a250f',
       align: 'center',
-      wordWrap: { width: 230 },
-    }).setPadding(0, 8, 0, 0).setOrigin(.5)
+      wordWrap: { width: TASK_TEXT_BOUNDS.width - 8, useAdvancedWrap: true },
+    }).setPadding(4, 10, 4, 10).setLineSpacing(4).setOrigin(.5)
 
     this.wolfCaughtIcons = this.add.container(451, 416).setDepth(25)
   }
@@ -203,7 +208,8 @@ export class GoldMinerScene extends Phaser.Scene {
     this.tracker?.startQuestion({ learningKey: this.question.learningKey, expectedAnswer: this.question.correctAnswer, skill: this.question.skill, inputMode: this.question.inputMode, answerMode: this.question.answerMode })
     this.state = GoldMinerState.ROUND_START
     this.wolfAppeared = false
-    this.taskItems.setText(this.question.prompt ?? Array.from({ length: this.question.count }, () => TASK_EMOJI[this.question.objectType]).join(' '))
+    this.taskItems.setText((this.question.prompt ?? Array.from({ length: this.question.count }, () => TASK_EMOJI[this.question.objectType]).join(' ')).normalize('NFC'))
+    this.fitTaskText()
     this.taskImage?.destroy()
     this.taskVoiceButton?.destroy()
     this.taskVoiceButton = undefined
@@ -214,12 +220,10 @@ export class GoldMinerScene extends Phaser.Scene {
       this.taskImage = createVoiceButton(this, () => {
         if (this.state === GoldMinerState.AIMING) playQuestionVoice(this, this.question)
       }).setPosition(TASK_PANEL_CENTER.x, TASK_PANEL_CENTER.y)
-    } else if (this.question.instructionVoice || this.question.voice || this.question.voiceFallback?.instruction) {
-      this.taskItems.y = TASK_PANEL_CENTER.y - 32
-      if (this.taskImage) this.taskImage.y = TASK_PANEL_CENTER.y - 32
+    } else if (this.question.voiceSequence?.length || this.question.instructionVoice || this.question.voice || this.question.voiceFallback?.instruction) {
       this.taskVoiceButton = createVoiceButton(this, () => {
         if (!this.paused && this.state === GoldMinerState.AIMING) playQuestionVoice(this, this.question)
-      }).setPosition(TASK_PANEL_CENTER.x, TASK_PANEL_CENTER.y + 58).setScale(0.7)
+      }).setPosition(TASK_VOICE_POSITION.x, TASK_VOICE_POSITION.y).setScale(0.5).setDepth(26)
     }
     this.taskItems.setVisible(!this.taskImage)
     this.game.events.emit('game-ui:round', this.round + 1)
@@ -234,6 +238,18 @@ export class GoldMinerScene extends Phaser.Scene {
       this.state = GoldMinerState.AIMING
       this.scheduleWolf()
     })
+  }
+
+  private fitTaskText() {
+    this.taskItems.setScale(1)
+    for (let size = 50; size >= 22; size -= 2) {
+      this.taskItems.setFontSize(size)
+      if (this.taskItems.width <= TASK_TEXT_BOUNDS.width && this.taskItems.height <= TASK_TEXT_BOUNDS.height) return
+    }
+    // Keep unusually long prompts inside the paper without truncating their text.
+    this.taskItems.setScale(Math.min(1,
+      TASK_TEXT_BOUNDS.width / this.taskItems.width,
+      TASK_TEXT_BOUNDS.height / this.taskItems.height))
   }
 
   private createMineItem(x: number, y: number, value: string | number, rock: boolean) {

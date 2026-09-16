@@ -42,6 +42,10 @@ for (const game of Object.keys(GAME_GOALS)) {
     const mapped = game === 'bubble-shooter' ? config.toBubble(q) : game === 'gold-mining' ? config.toGold(q) : game === 'racing' ? config.toRacing(q) : config.toDrag(q, 0)
     assert.equal(mapped.voiceFallback.instruction, q.voiceText)
     if (game === 'drag-drop') {
+      if (q.questionType === 'READ_WRITE' && q.variant === 'READ') {
+        assert.equal(mapped.groups[0].icon, String(q.number), 'show the number whose reading is requested')
+        assert.equal(mapped.answers.answer, readNumber(q.number))
+      }
       assert.ok(Object.values(mapped.learningKeys).every(key => key === q.goalKey))
       assert.ok(Object.values(mapped.answers).every(answer => mapped.answerDomain.includes(answer)))
       if (q.questionType === 'FORM') {
