@@ -1,4 +1,5 @@
 import { NUMBER_VOICE_FILES, numberWordVoice } from './number-voice'
+import { createComposedVoiceSequence, normalizeVoiceText, type VoiceSegment } from './composed-voice'
 /** Shared Vietnamese math recordings. Keep filenames in sync with docs/math-voices.md. */
 export const MATH_VOICE_FILES: Record<string, string> = {
   'hãy kéo cách đọc đúng của số trên bảng vào ô': 'hay-keo-cach-doc-dung',
@@ -16,20 +17,24 @@ export const MATH_VOICE_FILES: Record<string, string> = {
   'hãy chọn số lớn nhất trong các đáp án': 'hay-tim-so-lon-nhat',
 }
 
-const phrases = Object.keys(MATH_VOICE_FILES).sort((a, b) => b.length - a.length)
+const recordings: Record<string, VoiceSegment> = Object.fromEntries(
+  Object.entries(MATH_VOICE_FILES).map(([text, filename]) => [text, numberWordVoice(text) ?? {
+    src: `/games/general/voices/toan/${filename}.mp3`, text, playbackRate: 1,
+  }]),
+)
 
 /** Input uses spoken numbers (e.g. "hai mươi tư"). Unknown text falls back to TTS as a whole. */
 export function createMathVoiceSequence(text: string): Array<{ src: string; text: string; playbackRate?: number }> | undefined {
-  let remaining = text.normalize('NFC').toLocaleLowerCase('vi').replace(/[.,!?;:“”"']/g, '').replace(/\s+/g, ' ').trim()
-  const sequence: Array<{ src: string; text: string; playbackRate?: number }> = []
+  const single = recordings[normalizeVoiceText(text)]
+  return single ? [{ ...single }] : createComposedVoiceSequence(text, recordings)
+}
 
-  while (remaining) {
-    const phrase = phrases.find(part => remaining === part || remaining.startsWith(`${part} `))
-    if (!phrase) return undefined
-    sequence.push(numberWordVoice(phrase) ?? {
-      src: `/games/general/voices/toan/${MATH_VOICE_FILES[phrase]}.mp3`, text: phrase, playbackRate: 1,
-    })
-    remaining = remaining.slice(phrase.length).trimStart()
+/** Shared question fields: single MP3, composed MP3 sentence, or whole-text TTS. */
+export function createMathQuestionVoice(text: string) {
+  const sequence = createMathVoiceSequence(text)
+  return {
+    instructionVoice: sequence?.length === 1 ? sequence[0].src : undefined,
+    voiceSequence: sequence && sequence.length > 1 ? sequence : undefined,
+    voiceFallback: { instruction: text },
   }
-  return sequence.length ? sequence : undefined
 }

@@ -3,7 +3,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
-import { Play, RotateCcw } from 'lucide-react'
+import { Check, Play, RotateCcw } from 'lucide-react'
 import { useAuth } from '@/components/auth/AuthProvider'
 import { fetchWithAuthRetry } from '@/lib/auth/client-fetch'
 import type { LessonId } from './tracking/types'
@@ -71,10 +71,12 @@ export default function LessonGameGrid({ lessonId, games }: {
         const gameId = game.href.split('/').filter(Boolean).pop() ?? ''
         const completed = Boolean(currentGames[gameId]?.completedAt)
         return <Link key={game.href} href={game.href} aria-label={`${completed ? 'Chơi lại' : 'Chơi'} ${game.title}${completed ? ' — Đã hoàn thành' : ''}`} className="group relative aspect-square overflow-hidden rounded-2xl border-[3px] border-white bg-white shadow-xl focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-sky-400 md:rounded-[2rem]">
-          <Image src={game.image} alt={`Ảnh game ${game.title}`} fill sizes="(min-width: 1024px) 270px, 48vw" className={`object-cover transition duration-500 group-hover:scale-105 ${completed ? 'opacity-60 grayscale' : ''}`} style={{ objectPosition: game.position }} />
-          {completed && <span className="absolute left-2 top-2 rounded-full bg-emerald-700 px-2 py-1 text-xs font-bold text-white md:left-3 md:top-3">Đã hoàn thành</span>}
+          <Image src={game.image} alt={`Ảnh game ${game.title}`} fill sizes="(min-width: 1024px) 270px, 48vw" className="object-cover transition duration-500 group-hover:scale-105" style={{ objectPosition: game.position }} />
+          {completed && <span aria-hidden="true" className="absolute right-2 top-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-emerald-600 text-white shadow-sm md:right-3 md:top-3">
+            <Check size={16} strokeWidth={3} />
+          </span>}
           <div className="absolute inset-x-0 bottom-0 flex h-[22%] min-h-[52px] items-center justify-between gap-2 px-[18px] text-white md:px-5">
-            <span className={`absolute inset-0 bg-gradient-to-t ${completed ? 'from-slate-800 to-slate-600' : game.color} opacity-90`} />
+            <span className={`absolute inset-0 bg-gradient-to-t ${game.color} opacity-90`} />
             <p className="relative min-w-0 truncate text-sm font-black sm:text-base xl:text-xl">{game.title}</p>
             <span aria-hidden="true" className="relative inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-sky-700 md:h-11 md:w-11">
               {completed ? <RotateCcw size={20} /> : <Play size={20} className="ml-0.5 fill-current" />}

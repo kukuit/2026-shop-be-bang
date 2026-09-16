@@ -2,14 +2,15 @@ const assert = require('node:assert/strict')
 const fs = require('node:fs')
 const path = require('node:path')
 const load = require('./lib/load-project-ts.cjs')()
-const { createMathVoiceSequence, MATH_VOICE_FILES } = load('src/components/games/general/math-voice.ts')
+const { createMathVoiceSequence, createMathQuestionVoice, MATH_VOICE_FILES } = load('src/components/games/general/math-voice.ts')
+const { createComposedVoiceSequence } = load('src/components/games/general/composed-voice.ts')
 const { createQuestionPool, readNumber } = load('src/app/game/lop-2/toan/bai-1/content.ts')
 const { QuestionVoicePlayer } = load('src/components/games/general/QuestionVoicePlayer.ts')
 for (const file of Object.values(MATH_VOICE_FILES)) {
   assert.ok(fs.statSync(path.join(__dirname, '../public/games/general/voices/toan', `${file}.mp3`)).size > 0, file)
 }
 for (let n = 0; n <= 100; n++) assert.ok(createMathVoiceSequence(readNumber(n)), `Number ${n}`)
-for (const q of [...createQuestionPool('bubble-shooter'), ...createQuestionPool('drag-drop')]) {
+for (const q of ['bubble-shooter', 'drag-drop', 'gold-mining', 'racing'].flatMap(game => createQuestionPool(game))) {
   const sequence = createMathVoiceSequence(q.voiceText)
   assert.ok(sequence?.length, q.id)
   assert.equal(sequence.map(part => part.text).join(' '), q.voiceText.toLowerCase().replace(/[.?]/g, ''))
@@ -18,6 +19,19 @@ assert.equal(createMathVoiceSequence('Nội dung chưa có bản thu'), undefine
 assert.deepEqual(createMathVoiceSequence('Hãy chọn số hai mươi tư.').map(p => path.basename(p.src)),
   ['hay-chon-so.mp3', 'hai.mp3', 'muoi-hang-chuc.mp3', 'tu.mp3'])
 assert.equal(createMathVoiceSequence('Hãy chọn số bé nhất trong các đáp án.').length, 1)
+const singleVoice = createMathQuestionVoice('Hãy chọn số bé nhất trong các đáp án.')
+assert.ok(singleVoice.instructionVoice.endsWith('hay-tim-so-be-nhat.mp3'))
+assert.equal(singleVoice.voiceSequence, undefined)
+const composedVoice = createMathQuestionVoice('Hãy chọn số tám mươi chín.')
+assert.equal(composedVoice.instructionVoice, undefined)
+assert.deepEqual(composedVoice.voiceSequence.map(p => path.basename(p.src)),
+  ['hay-chon-so.mp3', 'tam.mp3', 'muoi-hang-chuc.mp3', 'chin.mp3'])
+assert.equal(createMathQuestionVoice('Chưa có bản thu').voiceSequence, undefined)
+assert.equal(createMathQuestionVoice('Chưa có bản thu').voiceFallback.instruction, 'Chưa có bản thu')
+const dictionary = { 'bé đọc số': { src: 'intro.mp3', text: 'bé đọc số' }, tám: { src: '8.mp3', text: 'tám' } }
+assert.equal(createComposedVoiceSequence('tám', dictionary), undefined)
+assert.equal(createComposedVoiceSequence('bé đọc số tám chưa có', dictionary), undefined)
+assert.deepEqual(createComposedVoiceSequence('Bé đọc số tám!', dictionary).map(p => p.src), ['intro.mp3', '8.mp3'])
 
 const played = []
 global.Audio = class {
@@ -68,7 +82,7 @@ player.setBlocked(false)
 assert.equal(played.length, beforeResume + 1)
 assert.equal(played.at(-1).src, sequence[1].src)
 player.stop()
-console.log('34 recordings, numbers 0–100, all bubble-shooter and drag-drop questions, playback order/replay/pause/stop passed')
+console.log('Recordings, numbers 0–100, all four math games, single/composed routing, playback order/replay/pause/stop passed')
 
 async function testSequentialNumbers() {
   const { createNumberVoiceSequence } = load('src/components/games/general/number-voice.ts')

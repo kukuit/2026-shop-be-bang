@@ -22,7 +22,7 @@ export function playQuestionVoice(scene: Phaser.Scene, question: { voiceSequence
     scene.game.events.on('game-ui:restart', onRestart)
     scene.events.once('shutdown', () => {
       unsubscribe()
-      current.stop()
+      current.dispose()
       scene.game.events.off('game-ui:mute', onMute)
       scene.game.events.off('game-ui:pause', onPause)
       scene.game.events.off('game-ui:restart', onRestart)
@@ -31,7 +31,7 @@ export function playQuestionVoice(scene: Phaser.Scene, question: { voiceSequence
     updateBlocked()
     players.set(scene, player)
   }
-  if (question.voiceSequence?.length) player.playSequence(question.voiceSequence)
+  if (question.voiceSequence?.length) player.playComposedSequence(question.voiceSequence)
   else player.play([question.instructionVoice, question.voice], question.voiceFallback)
 }
 

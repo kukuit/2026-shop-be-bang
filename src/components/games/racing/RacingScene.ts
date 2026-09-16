@@ -302,6 +302,17 @@ export class RacingScene extends Phaser.Scene {
     }
     const picture = createGameImage(this, this.lesson.images?.[content], 0, 0, 145, 100)
     if (picture) { this.questionText.add(picture); return }
+    const panelGemVoice = question.type === 'generic' && question.showVoiceButton && question.voiceButtonStyle === 'panel-gem'
+    if (panelGemVoice) {
+      this.renderColorfulPrompt(content, true)
+      if (question.showVoiceButton) {
+        this.questionText.disableInteractive()
+        // Inner panel is 548 × 202: the button's right and bottom edges land
+        // exactly on the existing 3 px panel border at x=274 / y=101.
+        this.questionText.add(this.createQuestionVoiceButton(question).setPosition(250, 76.5))
+      }
+      return
+    }
     const tokens = content.split(/\s+/).filter(Boolean)
     const showVoiceButton = question.type === 'generic' && question.showVoiceButton
     const palette = Phaser.Utils.Array.Shuffle(['#2563eb', '#22c55e', '#a855f7', '#f59e0b', '#0891b2'])
@@ -334,6 +345,90 @@ export class RacingScene extends Phaser.Scene {
         if (this.state === RacingState.RUNNING) playQuestionVoice(this, question)
       }).setPosition(0, 35).setScale(0.7))
     }
+  }
+
+  private renderColorfulPrompt(content: string, reserveVoiceCorner = false) {
+    const maxWidth = reserveVoiceCorner ? 330 : 380
+    const palette = Phaser.Utils.Array.Shuffle(['#2563eb', '#22c55e', '#a855f7', '#f59e0b', '#0891b2'])
+    const labels = content.normalize('NFC').split(/\s+/).filter(Boolean).map((token, index) =>
+      this.add.text(0, 0, token, {
+        fontFamily: 'Arial, "Segoe UI", sans-serif', fontSize: '48px', fontStyle: 'bold',
+        color: token.includes('?') ? '#ef2f36' : palette[index % palette.length],
+        stroke: '#ffffff', strokeThickness: 2,
+      }).setPadding(1, 5, 1, 5).setOrigin(.5))
+    if (!labels.length) return
+    let rows: Phaser.GameObjects.Text[][] = []
+    let gap = 10
+    let height = 0
+    for (let size = 48; size >= 24; size -= 2) {
+      gap = size * .22
+      rows = [[]]
+      let width = 0
+      for (const label of labels) {
+        label.setFontSize(size)
+        let row = rows[rows.length - 1]
+        if (row.length && width + gap + label.width > maxWidth) {
+          rows.push([])
+          row = rows[rows.length - 1]
+          width = 0
+        }
+        width += (row.length ? gap : 0) + label.width
+        row.push(label)
+      }
+      height = rows.reduce((sum, row) => sum + Math.max(...row.map(label => label.height)), 0) + (rows.length - 1) * 4
+      if (height <= 164 && labels.every(label => label.width <= maxWidth)) break
+    }
+    const scale = Math.min(1, 164 / height, maxWidth / Math.max(...labels.map(label => label.width)))
+    let y = -height / 2
+    for (const row of rows) {
+      const rowHeight = Math.max(...row.map(label => label.height))
+      const rowWidth = row.reduce((sum, label) => sum + label.width, 0) + (row.length - 1) * gap
+      let x = -rowWidth / 2
+      for (const label of row) {
+        label.setPosition((x + label.width / 2) * scale, (y + rowHeight / 2) * scale).setScale(scale)
+        this.questionText.add(label)
+        x += label.width + gap
+      }
+      y += rowHeight + 4
+    }
+  }
+
+  private createQuestionVoiceButton(question: RacingQuestion) {
+    const background = this.add.graphics()
+    const paint = (hover: boolean) => {
+      background.clear()
+        .fillStyle(hover ? 0xbae6fd : 0xe0f2fe)
+        .lineStyle(3, 0xd98a08, 1)
+        .beginPath()
+        .moveTo(-15, -24.5)
+        .lineTo(24, -24.5)
+        .lineTo(24, 24.5)
+        .lineTo(-15, 24.5)
+        .lineTo(-24, 12)
+        .lineTo(-24, -12)
+        .closePath()
+        .fillPath()
+        .strokePath()
+    }
+    paint(false)
+    const icon = this.add.graphics().lineStyle(3, 0x0369a1)
+    icon.beginPath().moveTo(-14, -5).lineTo(-9, -5).lineTo(-2, -11)
+      .lineTo(-2, 11).lineTo(-9, 5).lineTo(-14, 5).closePath().strokePath()
+    for (const radius of [7, 13]) {
+      icon.beginPath().arc(-1, 0, radius, -Math.PI / 4, Math.PI / 4).strokePath()
+    }
+    const button = this.add.container(0, 0, [background, icon]).setSize(48, 49)
+      .setInteractive({ useHandCursor: true })
+      .on('pointerover', () => paint(true))
+      .on('pointerout', () => paint(false))
+      .on('pointerdown', () => {
+        this.tweens.killTweensOf(button)
+        this.tweens.add({ targets: button, scale: .9, duration: 70, yoyo: true, ease: 'Sine.Out' })
+        if (this.gameStarted && !this.paused && !this.sound.mute && this.state === RacingState.RUNNING) {
+          playQuestionVoice(this, question)
+        }
+      })
+    return button
   }
 
   private arrangeObjects(object: string, quantity: number) {

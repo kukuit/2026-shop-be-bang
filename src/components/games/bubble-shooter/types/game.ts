@@ -13,7 +13,7 @@ export interface MathQuestion {
   instructionVoice?: string
   voiceFallback?: { instruction?: string; target?: string }
   voice?: string
-  voiceSequence?: Array<{ src: string; text: string; playbackRate?: number }>
+  voiceSequence?: import('../../general/composed-voice').VoiceSegment[]
   images?: import('../../general/game-image').GameImages
   presentation?:
     | { type: 'completeQuantity'; startNumber: number; targetNumber: number }

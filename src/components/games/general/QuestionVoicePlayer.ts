@@ -1,4 +1,7 @@
-/** Plays the instruction and question recording in order. */
+import { ComposedAudioPlayer } from './composed-audio'
+import type { VoiceSegment } from './composed-voice'
+
+/** Routes composed sentences to Web Audio; single recordings retain their own path. */
 export class QuestionVoicePlayer {
   private audio?: HTMLAudioElement
   private activeAudio = new Set<HTMLAudioElement>()
@@ -7,6 +10,29 @@ export class QuestionVoicePlayer {
   private blocked = false
   private utterance?: SpeechSynthesisUtterance
   private speechText?: string
+  private cancelVoiceWait?: () => void
+  private composed?: ComposedAudioPlayer
+  private composedActive = false
+  private generation = 0
+
+  playComposedSequence(sequence: VoiceSegment[]) {
+    if (sequence.length < 2 || typeof AudioContext === 'undefined') {
+      this.playSequence(sequence)
+      return
+    }
+    this.stop()
+    const generation = this.generation
+    this.composed ??= new ComposedAudioPlayer()
+    this.composed.setBlocked(this.blocked)
+    this.composedActive = true
+    void this.composed.play(sequence, {}, () => {
+      if (generation === this.generation) this.composedActive = false
+    }).catch(() => {
+      if (generation !== this.generation) return
+      // Retain the existing recording/TTS fallback if loading or decoding fails.
+      this.playSequence(sequence)
+    })
+  }
 
   play(sources: Array<string | undefined>, fallback?: { instruction?: string; target?: string }) {
     const texts = [fallback?.instruction, fallback?.target]
@@ -21,6 +47,8 @@ export class QuestionVoicePlayer {
 
   setBlocked(blocked: boolean) {
     this.blocked = blocked
+    this.composed?.setBlocked(blocked)
+    if (this.composedActive) return
     for (const audio of Array.from(this.activeAudio)) {
       if (blocked) audio.pause()
       else void audio.play().catch(() => undefined)
@@ -34,6 +62,9 @@ export class QuestionVoicePlayer {
   }
 
   stop() {
+    this.generation++
+    this.composed?.stop()
+    this.composedActive = false
     this.queue = []
     this.speechText = undefined
     this.cancelSpeech()
@@ -46,6 +77,12 @@ export class QuestionVoicePlayer {
     }
     this.activeAudio.clear()
     this.audio = undefined
+  }
+
+  dispose() {
+    this.stop()
+    this.composed?.dispose()
+    this.composed = undefined
   }
 
   private next() {
@@ -84,6 +121,8 @@ export class QuestionVoicePlayer {
   }
 
   private cancelSpeech() {
+    this.cancelVoiceWait?.()
+    this.cancelVoiceWait = undefined
     if (!this.utterance) return
     this.utterance.onend = this.utterance.onerror = null
     this.utterance = undefined
@@ -94,10 +133,42 @@ export class QuestionVoicePlayer {
     if (typeof window === 'undefined' || !('speechSynthesis' in window)) { this.next(); return }
     this.speechText = text
     if (this.blocked) return
+    if (this.cancelVoiceWait) return
+    const synth = window.speechSynthesis
+    const findVietnameseVoice = () => {
+      const voices = synth.getVoices()
+      return voices.find(candidate => candidate.lang.toLowerCase().replace('_', '-') === 'vi-vn')
+        ?? voices.find(candidate => /^vi(?:[-_]|$)/i.test(candidate.lang))
+    }
+    const voice = findVietnameseVoice()
+    if (voice) { this.speakWithVoice(text, voice); return }
+
+    // Some browsers populate their voices asynchronously, including remote voices.
+    const onVoicesChanged = () => {
+      const loadedVoice = findVietnameseVoice()
+      if (!loadedVoice) return
+      cleanup()
+      this.speakWithVoice(text, loadedVoice)
+    }
+    const timer = setTimeout(() => {
+      cleanup()
+      // Let the engine resolve vi-VN if it does not expose a Vietnamese voice.
+      this.speakWithVoice(text, findVietnameseVoice())
+    }, 1500)
+    const cleanup = () => {
+      clearTimeout(timer)
+      synth.removeEventListener('voiceschanged', onVoicesChanged)
+      this.cancelVoiceWait = undefined
+    }
+    this.cancelVoiceWait = cleanup
+    synth.addEventListener('voiceschanged', onVoicesChanged)
+    onVoicesChanged()
+  }
+
+  private speakWithVoice(text: string, voice?: SpeechSynthesisVoice) {
     const utterance = new SpeechSynthesisUtterance(text)
     utterance.lang = 'vi-VN'
     utterance.rate = .85
-    const voice = window.speechSynthesis.getVoices().find(candidate => candidate.lang.startsWith('vi'))
     if (voice) utterance.voice = voice
     this.utterance = utterance
     utterance.onend = utterance.onerror = () => {

@@ -170,5 +170,36 @@ async function main() {
   assert.equal(speech[2].onend, null)
   assert.equal(cancelled, 2)
   console.log('PASS voice fallback: Vietnamese speech, instruction before a, pause/resume and cleanup')
+  const events = new EventTarget()
+  let availableVoices = [{ lang: 'en-US' }]
+  Object.assign(window.speechSynthesis, {
+    getVoices: () => availableVoices,
+    addEventListener: events.addEventListener.bind(events),
+    removeEventListener: events.removeEventListener.bind(events),
+  })
+  const before = speech.length
+  voice.play([undefined], { instruction: 'Hãy chọn số hai.' })
+  assert.equal(speech.length, before)
+  availableVoices = [{ lang: 'en-US' }, { lang: 'vi-VN' }]
+  events.dispatchEvent(new Event('voiceschanged'))
+  assert.equal(speech.length, before + 1)
+  assert.equal(speech.at(-1).voice.lang, 'vi-VN')
+  voice.stop()
+  availableVoices = []
+  voice.play([undefined], { instruction: 'Câu đã hủy.' })
+  voice.setBlocked(true)
+  availableVoices = [{ lang: 'vi-VN' }]
+  events.dispatchEvent(new Event('voiceschanged'))
+  assert.equal(speech.length, before + 1)
+  voice.setBlocked(false)
+  assert.equal(speech.at(-1).text, 'Câu đã hủy.')
+  voice.stop()
+  availableVoices = []
+  voice.play([undefined], { instruction: 'Không đọc sau khi dừng.' })
+  voice.stop()
+  availableVoices = [{ lang: 'vi-VN' }]
+  events.dispatchEvent(new Event('voiceschanged'))
+  assert.equal(speech.length, before + 2)
+  console.log('PASS delayed Vietnamese voices: selection, pause/resume and stop while loading')
 }
 main().catch(error => { console.error(error); process.exitCode = 1 })
