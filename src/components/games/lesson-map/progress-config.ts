@@ -11,6 +11,7 @@ const games = Object.values(GAME_IDS)
 const published: Record<string, Pick<ProgressLesson, 'available' | 'games' | 'requiredGames' | 'starMilestones'>> = {
   'toan-1-bai-1': { available: true, games, requiredGames: 2 },
   'toan-1-bai-2': { available: true, games, requiredGames: 2 },
+  'tieng-anh-1-bai-2': { available: true, games, requiredGames: 4 },
   'tieng-anh-1-bai-1': { available: true, games, requiredGames: 2 },
   'tieng-viet-1-bai-1': { available: true, games: [GAME_IDS.BUBBLE_SHOOTER, GAME_IDS.GOLD_MINING, GAME_IDS.RACING, GAME_IDS.DRAG_DROP], requiredGames: 4 },
 }

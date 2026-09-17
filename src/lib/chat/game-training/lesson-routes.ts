@@ -4,7 +4,7 @@ export const GAME_LINK_EXAMPLE = `- Nếu người dùng nói “chơi Đào và
 /** Update when lessons are added or game routes change. */
 export const GAME_LESSON_ROUTES_TRAINING = `
 #Tất cả đường dẫn chơi game chính xác:
-- Hiện có 5 bài học có game: Toán lớp 1 bài 1 và bài 2, Tiếng Việt lớp 1 bài 1, Tiếng Anh lớp 1 bài 1, Toán lớp 2 bài 1; ngoài ra có luyện tập phép cộng đến 10.
+- Hiện có 6 bài học có game: Toán lớp 1 bài 1 và bài 2, Tiếng Việt lớp 1 bài 1, Tiếng Anh lớp 1 bài 1 và bài 2, Toán lớp 2 bài 1; ngoài ra có luyện tập phép cộng đến 10.
 - Mỗi bài trên có Bắn bóng, Kéo thả, Đào vàng, Đua xe. Riêng Toán lớp 1 bài 2 có thêm Nhặt trứng. Luyện cộng đến 10 dùng game Bắn bóng, không phải một thể loại game riêng.
 - Toán lớp 1, bài 1 “Nhận biết số từ 0 đến 5”, trang chọn trò chơi:
 /game/lop-1/toan/bai-1
@@ -62,6 +62,16 @@ export const GAME_LESSON_ROUTES_TRAINING = `
 /game/lop-1/tieng-anh/bai-1/bubble-shooter
 
 #Các trang chọn lớp, môn và bài học:
+- Tiếng Anh lớp 1, bài 2 “In the dining room”, đã có đủ 4 game. Có 10 mục tiêu: nhận biết cup, cake, cat, car, chữ C/c, âm /k/, ghép từ với hình, nghe và chọn, hiểu và hoàn thành “I have a + noun”. Câu hỏi và đáp án random mỗi lượt; ball, bike, book chỉ ôn tập hoặc làm đáp án nhiễu, không có mục tiêu riêng trong bài 2:
+/game/lop-1/tieng-anh/bai-2
+- Tiếng Anh lớp 1, bài 2, Bắn bóng:
+/game/lop-1/tieng-anh/bai-2/bubble-shooter
+- Tiếng Anh lớp 1, bài 2, Kéo thả:
+/game/lop-1/tieng-anh/bai-2/drag-drop
+- Tiếng Anh lớp 1, bài 2, Đào vàng:
+/game/lop-1/tieng-anh/bai-2/gold-mining
+- Tiếng Anh lớp 1, bài 2, Đua xe:
+/game/lop-1/tieng-anh/bai-2/racing
 - Trang tổng hợp trò chơi học tập:
 /game
 - Lớp 1, trang chọn môn:
@@ -79,11 +89,9 @@ export const GAME_LESSON_ROUTES_TRAINING = `
 
 #Các route đã có nhưng nội dung đang chuẩn bị:
 Không giới thiệu các trang dưới đây là game đã chơi được. Nếu người dùng hỏi, nói rõ nội dung đang chuẩn bị; không tự tạo route game con.
-- Tiếng Anh lớp 1, bài 2:
-/game/lop-1/tieng-anh/bai-2
 - Toán lớp 1, bài 3:
 /game/lop-1/toan/bai-3
-- Tiếng Việt lớp 1 và Tiếng Anh lớp 1: các bài 2 đến 10 đang chuẩn bị, chưa có game con để chơi.
+- Tiếng Việt lớp 1: các bài 2 đến 10 đang chuẩn bị. Tiếng Anh lớp 1: các bài 3 đến 16 đang chuẩn bị, chưa có game con để chơi.
 - Toán lớp 2: các bài 2 đến 10 đang chuẩn bị, chưa có game con để chơi.
 - Toán lớp 2, bài 2:
 /game/lop-2/toan/bai-2
