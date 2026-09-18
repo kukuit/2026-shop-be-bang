@@ -24,7 +24,6 @@ export interface MathQuestion {
 }
 
 export interface BubbleShooterGameConfig {
-  questionLayout?: { panelWidth: number; panelHeight?: number; fontFamily: string }
   wolfWrongAnswersOnly?: boolean
   id: string
   title: string

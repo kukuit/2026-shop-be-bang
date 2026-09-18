@@ -15,6 +15,10 @@ export class QuestionVoicePlayer {
   private composedActive = false
   private generation = 0
 
+  get pending() {
+    return this.composedActive || this.queue.length > 0 || Boolean(this.audio || this.speechText)
+  }
+
   playComposedSequence(sequence: VoiceSegment[]) {
     if (sequence.length < 2 || typeof AudioContext === 'undefined') {
       this.playSequence(sequence)
@@ -117,7 +121,9 @@ export class QuestionVoicePlayer {
       this.audio = undefined
       this.speak(text)
     }
-    void audio.play().catch(() => undefined)
+    void audio.play().catch(() => {
+      if (!this.blocked && this.audio === audio) audio.onerror?.(new Event('error'))
+    })
   }
 
   private cancelSpeech() {

@@ -1,5 +1,6 @@
 'use client'
 
+import { loadQuestionFont } from '../general/question-typography'
 import { useEffect, useRef, useState } from 'react'
 import { GameCompletion, GameLoadingScreen, GameShell, unlockGameAudio } from '../general'
 import type { BubbleShooterGameConfig } from './types/game'
@@ -21,7 +22,7 @@ export default function PhaserGame({ config }: { config: BubbleShooterGameConfig
 
     Promise.all([import('phaser'), import('./config'), resolveIntroVoice({
       gameId: 'bubble-shooter', lessonId: config.tracking?.lessonId, introVoice: config.introVoice,
-    })]).then(([Phaser, { createGameConfig }, introVoice]) => {
+    }), loadQuestionFont()]).then(([Phaser, { createGameConfig }, introVoice]) => {
       if (cancelled || !containerRef.current || gameRef.current) return
       setProgress(15)
       gameRef.current = new Phaser.Game(createGameConfig(containerRef.current, { ...config, introVoice }, {

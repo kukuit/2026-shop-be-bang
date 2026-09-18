@@ -1,5 +1,6 @@
 'use client'
 
+import { loadQuestionFont } from '../general/question-typography'
 import { useEffect, useRef, useState } from 'react'
 import { GameCompletion, GameLoadingScreen, GameShell, unlockGameAudio } from '../general'
 import type { RacingGameConfig } from './types'
@@ -18,7 +19,7 @@ export default function RacingGame({ config }: { config: RacingGameConfig }) {
 
   useEffect(() => {
     let cancelled = false
-    Promise.all([import('phaser'), import('./config'), resolveIntroVoice(config)]).then(([Phaser, { createRacingConfig }, introVoice]) => {
+    Promise.all([import('phaser'), import('./config'), resolveIntroVoice(config), loadQuestionFont()]).then(([Phaser, { createRacingConfig }, introVoice]) => {
       if (cancelled || !host.current || game.current) return
       setLoadProgress(15)
       const phaserGame = new Phaser.Game(createRacingConfig(host.current, { ...config, introVoice }, {

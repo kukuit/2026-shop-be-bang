@@ -67,7 +67,6 @@ export function toDrag(q: MathReviewQuestion, index: number): DragDropLevel {
 }
 const common = { lessonId, totalRounds: 10, answerDomain: [] }
 export const BUBBLE_CONFIG: BubbleShooterGameConfig = {
-  questionLayout: { panelWidth: 672, fontFamily: 'Arial, Helvetica, sans-serif' },
   id: `${lessonId}-bubble`, title: TOAN_2_BAI_1.title, totalRounds: 10,
   tracking: { lessonId, gameId: GAME_IDS.BUBBLE_SHOOTER },
   loadQuestions: async () => (await loadMathQuestions('bubble-shooter')).map(toBubble),

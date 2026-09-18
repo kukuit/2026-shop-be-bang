@@ -4,7 +4,7 @@ import { PointerEvent as ReactPointerEvent, useCallback, useEffect, useMemo, use
 import { GameCompletion, GameLoadingScreen, GameShell, preloadAssets, useBackgroundMusic } from '../general'
 import { GAME_BACKGROUND_MUSIC } from '../general/audio'
 import { NUMBER_COLORS } from './levels'
-import type { CountGroup, DragAnswerValue, DragDropGameConfig, NumberValue, SequenceCell } from './types'
+import type { CountGroup, DragAnswerValue, DragDropGameConfig, DragDropLevel, NumberValue, SequenceCell } from './types'
 import styles from './DragDropGame.module.css'
 import { createGameTracker, type GameTracker } from '../general/tracking'
 import { useGameVoices } from '../general/useGameVoices'
@@ -19,6 +19,11 @@ import { resolveIntroVoice } from '../general/intro-voice'
 
 type DragState = { value: DragAnswerValue; x: number; y: number; pointerId: number } | null
 type FloatingScore = { id: number; x: number; y: number; value: '+10' | '-2' | '0'; correct: boolean } | null
+
+// Heading decoration only; keep the actual question images/symbols in the board.
+const plainHeading = (text: string) => text
+  .replace(new RegExp('[\\p{Extended_Pictographic}\\uFE0F\\u200D]', 'gu'), '')
+  .replace(/\s+/g, ' ').trim()
 
 const shuffleNumbers = (domain: readonly DragAnswerValue[]) => {
   const values = [...domain]
@@ -91,12 +96,23 @@ function ReadyDragDropGame({ config }: { config: DragDropGameConfig }) {
   const gameAreaRef = useRef<HTMLDivElement>(null)
   const answerTrayRef = useRef<HTMLDivElement>(null)
   const level = levels[currentLevel]
+  const headingTitle = plainHeading(level.title)
+  const headingInstruction = plainHeading(level.instruction)
+  const hasQuestionVoice = Boolean(level.voice || level.instructionVoice || level.voiceSequence?.length
+    || level.voiceFallback?.instruction || level.voiceFallback?.target)
+  const inlineVoiceGroupIds = new Set((level.groups ?? []).filter(group =>
+    !group.textMatch && group.capacity === undefined && (
+      (hasQuestionVoice && group.count === 1 && group.icon.trim() === '?')
+      || (level.voice && !Object.values(level.inputModes ?? {}).includes('text'))
+    )).map(group => group.id))
+  const hasInlineVoiceButton = inlineVoiceGroupIds.size > 0
   const answerDomain = level.answerDomain ?? config.answerDomain
   const displayedAnswers = numberTray.length === answerDomain.length && numberTray.every((value) => answerDomain.includes(value))
     ? numberTray : answerDomain
-  const longestAnswer = Math.max(0, ...displayedAnswers.map(value => String(value).length))
-  const hasLongAnswers = config.answerTrayColumns === 'auto' && !config.images && longestAnswer > 3
-  const answerColumns = hasLongAnswers ? 3 : 6
+  const longestAnswer = Math.max(0, ...displayedAnswers.map(value => config.images?.[String(value)] ? 0 : Array.from(String(value).normalize('NFC')).length))
+  const hasLongAnswers = displayedAnswers.length !== 4 && longestAnswer > 3
+    && (displayedAnswers.length === 6 || config.answerTrayColumns === 'auto')
+  const answerColumns = displayedAnswers.length === 4 ? 4 : hasLongAnswers ? 3 : 6
   const density = level.groups && level.groups.length >= 4 ? 'dense' : level.groups && level.groups.length === 1 ? 'simple' : 'standard'
   const startMusic = useBackgroundMusic(soundEnabled, isReady && gameStarted)
   const voiceAssets = useMemo(() => config.introVoice
@@ -308,18 +324,18 @@ function ReadyDragDropGame({ config }: { config: DragDropGameConfig }) {
       <div ref={gameAreaRef} className="relative h-full touch-none overflow-hidden bg-sky-300 bg-cover bg-center" style={{ backgroundImage: "url('/games/drag-drop/images/optimize/farm-background.png')" }}>
         <div className={styles.gameplayPanel} data-density={density}>
           <div className={config.hideQuestionText ? 'sr-only' : styles.questionHeading}>
-            <h2>{level.title}</h2>
-            <p>{level.instruction}</p>
+            {headingTitle && <h2>{headingTitle}</h2>}
+            {headingInstruction && <p>{headingInstruction}</p>}
           </div>
           <div className={styles.questionArea}>
-            {(level.instructionVoice || (level.spokenInstruction && canSpeak) || (config.showQuestionVoiceButton && (level.voice || level.voiceFallback?.instruction || level.voiceFallback?.target))) && <button type="button" className={styles.listenButton} onClick={() => level.instructionVoice || config.showQuestionVoiceButton ? playLevelVoice() : speakInstruction()} disabled={!gameStarted || !soundEnabled || gamePaused || gameCompleted || isTransitioning} aria-label="Nghe lại câu hỏi"><Volume2 size={28} aria-hidden="true" /></button>}
-            {level.groups && <CountGroups groups={level.groups} completed={completedTargets} wrongTarget={wrongTarget} correctTarget={correctTarget} voiceButton={level.voice && !Object.values(level.inputModes ?? {}).includes('text') ? <button type="button" disabled={!gameStarted || gamePaused || gameCompleted || isTransitioning} onClick={playLevelVoice} className="grid h-24 w-24 max-w-full shrink-0 place-items-center rounded-full border-[3px] border-sky-400 bg-sky-100 text-sky-700 active:scale-95 disabled:opacity-50" aria-label="Nghe lại"><Volume2 className="h-16 w-16" aria-hidden="true" /></button> : undefined} />}
+            {!hasInlineVoiceButton && (hasQuestionVoice || (level.spokenInstruction && canSpeak)) && <button type="button" className={styles.listenButton} onClick={() => hasQuestionVoice ? playLevelVoice() : speakInstruction()} disabled={!gameStarted || !soundEnabled || gamePaused || gameCompleted || isTransitioning} aria-label="Nghe lại câu hỏi"><Volume2 size={28} aria-hidden="true" /></button>}
+            {level.groups && <CountGroups inlineVoiceGroupIds={inlineVoiceGroupIds} inputModes={level.inputModes} wideAnswer={longestAnswer > 3} groups={level.groups} completed={completedTargets} wrongTarget={wrongTarget} correctTarget={correctTarget} voiceButton={hasInlineVoiceButton ? <button type="button" disabled={!gameStarted || !soundEnabled || gamePaused || gameCompleted || isTransitioning} onClick={playLevelVoice} className={styles.listenButton} aria-label="Nghe lại"><Volume2 size={28} aria-hidden="true" /></button> : undefined} />}
             {level.sequence && <SequenceRow cells={level.sequence} completed={completedTargets} wrongTarget={wrongTarget} correctTarget={correctTarget} />}
           </div>
-          <div ref={answerTrayRef} className={styles.answerTray} data-long-answers={hasLongAnswers || undefined} style={config.answerTrayColumns === 'auto' ? { gridTemplateColumns: `repeat(${answerColumns}, minmax(0, 1fr))`, fontFamily: 'Arial, sans-serif' } : config.images ? { gridTemplateColumns: 'repeat(4, minmax(0, 1fr))' } : undefined}>
+          <div ref={answerTrayRef} className={styles.answerTray} data-long-answers={hasLongAnswers || undefined} style={{ gridTemplateColumns: `repeat(${answerColumns}, minmax(0, 1fr))`, fontFamily: '"Game Nunito", Arial, sans-serif' }}>
             {displayedAnswers.map((value) => {
               const stolen = stolenNumber === value
-              return <button key={value} data-answer-tile data-answer-value={value} type="button" disabled={stolen} onPointerDown={(event) => beginDrag(event, value)} onPointerMove={moveDrag} onPointerUp={(event) => endDrag(event, value)} onPointerCancel={() => setDrag(null)} className={`${styles.answerButton} ${stolen ? styles.answerButtonStolen : ''}`} style={{ backgroundColor: stolen ? undefined : colorFor(value) }} aria-label={stolen ? 'Ô số đã bị Sói lấy' : `Kéo ${config.answerNoun ?? 'số'} ${value}`}>{stolen ? '' : <GameImageValue value={value} />}</button>
+              return <button key={value} data-answer-tile data-answer-value={value} type="button" disabled={stolen} onPointerDown={(event) => beginDrag(event, value)} onPointerMove={moveDrag} onPointerUp={(event) => endDrag(event, value)} onPointerCancel={() => setDrag(null)} className={`${styles.answerButton} ${stolen ? styles.answerButtonStolen : ''}`} style={{ backgroundColor: stolen ? undefined : colorFor(value) }} aria-label={stolen ? 'Ô số đã bị Sói lấy' : `Kéo ${config.answerNoun ?? 'số'} ${value}`}>{stolen ? '' : <FittedTileContent wrap><GameImageValue value={value} /></FittedTileContent>}</button>
             })}
           </div>
         </div>
@@ -337,14 +353,16 @@ function ReadyDragDropGame({ config }: { config: DragDropGameConfig }) {
 
 function DropTarget({ id, completed, wrong, correct, large = false }: { id: string; completed?: DragAnswerValue; wrong: boolean; correct: boolean; large?: boolean }) {
   return <div data-target-id={id} className={`${styles.dropTarget} ${large ? styles.dropTargetLarge : ''} ${completed !== undefined ? styles.dropTargetCompleted : styles.dropTargetEmpty} ${wrong ? styles.shake : ''} ${correct ? 'scale-110' : ''}`}>
-    <span className={styles.targetValue}><GameImageValue value={completed ?? '?'} size={32} /></span>
+    {completed !== undefined
+      ? <FittedTileContent wrap><GameImageValue value={completed} size={32} /></FittedTileContent>
+      : <span className={styles.targetValue}>?</span>}
   </div>
 }
 
-function CountGroups({ groups, completed, wrongTarget, correctTarget, voiceButton }: { groups: CountGroup[]; completed: Record<string, DragAnswerValue>; wrongTarget: string | null; correctTarget: string | null; voiceButton?: ReactNode }) {
+function CountGroups({ groups, completed, wrongTarget, correctTarget, voiceButton, wideAnswer, inputModes, inlineVoiceGroupIds }: { inlineVoiceGroupIds: Set<string>; inputModes?: DragDropLevel['inputModes']; wideAnswer: boolean; groups: CountGroup[]; completed: Record<string, DragAnswerValue>; wrongTarget: string | null; correctTarget: string | null; voiceButton?: ReactNode }) {
   return <div className={styles.countGroups} data-count={groups.length} style={{ display: 'flex', flexDirection: 'column' }}>
-    {groups.map((group) => group.textMatch ? <div key={group.id} data-target-id={group.id} className={`${styles.countGroup} ${wrongTarget === group.id ? styles.shake : ''}`} style={{ width: '100%', justifyContent: 'center', gap: 4, fontFamily: 'Arial, sans-serif', fontSize: 56, fontWeight: 700 }} aria-label={group.label}>
-      <span>{group.textMatch.before}</span><span><DropTarget large id={group.id} completed={completed[group.id]} wrong={false} correct={correctTarget === group.id} /></span><span>{group.textMatch.after}</span>
+    {groups.map((group) => group.textMatch ? <div key={group.id} data-target-id={group.id} className={`${styles.countGroup} ${wrongTarget === group.id ? styles.shake : ''}`} style={{ justifyContent: 'center', gap: 4, fontFamily: '"Game Nunito", Arial, sans-serif', fontSize: 'clamp(20px, 6cqw, 28px)', fontWeight: 800, flexWrap: 'wrap' }} aria-label={group.label}>
+      <span><GameImageValue value={group.textMatch.before} colorful /></span><span><DropTarget large id={group.id} completed={completed[group.id]} wrong={false} correct={correctTarget === group.id} /></span><span><GameImageValue value={group.textMatch.after} colorful /></span>
     </div> : group.capacity !== undefined ? <div key={group.id} data-target-id={group.id} className={`${styles.completionGroup} ${wrongTarget === group.id ? styles.shake : ''}`}>
       <div className={styles.cakeTray} role="img" aria-label={`${group.capacity} chỗ, ${group.count} cái bánh, ${group.capacity - group.count} chỗ cần thêm`}>
         {Array.from({ length: group.capacity }, (_, index) => {
@@ -360,9 +378,9 @@ function CountGroups({ groups, completed, wrongTarget, correctTarget, voiceButto
         <span aria-hidden="true">→</span>
         <DropTarget large id={group.id} completed={completed[group.id]} wrong={false} correct={correctTarget === group.id} />
       </div>
-    </div> : <div key={group.id} data-target-id={group.id} className={`${styles.countGroup} ${wrongTarget === group.id ? styles.shake : ''}`} style={{ width: '100%' }}>
-      <div className={styles.animals} data-items={group.count} aria-label={`${group.count} ${group.label}`}>
-        {voiceButton ?? (group.count > 0 && Array.from({ length: group.count }, (_, itemIndex) => <span key={itemIndex}><GameImageValue value={group.icon} size={90} /></span>))}
+    </div> : <div key={group.id} data-target-id={group.id} data-wide-answer={wideAnswer || undefined} className={`${styles.countGroup} ${wrongTarget === group.id ? styles.shake : ''}`}>
+      <div className={group.count === 1 && (inputModes?.[group.id] === 'text' || new RegExp('\\p{L}', 'u').test(group.icon)) ? styles.wordPrompt : styles.animals} style={inlineVoiceGroupIds.has(group.id) ? { display: 'flex', justifyContent: 'center', alignItems: 'center' } : undefined} data-items={group.count} aria-label={`${group.count} ${group.label}`}>
+        {(inlineVoiceGroupIds.has(group.id) ? voiceButton : undefined) ?? (group.count > 0 && Array.from({ length: group.count }, (_, itemIndex) => <span key={itemIndex}><GameImageValue value={group.icon} size={90} colorful /></span>))}
       </div><DropTarget large id={group.id} completed={completed[group.id]} wrong={false} correct={correctTarget === group.id} />
     </div>)}
   </div>
