@@ -1,3 +1,4 @@
+import { QUESTION_FONT } from '../general/question-typography'
 import { createGameImage, preloadGameImages } from '../general/phaser-game-image'
 import { playQuestionVoice, stopQuestionVoice } from '../general/scene-question-voice'
 import * as Phaser from 'phaser'
@@ -166,7 +167,7 @@ export class GoldMinerScene extends Phaser.Scene {
   private createTopScene() {
     this.cappyFace = this.add.text(235, 327, '', { fontSize: '1px' })
     this.taskItems = this.add.text(TASK_PANEL_CENTER.x, TASK_PANEL_CENTER.y, '', {
-      fontFamily: 'Arial, "Segoe UI", sans-serif',
+      fontFamily: QUESTION_FONT,
       fontSize: '46px',
       fontStyle: 'bold',
       color: '#4a250f',

@@ -1,3 +1,4 @@
+import { TIENG_ANH_1_BAI_2 } from '@/app/game/lop-1/tieng-anh/bai-2/lesson'
 import { TOAN_2_BAI_1 } from '@/app/game/lop-2/toan/bai-1/lesson'
 import { TOAN_1_BAI_1 } from '@/app/game/lop-1/toan/bai-1/lesson'
 import { TOAN_1_BAI_2 } from '@/app/game/lop-1/toan/bai-2/lesson'
@@ -9,10 +10,12 @@ export const LESSON_CATALOG = {
   [TOAN_1_BAI_1.lessonId]: TOAN_1_BAI_1,
   [TOAN_1_BAI_2.lessonId]: TOAN_1_BAI_2,
   [TIENG_ANH_1_BAI_1.lessonId]: TIENG_ANH_1_BAI_1,
+  [TIENG_ANH_1_BAI_2.lessonId]: TIENG_ANH_1_BAI_2,
   [TIENG_VIET_1_BAI_1.lessonId]: TIENG_VIET_1_BAI_1,
 } as const
 
 export const LESSON_IDS = {
+  TIENG_ANH_1_BAI_2: TIENG_ANH_1_BAI_2.lessonId,
   TOAN_2_BAI_1: TOAN_2_BAI_1.lessonId,
   TOAN_1_BAI_1: TOAN_1_BAI_1.lessonId,
   TOAN_1_BAI_2: TOAN_1_BAI_2.lessonId,

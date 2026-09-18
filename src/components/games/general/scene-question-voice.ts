@@ -38,3 +38,7 @@ export function playQuestionVoice(scene: Phaser.Scene, question: { voiceSequence
 export function stopQuestionVoice(scene: Phaser.Scene) {
   players.get(scene)?.stop()
 }
+
+export function isQuestionVoicePending(scene: Phaser.Scene) {
+  return players.get(scene)?.pending ?? false
+}

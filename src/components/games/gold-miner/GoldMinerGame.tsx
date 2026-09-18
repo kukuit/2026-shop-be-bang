@@ -1,5 +1,6 @@
 'use client'
 
+import { loadQuestionFont } from '../general/question-typography'
 import { useEffect, useRef, useState } from 'react'
 import { GameCompletion, GameLoadingScreen, GameShell, unlockGameAudio } from '../general'
 import type { GoldMinerGameConfig } from './types'
@@ -18,7 +19,7 @@ export default function GoldMinerGame({ config }: { config: GoldMinerGameConfig 
 
   useEffect(() => {
     let cancelled = false
-    Promise.all([import('phaser'), import('./config'), resolveIntroVoice(config)]).then(([Phaser, { createGoldMinerConfig }, introVoice]) => {
+    Promise.all([import('phaser'), import('./config'), resolveIntroVoice(config), loadQuestionFont()]).then(([Phaser, { createGoldMinerConfig }, introVoice]) => {
       if (cancelled || !host.current || game.current) return
       setLoadProgress(15)
       game.current = new Phaser.Game(createGoldMinerConfig(host.current, { ...config, introVoice }, {

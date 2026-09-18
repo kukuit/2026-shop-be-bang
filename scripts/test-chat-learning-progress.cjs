@@ -62,7 +62,7 @@ test('summary is scoped to authenticated user and weights goals across the catal
   assert.ok(reads.every(id => id.startsWith('child-a_')))
   assert.equal(report.practiced, 2)
   assert.equal(report.percent, Math.round(2 / report.total * 100))
-  assert.equal(report.lessons.length, 3)
+  assert.equal(report.lessons.length, 5)
   assert.ok(report.lessons.every(lesson => !('goals' in lesson)))
   assert.equal(report.lessons[0].percent, 33)
 })
@@ -107,7 +107,7 @@ test('recognizes progress requests and detail follow-ups without intercepting or
 })
 
 test('other grades never read or expose grade one progress', async () => {
-  for (const grade of [2, 3]) {
+  for (const grade of [3, 4, 5]) {
     const { GET, reads } = endpoint({ ok: true, user: { id: 'child-a', activeGrade: grade } })
     const report = await (await GET(new Request(`http://localhost/api/chat/learning-progress?grade=${grade}`))).json()
     assert.equal(report.grade, grade)
@@ -123,8 +123,9 @@ test('other grades never read or expose grade one progress', async () => {
 test('subject detail only reads the selected subject within the confirmed grade', async () => {
   const { GET, reads } = endpoint({ ok: true, user: { id: 'child-a', activeGrade: 1 } })
   const report = await (await GET(new Request('http://localhost/api/chat/learning-progress?grade=1&detail=1&subject=tieng-anh'))).json()
-  assert.deepEqual(reads, ['child-a_tieng-anh-1-bai-1'])
-  assert.equal(report.lessons.length, 1)
+  assert.deepEqual(reads, ['child-a_tieng-anh-1-bai-1', 'child-a_tieng-anh-1-bai-2'])
+  assert.equal(report.lessons.length, 2)
+  assert.equal(report.lessons[1].goals.length, 10)
   assert.equal(report.subject, 'tieng-anh')
   const { formatProgress } = load('src/lib/chat/learning-progress.ts')
   const message = formatProgress(report, true)
@@ -155,7 +156,8 @@ test('uses the database active grade even when the client supplies another grade
   const { GET, reads } = endpoint({ ok: true, user: { id: 'child-a', activeGrade: 2, primaryGrade: 1 } })
   const report = await (await GET(new Request('http://localhost/api/chat/learning-progress?grade=1'))).json()
   assert.equal(report.grade, 2)
-  assert.deepEqual(reads, [])
+  assert.deepEqual(reads, ['child-a_toan-2-bai-1'])
+  assert.ok(report.lessons.every(lesson => lesson.id.startsWith('toan-2-')))
 })
 
 test('falls back to the database primary grade without asking for a grade', async () => {

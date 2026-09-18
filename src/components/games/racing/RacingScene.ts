@@ -1,5 +1,7 @@
+import { getVoiceChannel } from '../general/VoiceChannel'
+import { QUESTION_FONT, fitQuestionWords } from '../general/question-typography'
 import { createGameImage, preloadGameImages } from '../general/phaser-game-image'
-import { playQuestionVoice, stopQuestionVoice } from '../general/scene-question-voice'
+import { playQuestionVoice, stopQuestionVoice, isQuestionVoicePending } from '../general/scene-question-voice'
 import * as Phaser from 'phaser'
 import { GAME_BACKGROUND_MUSIC } from '../general/audio'
 import { GameVoiceManager, type VoicePriority } from '../general/GameVoiceManager'
@@ -21,6 +23,9 @@ const WOLF_BASE_SCALE = WOLF_FRAME_SIZE / WOLF_FRAME_SOURCE_SIZE
 const WOLF_CAR_Y = CAR_Y
 
 export class RacingScene extends Phaser.Scene {
+  private gatesWaiting = false
+  private readingTimeRemaining = 0
+  private waitingForIntro = false
   private state = RacingState.RUNNING
   private questions: RacingQuestion[] = []
   private questionIndex = 0
@@ -137,6 +142,9 @@ export class RacingScene extends Phaser.Scene {
     this.hasCheckedCurrentGate = false
     this.paused = false
     this.gameStarted = false
+    this.waitingForIntro = false
+    this.gatesWaiting = false
+    this.readingTimeRemaining = 0
     this.pointerStartX = undefined
     this.questionStartedAt = 0
     this.tracker = undefined
@@ -152,6 +160,20 @@ export class RacingScene extends Phaser.Scene {
   update(_: number, delta: number) {
     if (!this.gameStarted || this.paused) return
     this.road.update(delta, this.currentSpeed)
+    if (this.waitingForIntro) {
+      if (getVoiceChannel(this.sound).busy && !this.sound.mute) return
+      this.waitingForIntro = false
+      this.beginRaceAction()
+    }
+    if (this.gatesWaiting) {
+      if (!this.sound.mute && (getVoiceChannel(this.sound).busy || isQuestionVoicePending(this))) return
+      if (this.readingTimeRemaining > 0) {
+        this.readingTimeRemaining = Math.max(0, this.readingTimeRemaining - delta)
+        return
+      }
+      this.gatesWaiting = false
+      this.scheduleWolfForCurrentRound()
+    }
     if (this.state === RacingState.RUNNING && this.gates.length) {
       this.gateY += delta * .105 * this.currentSpeed
       const progress = Phaser.Math.Clamp((this.gateY - HORIZON_Y) / (CHECK_Y - HORIZON_Y), 0, 1)
@@ -313,30 +335,24 @@ export class RacingScene extends Phaser.Scene {
       }
       return
     }
-    const tokens = content.split(/\s+/).filter(Boolean)
+    const tokens = content.normalize('NFC').split(/\s+/).filter(Boolean)
     const showVoiceButton = question.type === 'generic' && question.showVoiceButton
     const palette = Phaser.Utils.Array.Shuffle(['#2563eb', '#22c55e', '#a855f7', '#f59e0b', '#0891b2'])
-    const gap = 14
     const labels = tokens.map((token, index) => {
       const label = this.add.text(0, 0, token, {
-        fontFamily: 'Arial Black, Arial, sans-serif',
+        fontFamily: QUESTION_FONT,
         fontSize: showVoiceButton ? '44px' : '58px',
         fontStyle: 'bold',
         color: token === '?' ? '#ef2f36' : palette[index % palette.length],
         stroke: '#ffffff',
         strokeThickness: 4,
-      }).setOrigin(.5)
+      }).setPadding(2, 8, 2, 8).setOrigin(.5).setResolution(2)
       label.setShadow(0, 3, 'rgba(49, 46, 129, 0.22)', 3)
       return label
     })
-    const totalWidth = labels.reduce((width, label) => width + label.width, 0) + gap * Math.max(0, labels.length - 1)
-    const rowScale = Math.min(1, 500 / Math.max(1, totalWidth))
-    let cursor = -totalWidth / 2
-    labels.forEach((label) => {
-      label.setX((cursor + label.width / 2) * rowScale)
-      label.setScale(rowScale)
-      if (showVoiceButton) label.setY(-40)
-      cursor += label.width + gap
+    fitQuestionWords(labels, 500, showVoiceButton ? 90 : 164, showVoiceButton ? 44 : 58)
+    labels.forEach(label => {
+      if (showVoiceButton) label.setY(label.y - 40)
       this.questionText.add(label)
     })
     if (showVoiceButton) {
@@ -352,7 +368,7 @@ export class RacingScene extends Phaser.Scene {
     const palette = Phaser.Utils.Array.Shuffle(['#2563eb', '#22c55e', '#a855f7', '#f59e0b', '#0891b2'])
     const labels = content.normalize('NFC').split(/\s+/).filter(Boolean).map((token, index) =>
       this.add.text(0, 0, token, {
-        fontFamily: 'Arial, "Segoe UI", sans-serif', fontSize: '48px', fontStyle: 'bold',
+        fontFamily: QUESTION_FONT, fontSize: '48px', fontStyle: 'bold',
         color: token.includes('?') ? '#ef2f36' : palette[index % palette.length],
         stroke: '#ffffff', strokeThickness: 2,
       }).setPadding(1, 5, 1, 5).setOrigin(.5))
@@ -439,11 +455,20 @@ export class RacingScene extends Phaser.Scene {
 
   private spawnGates() {
     if (this.state === RacingState.FINISHED) return
+    this.createAnswerGates()
+    this.gatesWaiting = true
+  }
+
+  private createAnswerGates() {
+    if (this.state === RacingState.FINISHED) return
     this.clearGates()
     this.state = RacingState.RUNNING
     this.hasCheckedCurrentGate = false
     this.gateY = HORIZON_Y
     const question = this.questions[this.questionIndex]
+    const hasVoice = !this.sound.mute && Boolean(question.voice || question.instructionVoice
+      || question.voiceSequence?.length || question.voiceFallback?.instruction || question.voiceFallback?.target)
+    this.readingTimeRemaining = hasVoice ? 0 : 2500
     const answers = shuffle(question.type === 'numberToQuantity' ? question.quantities : question.options)
     const correctIndex = answers.indexOf(this.getExpectedAnswer(question))
     if (correctIndex === this.currentLane) {
@@ -470,7 +495,6 @@ export class RacingScene extends Phaser.Scene {
       gate.lane = lane
       this.gates.push(gate)
     })
-    this.scheduleWolfForCurrentRound()
   }
 
   private resolveGate(selectedAnswer: string | number) {
@@ -815,9 +839,23 @@ export class RacingScene extends Phaser.Scene {
     this.tracker = createGameTracker({ lessonId: this.lesson.lessonId, gameId: this.lesson.gameId })
     this.game.registry.set('game-ui:started', true)
     this.startMusic()
-    if (this.lesson.introVoice) this.voiceManager?.prepareIntro()
-    if (this.lesson.introVoice) this.time.delayedCall(500, () => this.voiceManager?.playOnce('intro', 'racing-voice-intro', 'intro'))
     this.tweens.add({ targets: this.car, y: CAR_Y + 4, duration: 160, yoyo: true, repeat: -1, ease: 'Sine.InOut' })
+    if (this.lesson.introVoice && !this.sound.mute && this.voiceManager) {
+      this.waitingForIntro = true
+      this.questionText.removeAll(true)
+      this.renderColorfulPrompt('Bé ơi cùng cappy đua xe chọn đúng đáp án nhé')
+      this.voiceManager.prepareIntro()
+      this.time.delayedCall(500, () => {
+        if (this.sound.mute || !this.waitingForIntro) {
+          getVoiceChannel(this.sound).set('intro-pending', false)
+          return
+        }
+        this.voiceManager?.playOnce('intro', 'racing-voice-intro', 'intro')
+      })
+    } else this.beginRaceAction()
+  }
+
+  private beginRaceAction() {
     this.renderQuestion(false)
     this.time.delayedCall(700, () => this.spawnGates())
     this.time.delayedCall(2600, () => this.tweens.add({ targets: this.hint, alpha: 0, duration: 500 }))

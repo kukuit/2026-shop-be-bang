@@ -4,6 +4,8 @@ export const GAME_LINK_EXAMPLE = `- Nếu người dùng nói “chơi Đào và
 /** Update when lessons are added or game routes change. */
 export const GAME_LESSON_ROUTES_TRAINING = `
 #Tất cả đường dẫn chơi game chính xác:
+- Hiện có 6 bài học có game: Toán lớp 1 bài 1 và bài 2, Tiếng Việt lớp 1 bài 1, Tiếng Anh lớp 1 bài 1 và bài 2, Toán lớp 2 bài 1; ngoài ra có luyện tập phép cộng đến 10.
+- Mỗi bài trên có Bắn bóng, Kéo thả, Đào vàng, Đua xe. Riêng Toán lớp 1 bài 2 có thêm Nhặt trứng. Luyện cộng đến 10 dùng game Bắn bóng, không phải một thể loại game riêng.
 - Toán lớp 1, bài 1 “Nhận biết số từ 0 đến 5”, trang chọn trò chơi:
 /game/lop-1/toan/bai-1
 - Toán lớp 1, bài 1, Đào vàng — luyện nhìn hình và đếm số:
@@ -26,6 +28,28 @@ export const GAME_LESSON_ROUTES_TRAINING = `
 /game/lop-1/toan/bai-2/bubble-shooter
 - Toán lớp 1, luyện tập phép cộng trong phạm vi 10:
 /game/lop-1/toan/luyen-tap/cong-den-10
+- Toán lớp 1, bài 2, Nhặt trứng (còn gọi là săn trứng) — lắc xúc xắc và nhặt đủ 6 trứng:
+/game/lop-1/toan/bai-2/egg-hunt
+- Tiếng Việt lớp 1, bài 1 “A a”, trang chọn trò chơi — nhận biết a và A, nghe âm a, tìm chữ a trong từ, ghép và điền chữ a:
+/game/lop-1/tieng-viet/bai-1
+- Tiếng Việt lớp 1, bài 1, Bắn bóng:
+/game/lop-1/tieng-viet/bai-1/bubble-shooter
+- Tiếng Việt lớp 1, bài 1, Kéo thả:
+/game/lop-1/tieng-viet/bai-1/drag-drop
+- Tiếng Việt lớp 1, bài 1, Đào vàng:
+/game/lop-1/tieng-viet/bai-1/gold-mining
+- Tiếng Việt lớp 1, bài 1, Đua xe:
+/game/lop-1/tieng-viet/bai-1/racing
+- Toán lớp 2, bài 1 “Ôn tập các số đến 100”, trang chọn trò chơi — nhận biết, đọc viết số đến 100; chục và đơn vị; lập và phân tích số; so sánh, thứ tự số; bảng số 1–100; ước lượng và đếm; lập số có hai chữ số:
+/game/lop-2/toan/bai-1
+- Toán lớp 2, bài 1, Bắn bóng:
+/game/lop-2/toan/bai-1/bubble-shooter
+- Toán lớp 2, bài 1, Kéo thả:
+/game/lop-2/toan/bai-1/drag-drop
+- Toán lớp 2, bài 1, Đào vàng:
+/game/lop-2/toan/bai-1/gold-mining
+- Toán lớp 2, bài 1, Đua xe:
+/game/lop-2/toan/bai-1/racing
 - Tiếng Anh lớp 1, bài 1 “In the school playground”, trang chọn trò chơi — học ball, Bill, book, bike, chào hỏi “Hi, I’m + tên” và tạm biệt “Bye, + tên”:
 /game/lop-1/tieng-anh/bai-1
 - Tiếng Anh lớp 1, bài 1, Đào vàng:
@@ -38,6 +62,16 @@ export const GAME_LESSON_ROUTES_TRAINING = `
 /game/lop-1/tieng-anh/bai-1/bubble-shooter
 
 #Các trang chọn lớp, môn và bài học:
+- Tiếng Anh lớp 1, bài 2 “In the dining room”, đã có đủ 4 game. Có 10 mục tiêu: nhận biết cup, cake, cat, car, chữ C/c, âm /k/, ghép từ với hình, nghe và chọn, hiểu và hoàn thành “I have a + noun”. Câu hỏi và đáp án random mỗi lượt; ball, bike, book chỉ ôn tập hoặc làm đáp án nhiễu, không có mục tiêu riêng trong bài 2:
+/game/lop-1/tieng-anh/bai-2
+- Tiếng Anh lớp 1, bài 2, Bắn bóng:
+/game/lop-1/tieng-anh/bai-2/bubble-shooter
+- Tiếng Anh lớp 1, bài 2, Kéo thả:
+/game/lop-1/tieng-anh/bai-2/drag-drop
+- Tiếng Anh lớp 1, bài 2, Đào vàng:
+/game/lop-1/tieng-anh/bai-2/gold-mining
+- Tiếng Anh lớp 1, bài 2, Đua xe:
+/game/lop-1/tieng-anh/bai-2/racing
 - Trang tổng hợp trò chơi học tập:
 /game
 - Lớp 1, trang chọn môn:
@@ -46,19 +80,19 @@ export const GAME_LESSON_ROUTES_TRAINING = `
 /game/lop-1/toan
 - Tiếng Anh lớp 1, trang chọn bài học:
 /game/lop-1/tieng-anh
+- Tiếng Việt lớp 1, trang chọn bài học (bài 1 đã có game):
+/game/lop-1/tieng-viet
 - Lớp 2, trang chọn môn:
 /game/lop-2
-- Toán lớp 2, trang chọn bài học (các bài hiện đang chuẩn bị):
+- Toán lớp 2, trang chọn bài học (bài 1 đã có game):
 /game/lop-2/toan
 
 #Các route đã có nhưng nội dung đang chuẩn bị:
 Không giới thiệu các trang dưới đây là game đã chơi được. Nếu người dùng hỏi, nói rõ nội dung đang chuẩn bị; không tự tạo route game con.
-- Tiếng Anh lớp 1, bài 2:
-/game/lop-1/tieng-anh/bai-2
-- Tiếng Việt lớp 1:
-/game/lop-1/tieng-viet
-- Toán lớp 2, bài 1:
-/game/lop-2/toan/bai-1
+- Toán lớp 1, bài 3:
+/game/lop-1/toan/bai-3
+- Tiếng Việt lớp 1: các bài 2 đến 10 đang chuẩn bị. Tiếng Anh lớp 1: các bài 3 đến 16 đang chuẩn bị, chưa có game con để chơi.
+- Toán lớp 2: các bài 2 đến 10 đang chuẩn bị, chưa có game con để chơi.
 - Toán lớp 2, bài 2:
 /game/lop-2/toan/bai-2
 - Tiếng Anh lớp 2:

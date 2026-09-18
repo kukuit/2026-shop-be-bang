@@ -215,3 +215,13 @@ body {
   background-color: #cbd5f5; /* slate-300 hơi tím */
   border-radius: 9999px;
 }
+
+@font-face {
+  font-family: "Game Nunito";
+  src: url("/games/fonts/Nunito.ttf") format("truetype");
+  font-weight: 200 1000;
+  font-style: normal;
+  font-display: swap;
+}
+
+.game-typography { font-family: "Game Nunito", Arial, sans-serif; }
