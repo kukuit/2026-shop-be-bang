@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { Bot, Check, Mic, Send, Sparkles, Trash2 } from 'lucide-react'
+import { Check, Mic, Send, Sparkles, Trash2 } from 'lucide-react'
+import ChatMessage from '@/components/chat/ChatMessage'
 import { Entity, Row, modules, formatVND, displayName } from '../_lib/model'
 import { sortChatMessages } from '../_lib/chat-order'
 import { api, useDemo } from './Provider'
@@ -98,10 +99,7 @@ export default function Chat({ compact = false }: { compact?: boolean }) {
           const action = m.actionData as unknown as Action | null
           const waiting = m.status === 'waiting_confirmation'
           return <div className={`demo-chat-turn ${m.role}`} key={m.id}>
-            <article className={`demo-message ${m.role}`}>
-              <small>{m.role === 'user' ? 'Bạn' : <><Bot size={13} /> Aqua · Trợ lý</>}</small>
-              <p>{m.content}</p>
-            </article>
+            <ChatMessage role={m.role === 'user' ? 'user' : 'assistant'} content={String(m.content || '')} assistantName="Aqua" />
             {action && (waiting ? <div className="demo-chat-confirmation" ref={m.id === pending?.id ? confirmationRef : undefined}>
               <EntityForm inline entity={action.entity} initial={action.data} confirmationId={m.id} source={action.source} onClose={() => { void cancel(m.id) }} />
             </div> : <div className={`demo-confirm-card ${m.status === 'cancelled' ? 'is-cancelled' : ''}`}>

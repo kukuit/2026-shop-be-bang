@@ -22,7 +22,9 @@
     "game:normalize-sessions": "node scripts/normalize-game-sessions.mjs",
     "game:migrate-session-storage": "node scripts/migrate-game-session-storage.mjs",
     "game:backfill-progress": "node scripts/backfill-game-progress.cjs",
-    "test:game-me": "node scripts/test-game-me-progress.cjs"
+    "test:game-me": "node scripts/test-game-me-progress.cjs",
+    "test:ai-task": "node scripts/test-ai-task.cjs",
+    "test:ai-task:browser": "node scripts/test-ai-task-browser.cjs"
   },
   "dependencies": {
     "@next/third-parties": "^16.1.1",
