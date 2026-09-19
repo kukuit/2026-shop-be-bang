@@ -97,7 +97,7 @@ export async function findTasks(uid: string, filters: Filters, page = 0) {
   return { tasks: tasks.slice(page * 30, (page + 1) * 30), total: tasks.length, page }
 }
 export async function getMessages(uid: string, before?: number) {
-  let query = messageCollection(uid).orderBy('sequence', 'desc').limit(40)
+  let query = messageCollection(uid).orderBy('sequence', 'desc').limit(10)
   if (before !== undefined) query = query.startAfter(before)
   const snapshot = await query.get()
   return { messages: snapshot.docs.map(d => {
@@ -106,5 +106,15 @@ export async function getMessages(uid: string, before?: number) {
     if (message.tasks) message.tasks = message.tasks.map(upgradeParentField)
     if (message.candidates) message.candidates = message.candidates.map(upgradeParentField)
     return message
-  }).reverse(), hasMore: snapshot.size === 40 }
+  }).reverse(), hasMore: snapshot.size === 10 }
+}
+
+export async function getTurn(uid: string, messageId: string) {
+  idSchema.parse(messageId)
+  const docs = await Promise.all([messageCollection(uid).doc(`user_${messageId}`).get(), messageCollection(uid).doc(messageId).get()])
+  return { messages: docs.filter(doc => doc.exists).map(doc => {
+    const message = row<Message>(doc)
+    if (message.proposal) message.proposal = { ...message.proposal, data: upgradeParentField(message.proposal.data), before: upgradeParentField(message.proposal.before) }
+    return message
+  }) }
 }

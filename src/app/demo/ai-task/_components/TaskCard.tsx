@@ -6,6 +6,8 @@ export default function TaskCard({ task, groups, linked = true, path }: { task: 
     {path && <p className="ai-task-card-path">{path}</p>}
     <div className="demo-inline"><span className={`ai-task-badge priority-${task.priority}`}>{priorityLabels[task.priority]}</span><span className={`ai-task-badge status-${task.status}`}>{statusLabels[task.status]}</span><span>{groups.find(g => g.id === task.groupId)?.name || 'Nhóm không còn khả dụng'}</span>{task.parentId && <span>Task con</span>}</div>
     <small className={isOpen(task) && task.deadline && Date.parse(task.deadline) < Date.now() ? 'demo-danger-text' : ''}>{displayDate(task.deadline)}</small>
+    {task.startTime && <small>Bắt đầu: {displayDate(task.startTime)}</small>}
+    {task.duration && <small>Thời lượng: {task.duration} phút</small>}
     {task.description && <p>{task.description}</p>}
   </article>
 }

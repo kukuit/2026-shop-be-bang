@@ -8,9 +8,11 @@ const service = harness.load('_services/task.service.ts')
 const routes = harness.load('api/route.ts')
 const parser = harness.load('_services/ai-task-parser.ts')
 const tree = harness.load('_lib/tree.ts')
+const memoryService = harness.load('_services/work-memory.ts')
+const memoryModel = harness.load('_lib/work-memory.ts')
 let sequence = 0
 const id = () => `request_${++sequence}`
-const input = (title = 'Code EDA cho MSD') => ({ title, groupId: 'ainka', description: null, priority: 'normal', status: 'todo', deadline: null, parentId: null })
+const input = (title = 'Code EDA cho MSD') => ({ title, groupId: 'ainka', description: null, priority: 'normal', status: 'todo', deadline: null, parentId: null, startTime: null, duration: null, withinDay: false })
 const propose = (uid, data = input()) => service.proposeManual(uid, id(), 'CREATE_TASK', data)
 async function create(uid = 'alice', data = input()) { const p = await propose(uid, data); const r = await service.confirmProposal(uid, p.id, data); return (await repo.scanTasks(uid)).find(t => t.id === r.id) }
 async function mutate(task, action, changes = {}, uid = 'alice') {
@@ -20,6 +22,235 @@ async function mutate(task, action, changes = {}, uid = 'alice') {
   return (await repo.scanTasks(uid)).find(t => t.id === task.id)
 }
 test.beforeEach(async () => { harness.reset(); await repo.initialize('alice') })
+
+test('short numbered creation opens a proposal with remembered branch instead of asking for a group', async () => {
+  const student = await service.saveManualTask('alice', id(), 'CREATE_TASK', { ...input('Nhật Anh'), groupId: 'personal' })
+  const subject = await service.saveManualTask('alice', id(), 'CREATE_SUBTASK', { ...input('Toán lớp 2'), groupId: 'personal', parentId: student.id })
+  await service.saveManualTask('alice', id(), 'CREATE_SUBTASK', { ...input('bài 3'), groupId: 'personal', parentId: subject.id, duration: 120, startTime: '2026-09-19T17:00:00+07:00' })
+  const originalFetch = global.fetch
+  global.fetch = async () => { throw new Error('A clear short creation should not need AI clarification') }
+  try {
+    const requestId = id()
+    const response = await routes.POST(new NextRequest('http://localhost/demo/ai-task/api', { method: 'POST', body: JSON.stringify({ operation: 'chat', requestId, text: 'thêm bài 4' }) }))
+    assert.equal(response.status, 200)
+    const message = (await repo.messageCollection('alice').doc(requestId).get()).data()
+    assert.equal(message.status, 'pending')
+    assert.equal(message.proposal.data.title, 'bài 4')
+    assert.equal(message.proposal.data.parentId, subject.id)
+    assert.equal(message.proposal.data.groupId, 'personal')
+    assert.equal(message.proposal.data.duration, 120)
+    assert.equal((await repo.scanTasks('alice')).length, 3)
+    await service.cancelProposal('alice', requestId)
+    await repo.initialize('bob')
+    const intent = await parser.parseTaskIntent('thêm bài 5 nhé', [])
+    const fallback = await service.prepareIntent('bob', intent)
+    assert.equal(fallback.status, 'pending')
+    assert.equal(fallback.proposal.data.groupId, 'inbox')
+    assert.equal(fallback.proposal.data.parentId, null)
+  } finally { global.fetch = originalFetch }
+})
+
+test('quick creation keeps explicit parent, scheduling, questions and multiple actions for AI', () => {
+  const { quickCreateIntent } = harness.load('_lib/quick-create.ts')
+  for (const text of ['thêm bài 4 vào nhóm Cá nhân', 'thêm bài 4 dưới Toán', 'thêm bài 4 ngày mai', 'thêm bài 4 lúc 17h', 'thêm bài 4 và xóa bài 3', 'đừng thêm bài 4', 'có nên thêm bài 4?', 'thêm bài 4?', 'thêm bài']) assert.equal(quickCreateIntent(text), null, text)
+  for (const text of ['thêm bài 4', 'Thêm giúp tôi bài 12 nhé', 'tạo task bài 10', 'them bai 7', 'thêm bài tập 2', 'thêm chương 3']) assert.equal(quickCreateIntent(text).action, 'CREATE_TASK', text)
+})
+
+test('direct form save is atomic, idempotent and leaves a pending chat proposal untouched', async () => {
+  const pending = await propose('alice', input('Chat draft'))
+  const requestId = id()
+  const data = { ...input('Direct form'), startNow: true, scheduleMode: 'duration', duration: 120 }
+  const [first, second] = await Promise.all([service.saveManualTask('alice', requestId, 'CREATE_TASK', data), service.saveManualTask('alice', requestId, 'CREATE_TASK', data)])
+  assert.equal(first.id, second.id)
+  const tasks = await repo.scanTasks('alice')
+  assert.equal(tasks.length, 1)
+  assert.equal(tasks[0].title, 'Direct form')
+  assert.equal(Date.parse(tasks[0].deadline) - Date.parse(tasks[0].startTime), 120 * 60000)
+  assert.equal((await repo.sessionRef('alice').get()).get('pendingId'), pending.id)
+  assert.equal((await repo.messageCollection('alice').doc(pending.id).get()).get('status'), 'pending')
+  assert.equal((await memoryService.getWorkMemory('alice')).lastForm.duration, 120)
+  await service.confirmProposal('alice', pending.id, input('Chat draft'))
+  assert.equal((await repo.scanTasks('alice')).length, 2)
+})
+
+test('direct edits enforce version, owner, parent and subtree validation without partial writes', async () => {
+  const first = await service.saveManualTask('alice', id(), 'CREATE_TASK', input('Parent'))
+  const parent = (await repo.scanTasks('alice')).find(t => t.id === first.id)
+  const childInput = { ...input('Child'), parentId: parent.id }
+  const child = await service.saveManualTask('alice', id(), 'CREATE_SUBTASK', childInput)
+  await assert.rejects(() => service.saveManualTask('alice', id(), 'UPDATE_TASK', { ...input('Parent'), parentId: child.id }, parent.id, parent.version))
+  await assert.rejects(() => service.saveManualTask('bob', id(), 'UPDATE_TASK', input(), parent.id, parent.version))
+  await assert.rejects(() => service.saveManualTask('alice', id(), 'UPDATE_TASK', input()))
+  await assert.rejects(() => service.saveManualTask('alice', id(), 'CREATE_SUBTASK', input()))
+  await service.saveManualTask('alice', id(), 'UPDATE_TASK', { ...input('Renamed'), status: 'done' }, parent.id, parent.version)
+  await assert.rejects(() => service.saveManualTask('alice', id(), 'UPDATE_TASK', input('Stale'), parent.id, parent.version))
+  const saved = (await repo.scanTasks('alice')).find(t => t.id === parent.id)
+  assert.equal(saved.title, 'Renamed'); assert.ok(saved.completedAt)
+})
+
+test('direct save API requires authentication and rejects fields outside the save contract', async () => {
+  const request = body => new NextRequest('http://localhost/demo/ai-task/api', { method: 'POST', body: JSON.stringify(body) })
+  const body = { operation: 'saveTask', requestId: id(), action: 'CREATE_TASK', data: input('From API') }
+  harness.identity(null)
+  assert.equal((await routes.POST(request(body))).status, 401)
+  harness.identity('alice')
+  assert.equal((await routes.POST(request({ ...body, userId: 'bob' }))).status, 400)
+  assert.equal((await routes.POST(request({ ...body, action: 'DELETE_TASK' }))).status, 400)
+  assert.equal((await routes.POST(request(body))).status, 200)
+  assert.equal((await repo.scanTasks('alice')).length, 1)
+  assert.equal((await repo.getMessages('alice')).messages.length, 0)
+})
+
+test('confirmed forms remember group and sibling branch, explicit input wins, memory is isolated', async () => {
+  const student = await create('alice', { ...input('Nhat Anh'), groupId: 'personal' })
+  const subject = await create('alice', { ...input('Toan lop 2'), groupId: 'personal', parentId: student.id })
+  const task = await create('alice', { ...input('A'), groupId: 'personal', parentId: subject.id, duration: 120, startTime: '2026-09-19T17:00:00+07:00' })
+  const reply = await service.prepareIntent('alice', { action: 'CREATE_TASK', data: { title: 'B' } })
+  assert.equal(reply.proposal.data.parentId, subject.id)
+  assert.notEqual(reply.proposal.data.parentId, task.id)
+  assert.equal(reply.proposal.data.groupId, 'personal')
+  assert.equal(reply.proposal.data.duration, 120)
+  assert.equal(new Date(Date.parse(reply.proposal.data.startTime) + 7 * 3600000).toISOString().slice(11, 16), '17:00')
+  assert.ok(Date.parse(reply.proposal.data.startTime) >= Date.now() - 1000)
+  const explicit = await service.prepareIntent('alice', { action: 'CREATE_TASK', data: { title: 'C', groupName: 'Ainka', duration: 30, startTime: null } })
+  assert.equal(explicit.proposal.data.groupId, 'ainka'); assert.equal(explicit.proposal.data.parentId, null)
+  assert.equal(explicit.proposal.data.duration, 30); assert.equal(explicit.proposal.data.startTime, null)
+  await repo.initialize('bob')
+  assert.deepEqual(await memoryService.getWorkMemory('bob'), memoryModel.emptyMemory())
+  const other = await service.prepareIntent('bob', { action: 'CREATE_TASK', data: { title: 'B' } })
+  assert.equal(other.proposal.data.groupId, 'inbox'); assert.equal(other.proposal.data.parentId, null)
+})
+
+test('cancelled forms do not teach memory, confirmed retries and edits do not inflate habits', async () => {
+  const p = await propose('alice', { ...input(), duration: 120 })
+  await service.cancelProposal('alice', p.id)
+  assert.equal((await memoryService.getWorkMemory('alice')).updatedAt, null)
+  let task = await create('alice', { ...input(), duration: 120 })
+  for (let i = 0; i < 3; i++) task = await mutate(task, 'UPDATE_TASK', { priority: 'urgent' })
+  assert.equal((await memoryService.getWorkMemory('alice')).samples.length, 1)
+})
+
+test('natural conversation and explicit preferences persist atomically and can be cleared', async () => {
+  const chat = await service.prepareIntent('alice', { action: 'CHAT', reply: 'Hello' })
+  assert.equal(chat.content, 'Hello'); assert.equal(chat.proposal, undefined)
+  const reply = await service.prepareIntent('alice', memoryModel.conversationSchema.parse({ action: 'CHAT', reply: 'Remember', memory: { scope: 'preferences', duration: 120, startClock: '17:00', notes: 'Prefer short steps' } }))
+  const requestId = id()
+  await service.appendTurn('alice', requestId, 'Remember my hours', reply)
+  await service.appendTurn('alice', requestId, 'Remember my hours', reply)
+  const memory = await memoryService.getWorkMemory('alice')
+  assert.equal(memory.preferences.duration, 120); assert.equal(memory.notes, 'Prefer short steps')
+  const proposed = await service.prepareIntent('alice', { action: 'CREATE_TASK', data: { title: 'New' } })
+  assert.equal(proposed.proposal.data.duration, 120)
+  const reset = await service.prepareIntent('alice', { action: 'CHAT', reply: 'Reset', memory: { scope: 'context', reset: true } })
+  await service.appendTurn('alice', id(), 'Reset', reset)
+  const cleared = await memoryService.getWorkMemory('alice')
+  assert.deepEqual(cleared.preferences, {}); assert.deepEqual(cleared.lastForm, {}); assert.equal(cleared.samples.length, 0)
+  assert.equal((await service.prepareIntent('alice', { action: 'CREATE_TASK', data: { title: 'After reset' } })).proposal.data.duration, null)
+})
+
+test('context resolves full paths and ignores deleted or hidden remembered destinations', async () => {
+  const parent = await create('alice', input('Student'))
+  const subject = await create('alice', { ...input('Math'), parentId: parent.id })
+  const context = await service.prepareIntent('alice', { action: 'CHAT', reply: 'Context', memory: { scope: 'context', parentQuery: 'Student > Math' } })
+  assert.equal(context.memoryUpdate.values.parentId, subject.id)
+  await service.appendTurn('alice', id(), 'Use Math', context)
+  await mutate(subject, 'DELETE_TASK')
+  const proposal = await service.prepareIntent('alice', { action: 'CREATE_TASK', data: { title: 'No deleted parent' } })
+  assert.equal(proposal.proposal.data.parentId, null)
+  await service.saveGroup('alice', { name: 'Ainka', color: null, order: 1, isActive: false }, 'ainka')
+  assert.equal((await service.prepareIntent('alice', { action: 'CREATE_TASK', data: { title: 'No hidden group' } })).proposal.data.groupId, 'inbox')
+})
+
+test('habits require three distinct samples and explicit preferences override observed values', () => {
+  let memory = memoryModel.emptyMemory()
+  for (let i = 0; i < 3; i++) memory = memoryModel.rememberForm(memory, { ...input(), duration: 120 }, new Date().toISOString(), String(i))
+  memory = memoryModel.rememberForm(memory, { ...input(), duration: 30 }, new Date().toISOString(), 'fourth')
+  assert.equal(memoryModel.familiarDefaults(memory).duration, 120)
+  memory.preferences.duration = 45
+  assert.equal(memoryModel.familiarDefaults(memory).duration, 45)
+})
+
+test('missing memory falls back to the last historical confirmed form, reset does not resurrect it', async () => {
+  await create('alice', { ...input(), duration: 120 })
+  const rootPath = 'demo/ai-task/users/alice'
+  const owner = { ...harness.data().get(rootPath) }
+  delete owner.workMemory
+  harness.put(rootPath, owner)
+  assert.equal((await memoryService.getWorkMemory('alice')).lastForm.duration, 120)
+  const reset = await service.prepareIntent('alice', { action: 'CHAT', reply: 'Reset', memory: { scope: 'context', reset: true } })
+  await service.appendTurn('alice', id(), 'Reset', reset)
+  assert.equal((await memoryService.getWorkMemory('alice')).lastForm.duration, undefined)
+})
+
+test('start now is resolved at confirmation and repeated confirmation keeps the same start', async () => {
+  const data = { ...input(), startNow: true, scheduleMode: 'deadline', deadline: new Date(Date.now() + 3600000).toISOString() }
+  const proposal = await propose('alice', data)
+  assert.equal((await repo.messageCollection('alice').doc(proposal.id).get()).get('proposal').data.startTime, null)
+  const before = Date.now()
+  const result = await service.confirmProposal('alice', proposal.id, data)
+  const task = (await repo.scanTasks('alice')).find(t => t.id === result.id)
+  assert.ok(Date.parse(task.startTime) >= before && Date.parse(task.startTime) <= Date.now())
+  assert.equal(task.deadline, data.deadline)
+  assert.equal(task.duration, Math.ceil((Date.parse(data.deadline) - Date.parse(task.startTime)) / 60000))
+  assert.equal(task.startNow, false)
+  await service.confirmProposal('alice', proposal.id, data)
+  assert.equal((await repo.scanTasks('alice')).find(t => t.id === result.id).startTime, task.startTime)
+  const prepared = await service.prepareIntent('alice', model.intentSchema.parse({ action: 'UPDATE_TASK', target: { query: task.title }, changes: { priority: 'urgent' } }))
+  assert.equal(prepared.proposal.data.startTime, task.startTime)
+  assert.equal(prepared.proposal.data.deadline, task.deadline)
+})
+
+test('duration from now, fixed deadline and expired deadline are handled independently', async () => {
+  const now = Date.parse('2026-09-20T10:00:30Z')
+  const duration = model.finalizeSchedule(model.taskInputSchema.parse({ ...input(), scheduleMode: 'duration', startNow: true, duration: 1440 }), now)
+  assert.equal(duration.startTime, '2026-09-20T10:00:30.000Z')
+  assert.equal(duration.deadline, '2026-09-21T10:00:30.000Z')
+  const deadline = model.finalizeSchedule(model.taskInputSchema.parse({ ...input(), scheduleMode: 'deadline', startNow: true, deadline: '2026-09-20T11:00:00Z', duration: 1440 }), now)
+  assert.equal(deadline.deadline, '2026-09-20T11:00:00Z')
+  assert.equal(deadline.duration, 60)
+  assert.deepEqual(model.taskInputSchema.parse(deadline), deadline)
+  assert.throws(() => model.finalizeSchedule(model.taskInputSchema.parse({ ...input(), scheduleMode: 'deadline', startNow: true, deadline: '2026-09-20T10:00:00Z' }), now))
+  assert.equal(model.taskInputSchema.safeParse({ ...input(), scheduleMode: 'deadline', startTime: '2026-09-20T11:00:00Z', deadline: '2026-09-20T10:00:00Z' }).success, false)
+  const stale = { ...input(), scheduleMode: 'deadline', startNow: true, deadline: new Date(Date.now() - 60000).toISOString() }
+  const proposal = await propose('alice', stale)
+  await assert.rejects(() => service.confirmProposal('alice', proposal.id, stale))
+  assert.equal((await repo.scanTasks('alice')).length, 0)
+})
+
+test('schedule computes authoritative deadline and survives chat updates and completion', async () => {
+  let task = await create('alice', { ...input(), startTime: '2026-09-19T09:00:00+07:00', duration: 90, withinDay: true, deadline: '2030-01-01T00:00:00Z' })
+  assert.equal(task.startTime, '2026-09-19T02:00:00.000Z')
+  assert.equal(task.deadline, '2026-09-19T03:30:00.000Z')
+  const prepared = await service.prepareIntent('alice', model.intentSchema.parse({ action: 'UPDATE_TASK', target: { query: task.title }, changes: { duration: 120 } }))
+  assert.equal(prepared.proposal.data.startTime, task.startTime)
+  assert.equal(prepared.proposal.data.deadline, '2026-09-19T04:00:00.000Z')
+  task = await mutate(task, 'UPDATE_TASK', { duration: 120 })
+  assert.equal(task.deadline, '2026-09-19T04:00:00.000Z')
+  task = await mutate(task, 'COMPLETE_TASK', { status: 'done' })
+  assert.equal(task.duration, 120)
+  assert.equal(task.withinDay, false)
+  task = await mutate(task, 'UPDATE_TASK', { duration: null, deadline: null })
+  assert.equal(task.deadline, null)
+  assert.equal(task.duration, null)
+})
+
+test('schedule supports multiple days and midnight, rejects invalid durations and accepts legacy tasks', async () => {
+  const scheduled = { ...input(), withinDay: true, startTime: '2026-09-19T23:30:00+07:00', duration: 30 }
+  const midnight = await create('alice', scheduled)
+  assert.equal(midnight.deadline, '2026-09-19T17:00:00.000Z')
+  for (const duration of [1440, 2880, 4320, 5760]) {
+    const data = model.taskInputSchema.parse({ ...scheduled, duration })
+    assert.equal(Date.parse(data.deadline) - Date.parse(data.startTime), duration * 60000)
+  }
+  for (const changes of [{ duration: 0 }, { duration: -1 }, { duration: 1.5 }]) {
+    assert.equal(model.taskInputSchema.safeParse({ ...scheduled, ...changes }).success, false)
+  }
+  const valid = model.taskInputSchema.parse({ ...scheduled, duration: 29 })
+  assert.equal(valid.deadline, '2026-09-19T16:59:00.000Z')
+  assert.equal(model.matches({ ...valid, deletedAt: null }, model.filterSchema.parse({ view: 'today' }), Date.parse('2026-09-19T22:00:00+07:00')), true)
+  const legacy = model.taskInputSchema.parse({ title: 'Legacy', groupId: 'inbox' })
+  assert.equal(legacy.startTime, null); assert.equal(legacy.duration, null); assert.equal(legacy.withinDay, false)
+})
 
 test('initialization is idempotent, creates dynamic groups and isolates accounts', async () => {
   await repo.initialize('alice'); await repo.initialize('bob')
@@ -301,6 +532,12 @@ test('AI output validation rejects arbitrary fields/actions, supports dynamic gr
   try {
     const groups = [{ name: 'Shop Bé Băng', slug: 'shop-be-bang', isActive: true }]
     assert.equal((await parser.parseTaskIntent('Tạo banner', groups)).data.groupName, 'Shop Bé Băng')
+    reply = { action: 'CHAT', reply: 'Mình có thể giúp bạn sắp xếp công việc.', memory: { scope: 'preferences', duration: 120, startClock: '17:00' } }
+    const conversation = await parser.parseTaskIntent('Tôi thường làm 2 giờ', groups, new Date(), { memory: 'Own memory only', history: [{ role: 'user', content: 'Hello', status: 'normal' }] })
+    assert.equal(conversation.action, 'CHAT')
+    assert.equal(conversation.memory.duration, 120)
+    reply = { action: 'CHAT', reply: 'Bad reference', memory: { scope: 'context', parentId: 'foreign-owner-task' } }
+    await assert.rejects(() => parser.parseTaskIntent('Use foreign memory', groups), /chưa hiểu/)
     reply = { action: 'DROP_DATABASE' }
     await assert.rejects(() => parser.parseTaskIntent('Xóa hết', groups), /chưa hiểu/)
   } finally {
