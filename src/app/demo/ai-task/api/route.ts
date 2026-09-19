@@ -3,8 +3,9 @@ import { z } from 'zod'
 import { requireAuth } from '@/lib/auth/current-user'
 import { rejectCrossSiteMutation } from '@/lib/auth/request-security'
 import { filterSchema, idSchema } from '../_lib/model'
-import { findTasks, findTaskTree, getGroups, getMessages, getParentOptions, initialize, messageCollection, sessionRef } from '../_services/repository'
-import { appendTurn, cancelProposal, chooseTask, confirmProposal, prepareIntent, proposeManual, saveGroup, summary } from '../_services/task.service'
+import { findTasks, findTaskTree, getGroups, getMessages, getTurn, getParentOptions, initialize, messageCollection, sessionRef } from '../_services/repository'
+import { appendTurn, cancelProposal, chooseTask, confirmProposal, prepareIntent, proposeManual, saveManualTask, saveGroup, summary } from '../_services/task.service'
+import { describeMemory, getContextMemory } from '../_services/work-memory'
 import { parseTaskIntent } from '../_services/ai-task-parser'
 
 export const runtime = 'nodejs'
@@ -13,8 +14,10 @@ export const maxDuration = 60
 const json = (body: unknown, status = 200) => NextResponse.json(body, { status, headers: { 'Cache-Control': 'private, no-store' } })
 const mutationSchema = z.discriminatedUnion('operation', [
   z.object({ operation: z.literal('initialize') }).strict(),
+  z.object({ operation: z.literal('clearMemory'), requestId: idSchema }).strict(),
   z.object({ operation: z.literal('chat'), text: z.string().trim().min(1).max(4000), requestId: idSchema }).strict(),
   z.object({ operation: z.literal('propose'), requestId: idSchema, action: z.enum(['CREATE_TASK', 'CREATE_SUBTASK', 'UPDATE_TASK', 'DELETE_TASK', 'RESTORE_TASK']), data: z.unknown().optional(), taskId: idSchema.optional(), expectedVersion: z.number().int().positive().optional() }).strict(),
+  z.object({ operation: z.literal('saveTask'), requestId: idSchema, action: z.enum(['CREATE_TASK', 'CREATE_SUBTASK', 'UPDATE_TASK']), data: z.unknown(), taskId: idSchema.optional(), expectedVersion: z.number().int().positive().optional() }).strict(),
   z.object({ operation: z.literal('confirm'), messageId: idSchema, data: z.unknown() }).strict(),
   z.object({ operation: z.literal('cancel'), messageId: idSchema }).strict(),
   z.object({ operation: z.literal('choose'), messageId: idSchema, taskId: idSchema }).strict(),
@@ -34,6 +37,9 @@ export async function GET(req: NextRequest) {
     const uid = auth.user.id
     const params = req.nextUrl.searchParams
     switch (params.get('resource') || 'tasks') {
+      case 'chatState': return json({ pendingId: (await sessionRef(uid).get()).get('pendingId') || null })
+      case 'turn': return json(await getTurn(uid, idSchema.parse(params.get('messageId'))))
+      case 'memory': return json(await describeMemory(uid))
       case 'groups': return json({ groups: await getGroups(uid) })
       case 'messages': return json(await getMessages(uid, params.has('before') ? z.coerce.number().int().positive().parse(params.get('before')) : undefined))
       case 'summary': return json(await summary(uid))
@@ -64,8 +70,10 @@ export async function POST(req: NextRequest) {
     let result: unknown
     switch (input.operation) {
       case 'initialize': await initialize(uid); result = { groups: await getGroups(uid) }; break
+      case 'clearMemory': result = await appendTurn(uid, input.requestId, 'Xóa bộ nhớ gợi ý', await prepareIntent(uid, { action: 'CHAT', reply: 'Xóa bộ nhớ', memory: { scope: 'context', reset: true } })); break
       case 'saveGroup': result = await saveGroup(uid, input.data, input.id); break
       case 'propose': result = await proposeManual(uid, input.requestId, input.action, input.data, input.taskId, input.expectedVersion); break
+      case 'saveTask': result = await saveManualTask(uid, input.requestId, input.action, input.data, input.taskId, input.expectedVersion); break
       case 'confirm': result = await confirmProposal(uid, input.messageId, input.data); break
       case 'cancel': result = await cancelProposal(uid, input.messageId); break
       case 'choose': result = await chooseTask(uid, input.messageId, input.taskId); break
@@ -73,7 +81,8 @@ export async function POST(req: NextRequest) {
         const existing = await messageCollection(uid).doc(input.requestId).get()
         if (existing.exists) { result = { id: existing.id }; break }
         if ((await sessionRef(uid).get()).get('pendingId')) throw new Error('Hãy xác nhận hoặc hủy yêu cầu đang chờ trước.')
-        const intent = await parseTaskIntent(input.text, await getGroups(uid))
+        const [groups, memory, context] = await Promise.all([getGroups(uid), describeMemory(uid), getContextMemory(uid)])
+        const intent = await parseTaskIntent(input.text, groups, new Date(), { memory: JSON.stringify(memory), history: context.recent.map(m => ({ role: m.role, content: m.content, status: m.status })) })
         result = await appendTurn(uid, input.requestId, input.text, await prepareIntent(uid, intent))
         break
       }

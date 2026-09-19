@@ -7,6 +7,11 @@ export const priorityLabels = { urgent: 'Gấp', normal: 'Bình thường', low:
 export type Status = typeof statuses[number]
 export const idSchema = z.string().regex(/^[a-zA-Z0-9_-]{1,150}$/)
 const dateSchema = z.string().datetime({ offset: true }).nullable()
+const durationSchema = z.number().int().positive().max(525600).nullable()
+export function scheduledDeadline(startTime: string | null, duration: number | null) {
+  return startTime && duration && Number.isFinite(Date.parse(startTime) + duration * 60000)
+    ? new Date(Date.parse(startTime) + duration * 60000).toISOString() : null
+}
 export const taskInputSchema = z.object({
   title: z.string().trim().min(1, 'Cần nhập tên công việc').max(250),
   description: z.string().trim().max(5000).nullable().default(null),
@@ -15,8 +20,30 @@ export const taskInputSchema = z.object({
   status: z.enum(statuses).default('todo'),
   parentId: idSchema.nullable().default(null),
   deadline: dateSchema.default(null),
-}).strict()
+  startTime: dateSchema.default(null),
+  duration: durationSchema.default(null),
+  withinDay: z.boolean().default(false),
+  scheduleMode: z.enum(['duration', 'deadline']).optional(),
+  startNow: z.boolean().optional(),
+}).strict().superRefine((value, ctx) => {
+  if (!value.startNow && value.startTime && value.deadline && value.scheduleMode === 'deadline' && Date.parse(value.deadline) <= Date.parse(value.startTime)) {
+    ctx.addIssue({ code: 'custom', path: ['deadline'], message: 'Deadline phải sau thời gian bắt đầu.' })
+  }
+}).transform(value => {
+  const scheduleMode = value.scheduleMode ?? (value.duration ? 'duration' : 'deadline')
+  const startTime = value.startNow ? null : value.startTime
+  return { ...value, startTime, withinDay: false,
+    deadline: scheduleMode === 'duration' ? (value.startNow ? null : scheduledDeadline(startTime, value.duration) ?? value.deadline) : value.deadline,
+    duration: value.scheduleMode === 'deadline' ? (startTime && value.deadline ? Math.ceil((Date.parse(value.deadline) - Date.parse(startTime)) / 60000) : null) : value.duration,
+  }
+})
 export type TaskInput = z.infer<typeof taskInputSchema>
+export function finalizeSchedule(value: TaskInput, now = Date.now()): TaskInput {
+  if (!value.startNow) return value
+  const startTime = new Date(now).toISOString()
+  if (value.scheduleMode === 'deadline' && value.deadline && Date.parse(value.deadline) <= now) throw new Error('Deadline đã qua. Hãy chọn deadline sau thời điểm xác nhận lưu.')
+  return taskInputSchema.parse({ ...value, startNow: false, startTime })
+}
 export type Task = TaskInput & { id: string; rootTaskId: string; depth: number; createdAt: string; updatedAt: string; completedAt: string | null; cancelledAt: string | null; deletedAt: string | null; version: number }
 export type TreeNode = Pick<Task, 'id' | 'title' | 'parentId' | 'rootTaskId' | 'depth' | 'deletedAt'>
 export type Group = { id: string; name: string; slug: string; color: string | null; order: number; isDefault: boolean; isActive: boolean; createdAt: string; updatedAt: string }
@@ -31,7 +58,7 @@ export const filterSchema = z.object({
 export type Filters = z.infer<typeof filterSchema>
 export const actions = ['CREATE_TASK', 'UPDATE_TASK', 'CREATE_SUBTASK', 'COMPLETE_TASK', 'CANCEL_TASK', 'DELETE_TASK', 'RESTORE_TASK', 'GET_TASKS', 'GET_TASK_DETAIL'] as const
 export type Action = typeof actions[number]
-const aiFields = z.object({ title: z.string().trim().min(1).max(250).optional(), description: z.string().max(5000).nullable().optional(), groupName: z.string().max(80).optional(), priority: z.enum(priorities).optional(), status: z.enum(statuses).optional(), deadline: dateSchema.optional() }).strict()
+const aiFields = z.object({ title: z.string().trim().min(1).max(250).optional(), description: z.string().max(5000).nullable().optional(), groupName: z.string().max(80).optional(), priority: z.enum(priorities).optional(), status: z.enum(statuses).optional(), deadline: dateSchema.optional(), startTime: dateSchema.optional(), duration: durationSchema.optional(), withinDay: z.boolean().optional(), startNow: z.boolean().optional(), scheduleMode: z.enum(['duration', 'deadline']).optional() }).strict()
 export const intentSchema = z.object({
   action: z.enum(actions), target: z.object({ query: z.string().trim().min(1).max(250) }).strict().optional(),
   data: aiFields.optional(), changes: aiFields.optional(),
