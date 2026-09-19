@@ -45,7 +45,7 @@ export function finalizeSchedule(value: TaskInput, now = Date.now()): TaskInput 
   return taskInputSchema.parse({ ...value, startNow: false, startTime })
 }
 export type Task = TaskInput & { id: string; rootTaskId: string; depth: number; createdAt: string; updatedAt: string; completedAt: string | null; cancelledAt: string | null; deletedAt: string | null; version: number }
-export type TreeNode = Pick<Task, 'id' | 'title' | 'parentId' | 'rootTaskId' | 'depth' | 'deletedAt'>
+export type TreeNode = Pick<Task, 'id' | 'title' | 'parentId' | 'rootTaskId' | 'depth' | 'deletedAt'> & Partial<Pick<Task, 'groupId' | 'status'>>
 export type Group = { id: string; name: string; slug: string; color: string | null; order: number; isDefault: boolean; isActive: boolean; createdAt: string; updatedAt: string }
 export const groupInputSchema = z.object({ name: z.string().trim().min(1).max(80), color: z.string().regex(/^#[0-9a-fA-F]{6}$/).nullable().default(null), order: z.number().int().min(0).max(10000), isActive: z.boolean().default(true) }).strict()
 export const views = ['active', 'today', 'upcoming', 'overdue', 'no_deadline', 'completed', 'all', 'deleted'] as const
@@ -72,7 +72,7 @@ export const intentSchema = z.object({
 })
 export type Intent = z.infer<typeof intentSchema>
 export type Proposal = { action: Action; taskId: string | null; expectedVersion: number | null; data: TaskInput; before: Task | null }
-export type Message = { id: string; role: 'user' | 'assistant'; content: string; sequence: number; createdAt: string; status: 'normal' | 'choose' | 'pending' | 'confirmed' | 'cancelled'; proposal?: Proposal | null; intent?: Intent | null; candidates?: Task[]; candidatePaths?: Record<string, string>; tasks?: Task[]; total?: number }
+export type Message = { id: string; role: 'user' | 'assistant'; content: string; sequence: number; createdAt: string; status: 'normal' | 'choose' | 'pending' | 'confirmed' | 'cancelled'; proposal?: Proposal | null; intent?: Intent | null; candidates?: Task[]; candidatePaths?: Record<string, string>; tasks?: Task[]; displayGroups?: import('./task-display').TaskDisplayGroup[]; total?: number }
 export const normalize = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase().trim()
 export const slugify = (s: string) => normalize(s).replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'nhom'
 export const dayKey = (date: string | number | Date) => new Date(new Date(date).getTime() + 7 * 3600000).toISOString().slice(0, 10)

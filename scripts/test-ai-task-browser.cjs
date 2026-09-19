@@ -12,6 +12,7 @@ const service = harness.load('_services/task.service.ts')
 const output = path.resolve(__dirname, '../node_modules/.cache/ai-task-browser')
 fs.mkdirSync(output, { recursive: true })
 const nativeFetch = global.fetch
+const fixtureDeadline = new Date(Date.now() + 7 * 86400000).toISOString()
 process.env.CHAT_PROVIDER = 'groq'; process.env.GROQ_API_KEY = 'offline-browser-test'
 global.fetch = async (url, options) => {
   if (String(url).startsWith('https://api.groq.com/')) {
@@ -21,9 +22,17 @@ global.fetch = async (url, options) => {
       'Thêm Bạn C vào Dạy thêm': { action: 'CREATE_SUBTASK', target: { query: 'Dạy thêm' }, data: { title: 'Bạn C' } },
       'Thêm việc đo áo dưới Út Nhung': { action: 'CREATE_SUBTASK', target: { query: 'Út Nhung' }, data: { title: 'Đo áo' } },
     }
-    const intent = treeExamples[text] || (text.includes('xong rồi') ? { action: 'COMPLETE_TASK', target: { query: 'EDA' } }
+    const memoryExamples = {
+      'Thêm task kiểm tra bộ nhớ': { action: 'CREATE_TASK', data: { title: 'Kiểm tra bộ nhớ' } },
+      'nhóm Shop Bé Băng': { action: 'CHAT', reply: 'Nhóm', memory: { scope: 'context', groupName: 'Shop Bé Băng' } },
+      'ưu tiên thấp': { action: 'CHAT', reply: 'Ưu tiên', memory: { scope: 'context', priority: 'low' } },
+      '2 ngày': { action: 'CHAT', reply: 'Thời lượng', memory: { scope: 'context', duration: 2880 } },
+      'bắt đầu ngay': { action: 'CHAT', reply: 'Bắt đầu', memory: { scope: 'context', startNow: true } },
+      'Thêm task tiếp theo': { action: 'CREATE_TASK', data: { title: 'Task tiếp theo' } },
+    }
+    const intent = memoryExamples[text] || treeExamples[text] || (text.includes('xong rồi') ? { action: 'COMPLETE_TASK', target: { query: 'EDA' } }
       : text.includes('còn việc') ? { action: 'GET_TASKS', filters: { view: 'active' } }
-      : { action: 'CREATE_TASK', data: { title: text.includes('ABC') ? 'Code EDA cho ABC' : 'Code EDA cho MSD', groupName: 'Ainka', priority: 'urgent', deadline: '2099-09-19T17:00:00+07:00' } })
+      : { action: 'CREATE_TASK', data: { title: text.includes('ABC') ? 'Code EDA cho ABC' : 'Code EDA cho MSD', groupName: 'Ainka', priority: 'urgent', deadline: fixtureDeadline } })
     return Response.json({ choices: [{ message: { content: JSON.stringify(intent) } }] })
   }
   return nativeFetch(url, options)
@@ -50,7 +59,7 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms))
         if (request.url.includes('/logout')) signedIn = false
         body = { authenticated: signedIn, user: signedIn ? user : null, accessTokenExpiresAt: Date.now() + 900000 }
       } else {
-        requests.push({ method: request.method, body: request.postData ? JSON.parse(request.postData) : null })
+        requests.push({ url: request.url, method: request.method, body: request.postData ? JSON.parse(request.postData) : null })
         harness.identity(signedIn ? 'alice' : null)
         const response = await routes[request.method](new NextRequest(request.url, { method: request.method, headers: { 'Content-Type': 'application/json', origin: new URL(request.url).origin }, ...(request.method === 'POST' ? { body: request.postData } : {}) }))
         status = response.status; body = await response.json()
@@ -77,6 +86,8 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms))
   const send = async text => { await setInput('textarea[aria-label="Tin nhắn"]', text); await click('[aria-label="Gửi tin nhắn"]'); await wait(`!document.querySelector('[aria-label="Gửi tin nhắn"]') || !document.body.textContent.includes('Đang phân tích…')`) }
   try {
     await cdp('Page.enable'); await cdp('Runtime.enable')
+    await evaluate('try { localStorage.clear(); sessionStorage.clear() } catch {}')
+    await cdp('Network.clearBrowserCookies')
     await cdp('Page.navigate', { url: 'about:blank' }); await delay(200)
     await cdp('Fetch.enable', { patterns: [{ urlPattern: '*/api/auth/*' }, { urlPattern: '*/demo/ai-task/api*' }] })
     await cdp('Page.addScriptToEvaluateOnNewDocument', { source: `window.SpeechRecognition=class{start(){window.fixtureRecognition=this}stop(){this.onend?.()}abort(){} };window.fixtureSpeech=text=>{const r=window.fixtureRecognition;r.onresult({results:[[{transcript:text}]]});r.onend()}` })
@@ -104,12 +115,12 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms))
     await evaluate(`(()=>{const e=document.querySelector('select[aria-label="Ưu tiên"]');Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value').set.call(e,'normal');e.dispatchEvent(new Event('change',{bubbles:true}));})()`)
     await wait(`!document.querySelector('select[aria-label="Ưu tiên"]')`)
     await clickText('Mở rộng')
-    assert.equal(await evaluate(`document.querySelector('input[type="datetime-local"]').value`), '2099-09-19T17:00')
+    assert.equal(await evaluate(`document.querySelector('input[type="datetime-local"]').value`), new Date(Date.parse(fixtureDeadline) + 7 * 3600000).toISOString().slice(0, 16))
     await clickText('Thu gọn')
     await setInput('.ai-task-form input[maxlength="250"]', 'Code EDA cho MSD đã chỉnh')
     await screenshot('confirmation-desktop')
     await clickText('Xác nhận lưu')
-    await wait(`document.body.textContent.includes('Đã xác nhận và lưu') && !document.querySelector('.demo-chat-confirmation')`)
+    await wait(`document.body.textContent.includes('Xong, mình đã thêm “Code EDA cho MSD đã chỉnh”.') && !document.querySelector('.demo-chat-confirmation')`)
     assert.equal((await repo.scanTasks('alice'))[0].title, 'Code EDA cho MSD đã chỉnh')
     await send('Tạo task EDA cho ABC'); await wait(`document.querySelector('.demo-chat-confirmation .ai-task-form')`); await clickText('Xác nhận lưu'); await wait(`!document.querySelector('.demo-chat-confirmation')`)
     await send('EDA xong rồi'); await wait(`document.querySelector('.ai-task-choice')`)
@@ -204,6 +215,53 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms))
     assert.equal(await evaluate(`document.documentElement.scrollWidth<=innerWidth`), true)
     await cdp('Emulation.setDeviceMetricsOverride', { width: 1400, height: 960, deviceScaleFactor: 1, mobile: false })
     await screenshot('tree-filtered-desktop')
+    await navigate('/demo/ai-task'); await wait(`document.querySelector('textarea[aria-label="Tin nhắn"]') && !document.querySelector('textarea[aria-label="Tin nhắn"]').disabled`)
+    const memoryReads = () => requests.filter(r => r.url.includes('resource=memory')).length
+    const readsBeforeChat = memoryReads()
+    await send('Thêm task kiểm tra bộ nhớ'); await wait(`document.querySelector('.ai-task-form')`)
+    for (const message of ['nhóm Shop Bé Băng', 'ưu tiên thấp', '2 ngày', 'bắt đầu ngay']) {
+      const count = requests.filter(r => r.body?.operation === 'chat').length
+      await wait(`!document.querySelector('[aria-label="Gửi tin nhắn"]').disabled || !document.querySelector('textarea[aria-label="Tin nhắn"]').disabled`)
+      await send(message)
+      await wait(`!document.body.textContent.includes('Đang phân tích…') && document.querySelector('.ai-task-form')`)
+      assert.equal(requests.filter(r => r.body?.operation === 'chat').length, count + 1)
+    }
+    await setInput('.ai-task-form input[maxlength="250"]', 'Bản nháp giữ sau refresh')
+    await wait(`JSON.parse(sessionStorage.getItem('ai-task-chat-context:alice')).activeDraft.title === 'Bản nháp giữ sau refresh'`)
+    assert.equal(memoryReads(), readsBeforeChat, 'Chat must not refetch overview')
+    await cdp('Page.reload')
+    await wait(`document.querySelector('.ai-task-form')`)
+    assert.equal(await evaluate(`document.querySelector('.ai-task-form input[maxlength="250"]').value`), 'Bản nháp giữ sau refresh')
+    assert.equal(await evaluate(`JSON.parse(sessionStorage.getItem('ai-task-chat-context:alice')).activeDraft.duration`), 2880)
+    const readsAfterReload = memoryReads()
+    await click('details.ai-task-before summary')
+    assert.equal(await evaluate(`document.querySelector('details.ai-task-before').textContent.includes('{"groupId"')`), false)
+    await screenshot('memory-context-desktop')
+    await clickText('Xác nhận lưu'); await wait(`!document.querySelector('.demo-chat-confirmation')`)
+    await wait(`JSON.parse(sessionStorage.getItem('ai-task-chat-context:alice')).mode === 'idle'`)
+    assert.equal(memoryReads(), readsAfterReload, 'Confirm must update overview cache without refetch')
+    const savedMemoryTask = (await repo.scanTasks('alice')).find(t => t.title === 'Bản nháp giữ sau refresh')
+    assert.equal(savedMemoryTask.priority, 'low'); assert.equal(savedMemoryTask.duration, 2880)
+    await send('Thêm task tiếp theo'); await wait(`document.querySelector('.ai-task-form')`)
+    const nextDraft = await evaluate(`JSON.parse(sessionStorage.getItem('ai-task-chat-context:alice')).activeDraft`)
+    assert.equal(nextDraft.groupId, savedMemoryTask.groupId); assert.equal(nextDraft.priority, 'low')
+    assert.equal(nextDraft.duration, null); assert.equal(nextDraft.description, null); assert.equal(nextDraft.deadline, null)
+    await clickText('Hủy'); await wait(`!document.querySelector('.demo-chat-confirmation')`)
+    const tasksBeforeQuery = await repo.scanTasks('alice')
+    await send('còn việc gì?')
+    await wait(`document.querySelector('.ai-task-result-group')`)
+    const shownTitles = await evaluate(`Array.from(document.querySelectorAll('.ai-task-result-group li>strong')).map(e => e.textContent)`)
+    const expectedLeaves = harness.load('_lib/task-display.ts').leafTasks(tasksBeforeQuery.filter(t => !t.deletedAt && !['done', 'cancelled'].includes(t.status)), tasksBeforeQuery)
+    assert.deepEqual([...shownTitles].sort(), expectedLeaves.map(t => t.title).sort())
+    assert.equal(shownTitles.includes('Toán'), false)
+    assert.equal(shownTitles.includes('Bạn A'), false)
+    assert.equal(await evaluate(`Array.from(document.querySelectorAll('.ai-task-result-group h3')).some(e => e.textContent.includes('May đồ · Út Nhung · Bạn A · Toán'))`), true)
+    assert.deepEqual(await repo.scanTasks('alice'), tasksBeforeQuery)
+    await screenshot('grouped-results-desktop')
+    await cdp('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: true })
+    await delay(150)
+    assert.equal(await evaluate(`document.documentElement.scrollWidth <= innerWidth`), true, 'Grouped results mobile overflow')
+    await screenshot('grouped-results-mobile')
     assert.deepEqual(errors, [])
     console.log('PASS: actual Next desktop/mobile UI, auth, confirmation, task tree at multiple levels, three subtask chat examples, collapse/expand, valid parent choices, subtree move and ancestor-preserving search; screenshots:', output)
   } finally { ws.close(); global.fetch = nativeFetch }

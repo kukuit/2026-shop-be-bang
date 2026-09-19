@@ -9,7 +9,7 @@ import { visibleTree } from '../_lib/tree'
 
 const viewLabels = { active: 'Đang mở', today: 'Hôm nay', upcoming: 'Sắp tới', overdue: 'Quá hạn', no_deadline: 'Không deadline', completed: 'Hoàn thành', all: 'Tất cả', deleted: 'Thùng rác' }
 export default function Tasks() {
-  const { groups, revision, busy, run, refresh, notify } = useTasks()
+  const { acceptOverview, groups, revision, busy, run, refresh, notify } = useTasks()
   const router = useRouter()
   const [tasks, setTasks] = useState<Task[]>([])
   const [total, setTotal] = useState(0)
@@ -63,6 +63,6 @@ export default function Tasks() {
       </tr>)}</tbody></table></div>}
       <div className="ai-task-pagination"><span>{total} công việc phù hợp · {visibleTasks.length} dòng đang mở{tasks.length > total ? ' · Giữ task tổ tiên để hiển thị đúng cây' : ''}</span></div>
     </section>
-    <dialog ref={dialog} className="ai-task-dialog" onCancel={e => { if (busy) e.preventDefault(); else setEditor(null) }} onClose={() => setEditor(null)}>{editor && <><h2>{editor.action === 'UPDATE_TASK' ? 'Chỉnh sửa công việc' : editor.action === 'CREATE_SUBTASK' ? 'Thêm task con' : 'Thêm công việc'}</h2><TaskForm initial={editor.initial} before={editor.task} action={editor.action} groups={groups} busy={busy} onCancel={() => setEditor(null)} onSubmit={async data => { await run(async () => { await api({ operation: 'saveTask', requestId: editor.requestId, action: editor.action, data, ...(editor.task ? { taskId: editor.task.id, expectedVersion: editor.task.version } : {}) }); setEditor(null); notify('Đã lưu công việc.'); await refresh() }) }} /></>}</dialog>
+    <dialog ref={dialog} className="ai-task-dialog" onCancel={e => { if (busy) e.preventDefault(); else setEditor(null) }} onClose={() => setEditor(null)}>{editor && <><h2>{editor.action === 'UPDATE_TASK' ? 'Chỉnh sửa công việc' : editor.action === 'CREATE_SUBTASK' ? 'Thêm task con' : 'Thêm công việc'}</h2><TaskForm initial={editor.initial} before={editor.task} action={editor.action} groups={groups} busy={busy} onCancel={() => setEditor(null)} onSubmit={async data => { await run(async () => { const saved = await api<{ result: { overview?: import('../_lib/task-memory').TaskOverviewMemory } }>({ operation: 'saveTask', requestId: editor.requestId, action: editor.action, data, ...(editor.task ? { taskId: editor.task.id, expectedVersion: editor.task.version } : {}) }); if (saved.result.overview) acceptOverview(saved.result.overview); setEditor(null); notify('Đã lưu công việc.'); await refresh() }) }} /></>}</dialog>
   </>
 }

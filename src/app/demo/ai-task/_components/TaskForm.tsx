@@ -1,5 +1,5 @@
 'use client'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { scheduledDeadline, taskInputSchema, displayDate, priorities, priorityLabels, statuses, statusLabels, type Group, type TaskInput, type Task, type Action, type TreeNode } from '../_lib/model'
 import { treePath } from '../_lib/tree'
 import { api } from './Provider'
@@ -7,8 +7,11 @@ import DurationPicker from './DurationPicker'
 
 export function emptyTask(groupId: string): TaskInput { return { title: '', description: null, groupId, priority: 'normal', status: 'todo', parentId: null, deadline: null, startTime: null, duration: 1440, withinDay: false, startNow: true, scheduleMode: 'duration' } }
 const localDate = (value: string | null) => value ? new Date(Date.parse(value) + 7 * 3600000).toISOString().slice(0, 16) : ''
-export default function TaskForm({ initial, groups, busy, onSubmit, onCancel, before, action, compact = false, submitLabel = 'Xác nhận lưu' }: { initial: TaskInput; groups: Group[]; busy: boolean; onSubmit(data: TaskInput): Promise<void>; onCancel(): void; before?: Task | null; action?: Action; submitLabel?: string; compact?: boolean }) {
+export default function TaskForm({ initial, groups, busy, onSubmit, onCancel, before, action, compact = false, submitLabel = 'Xác nhận lưu', onDraftChange }: { initial: TaskInput; onDraftChange?(data: TaskInput): void; groups: Group[]; busy: boolean; onSubmit(data: TaskInput): Promise<void>; onCancel(): void; before?: Task | null; action?: Action; submitLabel?: string; compact?: boolean }) {
   const [value, setValue] = useState(() => ({ ...initial, startTime: initial.startTime ?? null, duration: initial.duration ?? null, withinDay: initial.withinDay ?? false, startNow: initial.startNow ?? (!before && !initial.startTime), scheduleMode: initial.scheduleMode ?? (initial.duration ? 'duration' : 'deadline') }))
+  const draftCallback = useRef(onDraftChange)
+  draftCallback.current = onDraftChange
+  useEffect(() => { draftCallback.current?.(value) }, [value])
   const [expanded, setExpanded] = useState(!compact)
   const [editPriority, setEditPriority] = useState(false)
   const [editStatus, setEditStatus] = useState(false)
@@ -28,7 +31,8 @@ export default function TaskForm({ initial, groups, busy, onSubmit, onCancel, be
   useEffect(() => { const controller = new AbortController(); void loadParents(controller.signal); return () => controller.abort() }, [loadParents])
   const readonly = action === 'DELETE_TASK' || action === 'RESTORE_TASK'
   const parentEditable = !action || ['CREATE_TASK', 'CREATE_SUBTASK', 'UPDATE_TASK'].includes(action)
-  const invalidParent = parentEditable && (value.parentId ? !parents.candidates.some(p => p.id === value.parentId) : action === 'CREATE_SUBTASK')
+  const parentCandidates = parents.candidates.filter(p => !p.groupId || p.groupId === value.groupId)
+  const invalidParent = parentEditable && (value.parentId ? !parentCandidates.some(p => p.id === value.parentId) : action === 'CREATE_SUBTASK')
   const set = <K extends keyof TaskInput>(key: K, v: TaskInput[K]) => setValue(old => ({ ...old, [key]: v }))
   return <form className={`ai-task-form ${compact ? 'ai-task-form-compact' : ''}`} onSubmit={async e => { e.preventDefault(); setError(''); try { const result = taskInputSchema.safeParse(value); if (!result.success) { setExpanded(true); setError(result.error.issues.map(issue => issue.message).join(' ')); return } await onSubmit(result.data) } catch (reason) { setExpanded(true); setError(reason instanceof Error ? reason.message : 'Không lưu được công việc.') } }}>
     {before && expanded && <details className="ai-task-before"><summary>Thông tin hiện tại trước khi thay đổi</summary><p><strong>{before.title}</strong></p><p>{statusLabels[before.status]} · {priorityLabels[before.priority]} · {groups.find(g => g.id === before.groupId)?.name}</p><p>Task cha: {treePath(before.parentId, parents.nodes)}</p><p>{displayDate(before.deadline)}</p>{before.startTime && <p>Bắt đầu: {displayDate(before.startTime)}</p>}{before.duration && <p>Thời lượng: {before.duration} phút</p>}{before.description && <p>{before.description}</p>}</details>}
@@ -39,10 +43,10 @@ export default function TaskForm({ initial, groups, busy, onSubmit, onCancel, be
         {expanded && <>
         <label className="demo-full">Task cha{parentEditable ? <select aria-label="Task cha" disabled={parentLoading || !!parentError} value={value.parentId || ''} onChange={e => set('parentId', e.target.value || null)}>
           <option value="" disabled={action === 'CREATE_SUBTASK'}>{action === 'CREATE_SUBTASK' ? 'Chọn task cha' : 'Không có · Task gốc'}</option>
-          {!!value.parentId && !parents.candidates.some(p => p.id === value.parentId) && <option value={value.parentId} disabled>{parentLoading ? 'Đang tải task cha…' : 'Task cha không còn hợp lệ — chọn lại'}</option>}
-          {parents.candidates.map(p => <option key={p.id} value={p.id}>{treePath(p.id, parents.nodes)}</option>)}
+          {!!value.parentId && !parentCandidates.some(p => p.id === value.parentId) && <option value={value.parentId} disabled>{parentLoading ? 'Đang tải task cha…' : 'Task cha không còn hợp lệ — chọn lại'}</option>}
+          {parentCandidates.map(p => <option key={p.id} value={p.id}>{treePath(p.id, parents.nodes)}</option>)}
         </select> : <p>{treePath(value.parentId, parents.nodes)}</p>}<small>{parentLoading ? 'Đang tải cây công việc…' : 'Có thể đặt dưới bất kỳ cấp nào. Không thể chọn chính task hoặc nhánh con của nó.'}</small></label>
-        <label>Nhóm<select value={value.groupId} onChange={e => set('groupId', e.target.value)}>{groups.filter(g => g.isActive || g.id === initial.groupId).map(g => <option value={g.id} key={g.id} disabled={!g.isActive && g.id !== initial.groupId}>{g.name}{g.isActive ? '' : ' (đã ẩn)'}</option>)}</select></label>
+        <label>Nhóm<select value={value.groupId} onChange={e => setValue(old => ({ ...old, groupId: e.target.value, parentId: parents.candidates.some(p => p.id === old.parentId && p.groupId === e.target.value) ? old.parentId : null }))}>{groups.filter(g => g.isActive || g.id === initial.groupId).map(g => <option value={g.id} key={g.id} disabled={!g.isActive && g.id !== initial.groupId}>{g.name}{g.isActive ? '' : ' (đã ẩn)'}</option>)}</select></label>
         </>}
         <div className="demo-full demo-inline ai-task-quick-fields">
           {expanded || editPriority ? <label>Ưu tiên<select aria-label="Ưu tiên" autoFocus={!expanded} value={value.priority} onBlur={() => setEditPriority(false)} onChange={e => { set('priority', e.target.value as TaskInput['priority']); setEditPriority(false) }}>{priorities.map(p => <option key={p} value={p}>{priorityLabels[p]}</option>)}</select></label> : <span>Ưu tiên: <button type="button" className="ai-task-text-link" onClick={() => setEditPriority(true)}>{priorityLabels[value.priority]}</button></span>}
