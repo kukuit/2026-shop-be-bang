@@ -3,7 +3,7 @@ import type { Action, Filters } from './model'
 export function taskReply(action: Action, title: string, confirmed = false): string {
   const name = `“${title}”`
   switch (action) {
-    case 'CREATE_TASK': case 'CREATE_SUBTASK': return confirmed ? `Xong, mình đã thêm ${name}.` : `Mình thêm ${name} nhé.`
+    case 'CREATE_TASK': case 'CREATE_SUBTASK': return confirmed ? `Xong, mình đã thêm ${name}.` : `Bạn kiểm tra lại thông tin trước khi mình thêm ‘${title}’ nhé!`
     case 'COMPLETE_TASK': return confirmed ? `Xong, ${name} đã hoàn thành.` : `Mình sẽ đánh dấu ${name} là hoàn thành nhé.`
     case 'UPDATE_TASK': return confirmed ? `Đã cập nhật ${name}.` : `Mình cập nhật ${name} nhé.`
     case 'CANCEL_TASK': return confirmed ? `Đã hủy ${name}.` : `Bạn muốn hủy ${name} đúng không?`

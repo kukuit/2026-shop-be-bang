@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import CompletionSummary from './CompletionSummary'
 import { displayDate, isOpen, priorityLabels, statusLabels } from '../_lib/model'
 import type { TaskDisplayGroup } from '../_lib/task-display'
 
@@ -10,6 +11,7 @@ export default function TaskResultGroups({ groups }: { groups: TaskDisplayGroup[
       <div className="demo-inline"><span className={`ai-task-badge priority-${task.priority}`}>{priorityLabels[task.priority]}</span><span className={`ai-task-badge status-${task.status}`}>{statusLabels[task.status]}</span></div>
       {task.deadline && <small className={isOpen(task) && Date.parse(task.deadline) < Date.now() ? 'demo-danger-text' : ''}>Hạn: {displayDate(task.deadline)}</small>}
       {task.startTime && <small>Bắt đầu: {displayDate(task.startTime)}</small>}
+      <CompletionSummary task={task} />
     </li>)}</ul>
   </section>)}</div>
 }

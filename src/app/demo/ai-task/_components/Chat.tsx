@@ -112,11 +112,11 @@ export default function Chat() {
     finally { setOutgoing('') }
   }
   return <div className="demo-chat-view ai-task-chat">
-    <div className="demo-page-heading"><div><h1>Trợ lý công việc</h1><p>Nói điều bạn cần làm. Xem lại và xác nhận trước khi lưu.</p></div></div>
+    <div className="demo-page-heading"><div><h1>Trợ lý công việc</h1><p>Nói điều bạn cần làm, mình giúp bạn sắp xếp.</p></div></div>
     <details className="ai-task-before"><summary>Bộ nhớ tổng quan và ngữ cảnh</summary>
       <MemoryDetails title="Bộ nhớ tổng quan" values={overview} groups={groups} nodes={parents.data?.nodes || []} />
       <MemoryDetails title="Bộ nhớ ngữ cảnh" values={{ ...context.conversationDefaults, ...context.activeDraft }} groups={groups} nodes={parents.data?.nodes || []} />
-      <p>{context.mode === 'idle' ? 'Chưa có task đang tạo.' : context.mode === 'editing-task' ? 'Đang sửa task.' : 'Đang tạo task.'} Ngữ cảnh giữ trong tab này tối đa 2 giờ không hoạt động.</p>
+      <p>{context.mode === 'idle' ? 'Chưa có công việc đang tạo.' : context.mode === 'editing-task' ? 'Đang sửa công việc.' : 'Đang tạo công việc.'} Ngữ cảnh giữ trong tab này tối đa 2 giờ không hoạt động.</p>
       <button disabled={busy || loading || !!pendingId} onClick={() => setContext(newContext())}>Xóa ngữ cảnh</button>
     </details>
     {overviewError && <p role="alert">Không tải được bộ nhớ tổng quan. <button onClick={() => void reloadOverview()}>Thử lại</button></p>}
@@ -128,15 +128,14 @@ export default function Chat() {
         {pendingId && !pending && <p className="demo-alert">Có yêu cầu chưa xử lý. <button disabled={busy} onClick={() => void loadTurn(pendingId).catch(e => notify(e.message))}>Mở yêu cầu đang chờ</button> <button disabled={busy} onClick={() => cancel(pendingId)}>Hủy yêu cầu cũ</button></p>}
         {error && <div className="demo-alert" role="alert">{error} <button onClick={() => void load()}>Thử lại</button></div>}
         {messages.map(m => <div className={`demo-chat-turn ${m.role}`} key={m.id}>
-          <ChatMessage role={m.role} content={m.proposal && m.status === 'confirmed' ? taskReply(m.proposal.action, m.proposal.data.title, true) : m.proposal && m.status === 'cancelled' ? 'Mình bỏ yêu cầu này nhé.' : m.proposal && /Đã điền các trường|Mình đã chuẩn bị thông tin|Kiểm tra thông tin/.test(m.content) ? taskReply(m.proposal.action, m.proposal.data.title) : m.content} assistantName="AI Task" />
+          <ChatMessage role={m.role} content={m.proposal && m.status === 'confirmed' ? taskReply(m.proposal.action, m.proposal.data.title, true) : m.proposal && m.status === 'cancelled' ? 'Bạn đã hủy bỏ yêu cầu này.' : m.proposal && (['CREATE_TASK', 'CREATE_SUBTASK'].includes(m.proposal.action) || /Đã điền các trường|Mình đã chuẩn bị thông tin|Kiểm tra thông tin/.test(m.content)) ? taskReply(m.proposal.action, m.proposal.data.title) : m.content} assistantName="AI Công việc" />
           {m.displayGroups ? <TaskResultGroups groups={m.displayGroups} /> : m.tasks && <div className="ai-task-results">{m.tasks.map(t => <TaskCard key={t.id} task={t} groups={groups} />)}</div>}
           {m.status === 'choose' && <div className="demo-chat-confirmation ai-task-choice" ref={pendingRef}><p>Chọn công việc:</p>{m.candidates?.map(t => <div key={t.id}><TaskCard task={t} groups={groups} linked={false} path={m.candidatePaths?.[t.id]} /><button disabled={busy} onClick={() => { void perform({ operation: 'choose', messageId: m.id, taskId: t.id }).catch(e => notify(e.message)) }}>Chọn {t.title}</button></div>)}<button disabled={busy} onClick={() => cancel(m.id)}>Hủy yêu cầu</button></div>}
-          {m.proposal && (m.status === 'pending' ? <div className="demo-chat-confirmation demo-inline-confirmation" ref={pendingRef}><TaskForm compact key={`${m.id}:${JSON.stringify(m.proposal.data)}`} initial={m.id === pendingId && context.mode !== 'idle' ? { ...m.proposal.data, ...context.activeDraft } : m.proposal.data} onDraftChange={data => setContext({ ...context, mode: m.proposal!.taskId ? 'editing-task' : 'creating-task', activeDraft: data })} before={m.proposal.before} action={m.proposal.action} groups={groups} busy={busy} onCancel={() => cancel(m.id)} submitLabel={m.proposal.action === 'DELETE_TASK' ? 'Xác nhận xóa' : m.proposal.action === 'RESTORE_TASK' ? 'Xác nhận khôi phục' : 'Xác nhận lưu'} onSubmit={data => perform({ operation: 'confirm', messageId: m.id, data })} /></div> : null)}
+          {m.proposal && (m.status === 'pending' ? <div className="demo-chat-confirmation demo-inline-confirmation" ref={pendingRef}><TaskForm compact key={`${m.id}:${JSON.stringify(m.proposal.data)}`} initial={m.id === pendingId && context.mode !== 'idle' ? { ...m.proposal.data, ...context.activeDraft } : m.proposal.data} onDraftChange={data => setContext({ ...context, mode: m.proposal!.taskId ? 'editing-task' : 'creating-task', activeDraft: data })} before={m.proposal.before} action={m.proposal.action} groups={groups} busy={busy} onCancel={() => cancel(m.id)} submitLabel={m.proposal.action === 'DELETE_TASK' ? 'Xác nhận xóa' : m.proposal.action === 'RESTORE_TASK' ? 'Xác nhận khôi phục' : ['CREATE_TASK', 'CREATE_SUBTASK'].includes(m.proposal.action) ? 'Thêm' : 'Cập nhật'} onSubmit={data => perform({ operation: 'confirm', messageId: m.id, data })} /></div> : null)}
           {!m.proposal && m.status === 'cancelled' && <small>Đã hủy yêu cầu</small>}
         </div>)}
-        {outgoing && <div className="demo-chat-turn user"><ChatMessage role="user" content={outgoing} assistantName="AI Task" /><p role="status">Đang phân tích…</p></div>}
+        {outgoing && <div className="demo-chat-turn user"><ChatMessage role="user" content={outgoing} assistantName="AI Công việc" /><p role="status">Đang phân tích…</p></div>}
       </div>
-      {pending && <p className="demo-chat-pending">Bạn có thể nhắn bổ sung cho bản nháp, xác nhận lưu hoặc hủy yêu cầu.</p>}
       <form className="demo-chat-input demo-chat-voice-input" onSubmit={e => { e.preventDefault(); void send() }}>
         <VoiceInputSlot hidden={hideVoice}><button type="button" className={`demo-mic ${voice.listening ? 'listening' : ''}`} disabled={!voice.supported || busy || loading || blocked || !!error || hideVoice} tabIndex={hideVoice ? -1 : 0} onClick={voice.toggle} aria-pressed={voice.listening} aria-label={voice.listening ? 'Dừng ghi âm' : 'Nhập bằng giọng nói'} title={!voice.supported ? 'Trình duyệt chưa hỗ trợ nhập giọng nói' : undefined}><Mic size={24} /></button></VoiceInputSlot>
         <textarea ref={input} rows={1} maxLength={4000} placeholder="Ví dụ: EDA đang làm…" aria-label="Tin nhắn" disabled={busy || loading || blocked || !!error} value={text} onChange={e => { setText(e.target.value); setVoiceText(false) }} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); void send() } }} />
@@ -150,7 +149,7 @@ function MemoryDetails({ title, values, groups, nodes }: { title: string; values
   return <div><strong>{title}</strong>
     {values.title && <p>Công việc: {values.title}</p>}
     <p>Nhóm: {values.groupId ? groups.find(g => g.id === values.groupId)?.name || 'Nhóm không còn khả dụng' : 'Chưa chọn'}</p>
-    <p>Task cha: {values.parentId ? nodes.find(n => n.id === values.parentId)?.title || 'Task không còn khả dụng' : 'Không có · Task gốc'}</p>
+    <p>Thuộc công việc: {values.parentId ? nodes.find(n => n.id === values.parentId)?.title || 'Công việc không còn khả dụng' : 'Không có'}</p>
     <p>Ưu tiên: {values.priority ? priorityLabels[values.priority] : 'Chưa chọn'} · Trạng thái: {values.status ? statusLabels[values.status] : 'Chưa chọn'}</p>
     {(values.startNow || values.startClock || values.startTime) && <p>Bắt đầu: {values.startNow ? 'Ngay khi xác nhận' : values.startTime ? displayDate(values.startTime) : values.startClock}</p>}
     {values.duration && <p>Thời lượng: {values.duration} phút</p>}{values.deadline && <p>Deadline: {displayDate(values.deadline)}</p>}{values.description && <p>Ghi chú: {values.description}</p>}

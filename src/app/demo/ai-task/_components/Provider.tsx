@@ -4,6 +4,7 @@ import { fetchWithAuthRetry } from '@/lib/auth/client-fetch'
 import { useAuth } from '@/components/auth/AuthProvider'
 import type { Group } from '../_lib/model'
 import { useTaskMemory } from './useTaskMemory'
+import TaskWorkflow from './TaskWorkflow'
 
 export async function api<T = unknown>(body?: unknown, params?: Record<string, string>, signal?: AbortSignal): Promise<T> {
   const response = await fetchWithAuthRetry(`/demo/ai-task/api${params ? `?${new URLSearchParams(params)}` : ''}`, body ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal } : { cache: 'no-store', signal })
@@ -41,7 +42,7 @@ export default function Provider({ children }: { children: React.ReactNode }) {
     try { return await fn() } finally { lock.current = false; setBusy(false) }
   }, [])
   return <TaskContext.Provider value={{ ...memory, groups, revision, ready, busy, run, refresh, notify: setToast }}>
-    {error ? <div className="demo-alert" role="alert">{error} <button onClick={initialize}>Thử lại</button></div> : !ready ? <p role="status">Đang mở không gian công việc…</p> : children}
+    {error ? <div className="demo-alert" role="alert">{error} <button onClick={initialize}>Thử lại</button></div> : !ready ? <p role="status">Đang mở không gian công việc…</p> : <TaskWorkflow>{children}</TaskWorkflow>}
     {toast && <div className="demo-toast" role="status">{toast}</div>}
   </TaskContext.Provider>
 }

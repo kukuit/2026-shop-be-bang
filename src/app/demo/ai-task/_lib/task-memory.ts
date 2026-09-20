@@ -50,7 +50,11 @@ export function resolveTaskMemory(explicit: Partial<TaskInput> & { startClock?: 
     sources[key as keyof typeof TASK_MEMORY_POLICY] = found?.[0] || 'default'
   }
   if (!groups.some(g => g.isActive && g.id === values.groupId)) { values.groupId = fallback.id; sources.groupId = 'default' }
-  if (values.parentId && !validParents(tasks).some(t => t.id === values.parentId && t.groupId === values.groupId && isOpen(t))) { values.parentId = null; sources.parentId = 'default' }
+  if (values.parentId) {
+    const parent = validParents(tasks).find(t => t.id === values.parentId && isOpen(t) && groups.some(g => g.id === t.groupId && g.isActive))
+    if (parent) { values.groupId = parent.groupId; sources.groupId = sources.parentId }
+    else { values.parentId = null; sources.parentId = 'default' }
+  }
   // Start controls describe one choice. A lower-layer "now" must never override
   // a date/clock supplied by a higher layer (or resurrect an explicitly cleared date).
   const startLayers: [ResolvedSource, Partial<TaskInput> & { startClock?: string | null }][] = [['explicit', explicit], ['draft', context.activeDraft], ['overview', overview]]

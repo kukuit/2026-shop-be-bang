@@ -115,7 +115,7 @@ test('confirmed forms remember group and sibling branch, explicit input wins, me
   assert.equal(new Date(Date.parse(reply.proposal.data.startTime) + 7 * 3600000).toISOString().slice(11, 16), '17:00')
   assert.ok(Date.parse(reply.proposal.data.startTime) >= Date.now() - 1000)
   const explicit = await service.prepareIntent('alice', { action: 'CREATE_TASK', data: { title: 'C', groupName: 'Ainka', duration: 30, startTime: null } }, undefined, taskMemory.newContext(), overview)
-  assert.equal(explicit.proposal.data.groupId, 'ainka'); assert.equal(explicit.proposal.data.parentId, null)
+  assert.equal(explicit.proposal.data.groupId, 'personal'); assert.equal(explicit.proposal.data.parentId, subject.id)
   assert.equal(explicit.proposal.data.duration, 30); assert.equal(explicit.proposal.data.startTime, null)
   await repo.initialize('bob')
   assert.deepEqual(await memoryService.getOverviewMemory('bob'), { updatedAt: null })
@@ -327,7 +327,7 @@ test('subtasks stay in tasks at any depth; rejects cross-account parent and pare
   assert.equal(child.parentId, parent.id)
   const nested = await create('alice', { ...input('Nested'), parentId: child.id })
   assert.equal(nested.depth, 2); assert.equal(nested.rootTaskId, parent.id)
-  await assert.rejects(() => mutate(parent, 'DELETE_TASK'), /task con/)
+  await assert.rejects(() => mutate(parent, 'DELETE_TASK'), /công việc con/)
   const pending = (await repo.getMessages('alice')).messages.find(m => m.status === 'pending')
   await service.cancelProposal('alice', pending.id)
   await repo.initialize('bob')
@@ -385,6 +385,53 @@ test('self-parent and move into any descendant are rejected with no partial writ
     await service.cancelProposal('alice', p.id)
   }
   await assert.rejects(() => propose('alice', { ...input(), rootTaskId: 'forged', depth: 42 }))
+})
+
+test('group changes and cross-group moves update the entire branch atomically, including deleted descendants', async () => {
+  const root = await create('alice', input('Root'))
+  const child = await create('alice', { ...input('Child'), parentId: root.id })
+  const leaf = await create('alice', { ...input('Leaf'), parentId: child.id, deadline: '2099-01-01T10:00:00Z' })
+  await mutate(leaf, 'DELETE_TASK')
+  const before = await repo.scanTasks('alice')
+  const rootData = { ...input('Root'), groupId: 'personal' }
+  harness.failNextCommit()
+  await assert.rejects(() => service.saveManualTask('alice', id(), 'UPDATE_TASK', rootData, root.id, root.version))
+  assert.deepEqual(await repo.scanTasks('alice'), before)
+  await service.saveManualTask('alice', id(), 'UPDATE_TASK', rootData, root.id, root.version)
+  let tasks = await repo.scanTasks('alice')
+  for (const task of tasks) {
+    const previous = before.find(t => t.id === task.id)
+    assert.equal(task.groupId, 'personal')
+    assert.equal(task.version, previous.version + 1)
+    assert.equal(task.deadline, previous.deadline)
+    assert.equal(task.status, previous.status)
+    assert.equal(task.deletedAt, previous.deletedAt)
+  }
+  await assert.rejects(() => service.saveManualTask('alice', id(), 'UPDATE_TASK', { ...input('Child'), groupId: 'personal', parentId: root.id }, child.id, child.version), /đã thay đổi/)
+  const destination = await create('alice', { ...input('Destination'), groupId: 'inbox' })
+  const currentChild = tasks.find(t => t.id === child.id)
+  await service.saveManualTask('alice', id(), 'UPDATE_TASK', { ...input('Child'), parentId: destination.id, groupId: 'inbox' }, child.id, currentChild.version)
+  tasks = await repo.scanTasks('alice')
+  for (const taskId of [child.id, leaf.id]) {
+    assert.equal(tasks.find(t => t.id === taskId).groupId, 'inbox')
+    assert.equal(tasks.find(t => t.id === taskId).rootTaskId, destination.id)
+  }
+  assert.equal(tasks.find(t => t.id === root.id).groupId, 'personal')
+})
+
+test('direct and chat writes reject a forged child group without changing tasks', async () => {
+  const root = await create('alice', input('Root'))
+  const child = await create('alice', { ...input('Child'), parentId: root.id })
+  const before = await repo.scanTasks('alice')
+  const invalid = { ...input('Child'), parentId: root.id, groupId: 'personal' }
+  await assert.rejects(() => service.saveManualTask('alice', id(), 'CREATE_SUBTASK', invalid), /không thuộc nhóm/)
+  await assert.rejects(() => service.saveManualTask('alice', id(), 'UPDATE_TASK', invalid, child.id, child.version), /không thuộc nhóm/)
+  const proposal = await service.proposeManual('alice', id(), 'UPDATE_TASK', invalid, child.id, child.version)
+  await assert.rejects(() => service.confirmProposal('alice', proposal.id, invalid), /không thuộc nhóm/)
+  assert.deepEqual(await repo.scanTasks('alice'), before)
+  const preview = await service.prepareIntent('alice', { action: 'UPDATE_TASK', target: { query: 'Child' }, changes: { groupName: 'Cá nhân' } })
+  assert.equal(preview.proposal.data.groupId, root.groupId)
+  assert.equal(preview.proposal.data.parentId, root.id)
 })
 
 test('parent picker excludes self, all descendants and deleted branches, keeps valid cousins', async () => {
@@ -506,6 +553,27 @@ test('API denies guest, cross-site mutation, unknown fields and owner spoofing',
   assert.equal((await routes.POST(request({ operation: 'confirm', messageId: 'fake', data: input() }))).status, 400)
   assert.equal((await routes.GET(new NextRequest('http://localhost/demo/ai-task/api?resource=tasks&userId=bob'))).status, 400)
 })
+test('weekday training uses the next occurrence after today in Vietnam, including month/year boundaries', () => {
+  const { upcomingWeekdayTraining } = harness.load('_lib/secretary-training.ts')
+  const sunday = upcomingWeekdayTraining(new Date('2026-09-20T10:00:00+07:00'))
+  assert.match(sunday, /Thứ năm: 2026-09-24/)
+  assert.match(sunday, /Thứ sáu: 2026-09-25/)
+  assert.match(sunday, /Chủ nhật: 2026-09-27/)
+  const friday = upcomingWeekdayTraining(new Date('2026-09-24T18:00:00Z'))
+  assert.match(friday, /Thứ sáu: 2026-10-02/)
+  assert.doesNotMatch(friday, /2026-09-25/)
+  assert.match(upcomingWeekdayTraining(new Date('2026-12-31T10:00:00+07:00')), /Thứ sáu: 2027-01-01/)
+})
+
+test('chat presentation capitalizes only the first character and shows the actual Vietnam weekday', () => {
+  const { capitalizeTaskTitle, displayTaskDate } = harness.load('_lib/task-presentation.ts')
+  assert.equal(capitalizeTaskTitle('bài 7 nhân phân số'), 'Bài 7 nhân phân số')
+  assert.equal(capitalizeTaskTitle('  ôn API MISA'), '  Ôn API MISA')
+  assert.equal(capitalizeTaskTitle(''), '')
+  assert.match(displayTaskDate('2026-09-22T17:00:00+07:00'), /22\/9\/26 \(Thứ ba\)$/)
+  assert.match(displayTaskDate('2026-09-24T18:00:00Z'), /25\/9\/26 \(Thứ sáu\)$/)
+})
+
 test('AI output validation rejects arbitrary fields/actions, supports dynamic groups and dates', async () => {
   assert.equal(model.intentSchema.safeParse({ action: 'CREATE_TASK_GROUP', data: { name: 'Foo' } }).success, false)
   assert.equal(model.intentSchema.safeParse({ action: 'CREATE_TASK', data: { title: 'Task', groupId: 'forged' } }).success, false)
@@ -514,7 +582,7 @@ test('AI output validation rejects arbitrary fields/actions, supports dynamic gr
   const oldFetch = global.fetch, oldProvider = process.env.CHAT_PROVIDER, oldKey = process.env.GROQ_API_KEY
   process.env.CHAT_PROVIDER = 'groq'; process.env.GROQ_API_KEY = 'test-only-placeholder'
   let reply = { action: 'CREATE_TASK', data: { title: 'Banner', groupName: 'Shop Bé Băng', deadline: '2026-09-19T17:00:00+07:00' } }
-  global.fetch = async (_url, options) => { const body = JSON.parse(options.body); assert.match(body.messages[0].content, /Shop Bé Băng/); return Response.json({ choices: [{ message: { content: JSON.stringify(reply) } }] }) }
+  global.fetch = async (_url, options) => { const body = JSON.parse(options.body); assert.match(body.messages[0].content, /Shop Bé Băng/); assert.match(body.messages[0].content, /Bảng thứ kế tiếp sau hôm nay/); assert.match(body.messages[0].content, /ngày thứ năm/); return Response.json({ choices: [{ message: { content: JSON.stringify(reply) } }] }) }
   try {
     const groups = [{ name: 'Shop Bé Băng', slug: 'shop-be-bang', isActive: true }]
     assert.equal((await parser.parseTaskIntent('Tạo banner', groups)).data.groupName, 'Shop Bé Băng')
@@ -556,11 +624,12 @@ test('resolver validates parent ownership, group, deleted branches and active st
   const groups = await repo.getGroups('alice')
   const context = { ...taskMemory.newContext(), activeDraft: { groupId: 'ainka', parentId: parent.id } }
   const resolve = (explicit, tasks = [parent]) => taskMemory.resolveTaskMemory({ title: 'New', ...explicit }, context, {}, groups, tasks).data
-  assert.equal(resolve({ groupId: 'personal' }).parentId, null)
+  assert.equal(resolve({ groupId: 'personal' }).parentId, parent.id)
+  assert.equal(resolve({ groupId: 'personal' }).groupId, parent.groupId)
   assert.equal(resolve({ parentId: 'foreign' }).parentId, null)
   assert.equal(resolve({}, [{ ...parent, status: 'done' }]).parentId, null)
   assert.equal(resolve({}, [{ ...parent, deletedAt: new Date().toISOString() }]).parentId, null)
-  assert.equal(resolve({ groupId: 'does-not-exist' }).groupId, 'inbox')
+  assert.equal(resolve({ groupId: 'does-not-exist' }).groupId, parent.groupId)
   const pending = await propose('alice', { ...input('Bad group parent'), groupId: 'personal', parentId: parent.id })
   const before = [...harness.data()]
   await assert.rejects(() => service.confirmProposal('alice', pending.id, { ...input('Bad group parent'), groupId: 'personal', parentId: parent.id }), /không thuộc nhóm/)
@@ -649,7 +718,7 @@ test('overview load is one read; chat has zero memory IO; confirm commits task a
 
 test('assistant replies stay natural and report success only after the final edited task commits', async () => {
   const prepared = await service.prepareIntent('alice', { action: 'CREATE_TASK', data: { title: 'Bài 6 trừ phân số' } }, undefined, taskMemory.newContext(), { groupId: 'personal', priority: 'normal' })
-  assert.equal(prepared.content, 'Mình thêm “Bài 6 trừ phân số” nhé.')
+  assert.equal(prepared.content, 'Bạn kiểm tra lại thông tin trước khi mình thêm ‘Bài 6 trừ phân số’ nhé!')
   const turn = await service.appendTurn('alice', id(), 'thêm bài 6 trừ phân số', prepared)
   const edited = { ...prepared.proposal.data, title: 'Bài 6 đã sửa' }
   harness.failNextCommit()

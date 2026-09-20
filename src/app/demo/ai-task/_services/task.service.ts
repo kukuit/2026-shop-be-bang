@@ -54,7 +54,7 @@ export async function prepareIntent(uid: string, intent: Intent | Conversation, 
       if (parentQuery === null) update.values.parentId = null
       else {
         const tasks = await scanTasks(uid)
-        const matches = validParents(tasks).filter(t => isOpen(t) && (!update.values.groupId || tasks.find(n => n.id === t.id)?.groupId === update.values.groupId) && (normalize(t.title) === normalize(parentQuery) || normalize(treePath(t.id, tasks)).replace(/\s*[/>→]\s*/g, '/') === normalize(parentQuery).replace(/\s*[/>→]\s*/g, '/')))
+        const matches = validParents(tasks).filter(t => isOpen(t) && (normalize(t.title) === normalize(parentQuery) || normalize(treePath(t.id, tasks)).replace(/\s*[/>→]\s*/g, '/') === normalize(parentQuery).replace(/\s*[/>→]\s*/g, '/')))
         if (matches.length !== 1) return { status: 'normal', content: matches.length ? 'Có vài việc cùng tên. Bạn muốn đặt dưới việc nào?' : 'Mình chưa thấy việc đó. Bạn muốn đặt dưới việc nào khác?' }
         update.values.parentId = matches[0].id
         update.values.groupId = tasks.find(t => t.id === matches[0].id)!.groupId
@@ -84,7 +84,7 @@ export async function prepareIntent(uid: string, intent: Intent | Conversation, 
     if (chosenId) target = candidates.find(t => t.id === chosenId)
     else if (candidates.length === 1) target = candidates[0]
     if (!target) {
-      if (chosenId) throw new Error('Task đã thay đổi hoặc không còn phù hợp. Hãy gửi lại yêu cầu.')
+      if (chosenId) throw new Error('Công việc đã thay đổi hoặc không còn phù hợp. Hãy gửi lại yêu cầu.')
       if (!candidates.length) return { content: 'Mình chưa thấy việc đó. Bạn nói rõ tên giúp mình nhé?', status: 'normal' }
       if (candidates.length > 30) return { content: `Có ${candidates.length} việc gần giống. Bạn nói rõ hơn tên việc cần tìm nhé?`, status: 'normal' }
       return { content: 'Bạn đang nói đến việc nào trong những việc này?', status: 'choose', candidates, candidatePaths: Object.fromEntries(candidates.map(t => [t.id, treePath(t.id, tasks)])), intent }
@@ -106,6 +106,10 @@ export async function prepareIntent(uid: string, intent: Intent | Conversation, 
   } else {
     data = taskInput(target!)
     if (intent.action === 'UPDATE_TASK') data = taskInputSchema.parse({ ...data, ...changes, ...('deadline' in changes ? { scheduleMode: 'deadline' } : 'duration' in changes ? { scheduleMode: 'duration' } : {}), ...(groupName ? { groupId: resolved.group.id } : {}) })
+    if (intent.action === 'UPDATE_TASK' && data.parentId) {
+      const parent = (await scanTasks(uid)).find(t => t.id === data.parentId)
+      if (parent) data.groupId = parent.groupId
+    }
     if (intent.action === 'COMPLETE_TASK') data.status = 'done'
     if (intent.action === 'CANCEL_TASK') data.status = 'cancelled'
   }
@@ -149,10 +153,10 @@ export async function proposeManual(uid: string, requestId: string, action: Acti
   let before: Task | null = null
   if (!create) {
     const snapshot = await taskCollection(uid).doc(idSchema.parse(taskId)).get()
-    if (!snapshot.exists) throw new Error('Task không tồn tại.')
+    if (!snapshot.exists) throw new Error('Công việc không tồn tại.')
     before = row<Task>(snapshot)
-    if (before.version !== expectedVersion) throw new Error('Task đã thay đổi. Hãy tải lại danh sách.')
-    if (action === 'RESTORE_TASK' ? !before.deletedAt : !!before.deletedAt) throw new Error('Trạng thái task đã thay đổi.')
+    if (before.version !== expectedVersion) throw new Error('Công việc đã thay đổi. Hãy tải lại danh sách.')
+    if (action === 'RESTORE_TASK' ? !before.deletedAt : !!before.deletedAt) throw new Error('Trạng thái công việc đã thay đổi.')
   }
   const data = taskInputSchema.parse(raw || (before && taskInput(before)))
   const proposal: Proposal = { action, data, taskId: before?.id || null, expectedVersion: before?.version || null, before }
@@ -212,27 +216,36 @@ async function persistTask(uid: string, messageId: string, raw: unknown, direct?
     const restoring = proposal.action === 'RESTORE_TASK'
     const parsedData = taskInputSchema.parse(deleting || restoring ? proposal.data : raw)
     const data = deleting || restoring ? parsedData : finalizeSchedule(parsedData)
-    if (!['CREATE_TASK', 'CREATE_SUBTASK', 'UPDATE_TASK'].includes(proposal.action) && data.parentId !== proposal.data.parentId) throw new Error('Hành động này không thay đổi task cha. Hãy dùng Sửa công việc.')
-    if (proposal.action === 'CREATE_SUBTASK' && !data.parentId) throw new Error('Hãy chọn task cha cho công việc con.')
+    if (!['CREATE_TASK', 'CREATE_SUBTASK', 'UPDATE_TASK'].includes(proposal.action) && data.parentId !== proposal.data.parentId) throw new Error('Hành động này không thay đổi công việc cha. Hãy dùng Sửa công việc.')
+    if (proposal.action === 'CREATE_SUBTASK' && !data.parentId) throw new Error('Hãy chọn công việc cha cho công việc con.')
     if (proposal.action === 'COMPLETE_TASK' && data.status !== 'done' || proposal.action === 'CANCEL_TASK' && data.status !== 'cancelled') throw new Error('Trạng thái không khớp hành động.')
     const taskRef = proposal.taskId ? taskCollection(uid).doc(idSchema.parse(proposal.taskId)) : newTaskRef
     const current = await tx.get(taskRef)
     const old = current.exists ? row<Task>(current) : null
-    if (proposal.taskId && (!old || old.version !== proposal.expectedVersion)) throw new Error(direct ? 'Task đã thay đổi. Hãy đóng form và mở lại công việc để xem dữ liệu mới.' : 'Task đã thay đổi. Hủy đề xuất này và mở lại task để xem dữ liệu mới.')
-    if (old && (restoring ? !old.deletedAt : !!old.deletedAt)) throw new Error('Task đã đổi trạng thái xóa.')
+    if (proposal.taskId && (!old || old.version !== proposal.expectedVersion)) throw new Error(direct ? 'Công việc đã thay đổi. Hãy đóng form và mở lại công việc để xem dữ liệu mới.' : 'Công việc đã thay đổi. Hủy đề xuất này và mở lại công việc để xem dữ liệu mới.')
+    if (old && (restoring ? !old.deletedAt : !!old.deletedAt)) throw new Error('Công việc đã đổi trạng thái xóa.')
     const group = await tx.get(groupCollection(uid).doc(data.groupId))
     if (!group.exists || (!group.get('isActive') && (!old || old.groupId !== data.groupId))) throw new Error('Nhóm đã bị ẩn hoặc không tồn tại. Chọn nhóm đang hoạt động.')
     const snapshot = await tx.get(taskCollection(uid))
     const tasks = snapshot.docs.map(d => row<Task>(d))
     const beforePositions = treePositions(tasks)
     const nodes = tasks.map(t => ({ ...t, ...beforePositions.get(t.id)! }))
-    if (data.parentId === taskRef.id) throw new Error('Task không được làm cha của chính nó.')
+    if (data.parentId === taskRef.id) throw new Error('Công việc không được làm cha của chính nó.')
     const branch = descendants(nodes, taskRef.id)
-    if (data.parentId && branch.has(data.parentId)) throw new Error('Không thể chuyển task vào nhánh con của chính nó vì sẽ tạo quan hệ vòng.')
-    if (data.parentId && !deleting && !validParents(nodes, old?.id).some(t => t.id === data.parentId)) throw new Error('Task cha không hợp lệ, thuộc tài khoản khác hoặc nhánh cha đã bị xóa.')
-    if (data.parentId && !deleting && !nodes.some(t => t.id === data.parentId && t.groupId === data.groupId && isOpen(t))) throw new Error('Task cha không hoạt động hoặc không thuộc nhóm đã chọn.')
+    if (data.parentId && branch.has(data.parentId)) throw new Error('Không thể chuyển công việc vào nhánh con của chính nó vì sẽ tạo quan hệ vòng.')
+    if (data.parentId && !deleting && !validParents(nodes, old?.id).some(t => t.id === data.parentId)) throw new Error('Công việc cha không hợp lệ, thuộc tài khoản khác hoặc nhánh cha đã bị xóa.')
+    if (data.parentId && !deleting && !nodes.some(t => t.id === data.parentId && t.groupId === data.groupId && isOpen(t))) throw new Error('Công việc cha không hoạt động hoặc không thuộc nhóm đã chọn.')
+    if (!deleting) {
+      const byId = new Map(nodes.map(t => [t.id, t]))
+      let ancestorId = data.parentId
+      while (ancestorId) {
+        const ancestor = byId.get(ancestorId)!
+        if (ancestor.groupId !== data.groupId) throw new Error('Nhánh cha đang có công việc khác nhóm. Hãy sửa nhóm ở công việc gốc trước.')
+        ancestorId = ancestor.parentId
+      }
+    }
     if (deleting) {
-      if (nodes.some(t => branch.has(t.id) && !t.deletedAt)) throw new Error('Hãy xử lý/xóa task con trong toàn bộ nhánh trước khi xóa task cha.')
+      if (nodes.some(t => branch.has(t.id) && !t.deletedAt)) throw new Error('Hãy xử lý/xóa công việc con trong toàn bộ nhánh trước khi xóa công việc cha.')
     }
     const positions = treePositions([...nodes.filter(t => t.id !== taskRef.id), { id: taskRef.id, parentId: data.parentId }])
     const now = FieldValue.serverTimestamp()
@@ -240,15 +253,17 @@ async function persistTask(uid: string, messageId: string, raw: unknown, direct?
     tx.set(taskRef, {
       ...data, ...positions.get(taskRef.id)!, deadline: timestamp(data.deadline), startTime: timestamp(data.startTime), createdAt: old ? current.get('createdAt') : now, updatedAt: now,
       version: (old?.version || 0) + 1,
-      completedAt: data.status === 'done' ? old?.status === 'done' ? current.get('completedAt') : now : null,
+      completedAt: data.status === 'done' ? old?.status === 'done' ? current.get('completedAt') ?? null : now : null,
+      completionPercent: data.status === 'done' ? old?.status === 'done' ? old.completionPercent ?? null : data.completionPercent ?? null : null,
+      completionNote: data.status === 'done' ? old?.status === 'done' ? old.completionNote ?? null : data.completionNote?.trim() || null : null,
       cancelledAt: data.status === 'cancelled' ? old?.status === 'cancelled' ? current.get('cancelledAt') : now : null,
       deletedAt: deleting ? now : restoring ? null : old ? current.get('deletedAt') : null,
     })
     // Updating the whole branch atomically avoids stale roots/depths and invalidates
     // outstanding descendant proposals. Deleted descendants keep their links too.
-    if (old && old.parentId !== data.parentId) {
-      for (const document of snapshot.docs) if (branch.has(document.id)) {
-        tx.update(document.ref, { ...positions.get(document.id)!, version: Number(document.get('version') || 0) + 1, updatedAt: now })
+    if (old && !deleting) {
+      for (const document of snapshot.docs) if (branch.has(document.id) && (old.parentId !== data.parentId || document.get('groupId') !== data.groupId)) {
+        tx.update(document.ref, { ...positions.get(document.id)!, groupId: data.groupId, version: Number(document.get('version') || 0) + 1, updatedAt: now })
       }
     }
     if (direct) tx.set(ref, { status: 'confirmed', resultTaskId: taskRef.id, createdAt: now })

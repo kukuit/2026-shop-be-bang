@@ -2,7 +2,7 @@ import { z } from 'zod'
 
 export const statuses = ['todo', 'in_progress', 'waiting', 'blocked', 'done', 'cancelled'] as const
 export const priorities = ['urgent', 'normal', 'low'] as const
-export const statusLabels: Record<Status, string> = { todo: 'Chưa làm', in_progress: 'Đang làm', waiting: 'Đang chờ', blocked: 'Bị chặn', done: 'Hoàn thành', cancelled: 'Đã hủy' }
+export const statusLabels: Record<Status, string> = { todo: 'Mới tạo', in_progress: 'Đang làm', waiting: 'Đang chờ', blocked: 'Đang chờ', done: 'Hoàn thành', cancelled: 'Đã hủy' }
 export const priorityLabels = { urgent: 'Gấp', normal: 'Bình thường', low: 'Thấp' }
 export type Status = typeof statuses[number]
 export const idSchema = z.string().regex(/^[a-zA-Z0-9_-]{1,150}$/)
@@ -18,6 +18,8 @@ export const taskInputSchema = z.object({
   groupId: idSchema,
   priority: z.enum(priorities).default('normal'),
   status: z.enum(statuses).default('todo'),
+  completionPercent: z.number().int().min(0).max(100).nullable().optional(),
+  completionNote: z.string().trim().max(5000).nullable().optional(),
   parentId: idSchema.nullable().default(null),
   deadline: dateSchema.default(null),
   startTime: dateSchema.default(null),
@@ -65,9 +67,9 @@ export const intentSchema = z.object({
   filters: filterSchema.omit({ groupId: true, parentId: true }).extend({ groupName: z.string().max(80).optional() }).optional(),
 }).strict().superRefine((v, ctx) => {
   if (v.action === 'CREATE_TASK' || v.action === 'CREATE_SUBTASK') {
-    if (!v.data?.title) ctx.addIssue({ code: 'custom', message: 'Thiếu tên task', path: ['data', 'title'] })
+    if (!v.data?.title) ctx.addIssue({ code: 'custom', message: 'Thiếu tên công việc', path: ['data', 'title'] })
   }
-  if (!['CREATE_TASK', 'GET_TASKS'].includes(v.action) && !v.target?.query) ctx.addIssue({ code: 'custom', message: 'Thiếu task cần tìm', path: ['target'] })
+  if (!['CREATE_TASK', 'GET_TASKS'].includes(v.action) && !v.target?.query) ctx.addIssue({ code: 'custom', message: 'Thiếu công việc cần tìm', path: ['target'] })
   if (v.action === 'UPDATE_TASK' && !Object.keys(v.changes || {}).length) ctx.addIssue({ code: 'custom', message: 'Thiếu nội dung thay đổi', path: ['changes'] })
 })
 export type Intent = z.infer<typeof intentSchema>

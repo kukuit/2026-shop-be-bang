@@ -74,7 +74,7 @@ export async function getParentOptions(uid: string, taskId?: string) {
   if (taskId) idSchema.parse(taskId)
   const tasks = await scanTasks(uid)
   const nodes: TreeNode[] = tasks.map(({ id, title, parentId, rootTaskId, depth, deletedAt, groupId, status }) => ({ id, title, parentId, rootTaskId, depth, deletedAt, groupId, status }))
-  if (taskId && !nodes.some(n => n.id === taskId)) throw new Error('Task không tồn tại trong tài khoản này.')
+  if (taskId && !nodes.some(n => n.id === taskId)) throw new Error('Công việc không tồn tại trong tài khoản này.')
   return { nodes, candidates: validParents(tasks, taskId).filter(isOpen).map(t => nodes.find(n => n.id === t.id)!) }
 }
 
