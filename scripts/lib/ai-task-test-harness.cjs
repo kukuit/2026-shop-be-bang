@@ -9,6 +9,7 @@ const firestore = require('firebase-admin/firestore')
 const { Timestamp } = firestore
 const root = path.resolve(__dirname, '../..')
 let database = new Map(), counter = 0, identity = 'alice', queue = Promise.resolve(), clock = Date.now()
+let reads = [], writes = [], failCommit = false
 const serverTime = { __serverTimestamp: true }
 const deleteField = { __deleteField: true }
 const clone = v => v instanceof Timestamp ? v : Array.isArray(v) ? v.map(clone) : v && typeof v === 'object' ? Object.fromEntries(Object.entries(v).map(([k, x]) => [k, clone(x)])) : v
@@ -17,7 +18,7 @@ function snapshot(ref, state) { return { ref, id: ref.id, exists: state.has(ref.
 class Ref {
   constructor(p) { this.path = p; this.id = p.split('/').at(-1) }
   collection(name) { return new Query(`${this.path}/${name}`) }
-  get() { return Promise.resolve(snapshot(this, database)) }
+  get() { reads.push(this.path); return Promise.resolve(snapshot(this, database)) }
 }
 class Query {
   constructor(p, filters = [], max = Infinity, order = '__name__', direction = 'asc', cursor) { Object.assign(this, { path: p, filters, max, order, direction, cursor }) }
@@ -34,7 +35,7 @@ class Query {
     docs = docs.slice(0, this.max)
     return { docs, size: docs.length, empty: !docs.length }
   }
-  get() { return Promise.resolve(this.read(database)) }
+  get() { reads.push(this.path); return Promise.resolve(this.read(database)) }
 }
 const db = {
   collection(p) { assert.equal(p, 'demo'); return new Query(p) },
@@ -43,11 +44,12 @@ const db = {
       const state = new Map([...database].map(([k, v]) => [k, clone(v)]))
       let written = false
       const tx = {
-        async get(ref) { assert.equal(written, false, 'Firestore reads must precede writes'); return ref instanceof Query ? ref.read(state) : snapshot(ref, state) },
-        set(ref, value, options) { assert.ok(ref.path.startsWith('demo/ai-task/users/'), 'Write escaped AI Task namespace'); written = true; const data = materialize(value); const next = options?.merge ? { ...state.get(ref.path), ...data } : data; for (const key of Object.keys(next)) if (next[key]?.__deleteField) delete next[key]; state.set(ref.path, next); return tx },
+        async get(ref) { reads.push(ref.path); assert.equal(written, false, 'Firestore reads must precede writes'); return ref instanceof Query ? ref.read(state) : snapshot(ref, state) },
+        set(ref, value, options) { writes.push(ref.path); assert.ok(ref.path.startsWith('demo/ai-task/users/'), 'Write escaped AI Task namespace'); written = true; const data = materialize(value); const next = options?.merge ? { ...state.get(ref.path), ...data } : data; for (const key of Object.keys(next)) if (next[key]?.__deleteField) delete next[key]; state.set(ref.path, next); return tx },
         update(ref, value) { assert.ok(state.has(ref.path)); return tx.set(ref, value, { merge: true }) },
       }
       const result = await callback(tx)
+      if (failCommit) { failCommit = false; throw new Error('Simulated commit failure') }
       database = state
       return result
     })
@@ -67,7 +69,10 @@ Module._load = function (id, parent, main) {
 require.extensions['.ts'] = (module, filename) => module._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020, esModuleInterop: true } }).outputText, filename)
 module.exports = {
   load: name => require(path.join(root, 'src/app/demo/ai-task', name)),
-  reset() { database = new Map(); counter = 0; identity = 'alice' },
+  reset() { database = new Map(); counter = 0; identity = 'alice'; reads = []; writes = []; failCommit = false },
+  resetMetrics() { reads = []; writes = [] },
+  metrics: () => ({ reads: [...reads], writes: [...writes] }),
+  failNextCommit() { failCommit = true },
   identity(value) { identity = value },
   data: () => database,
   put(p, value) { assert.ok(p.startsWith('demo/ai-task/users/')); database.set(p, value) },

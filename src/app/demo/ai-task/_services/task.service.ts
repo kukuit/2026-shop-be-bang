@@ -1,11 +1,13 @@
 import 'server-only'
-import { emptyContext, emptyMemory, rememberForm, type Conversation, type MemoryUpdate, type ContextMemory, type WorkDefaults } from '../_lib/work-memory'
-import { suggestedTaskFields } from './work-memory'
+import { leafTasks } from '../_lib/task-display'
+import { taskReply, taskListReply, conversationalReply } from '../_lib/assistant-replies'
+import { type Conversation, type MemoryUpdate, type WorkDefaults } from '../_lib/work-memory'
+import { confirmedOverview, newContext, resolveTaskMemory, type TaskConversationMemory, type TaskOverviewMemory } from '../_lib/task-memory'
 type PreparedReply = Partial<Message> & { memoryUpdate?: MemoryUpdate }
 import { FieldValue, Timestamp } from 'firebase-admin/firestore'
 import { getAdminDb } from '@/lib/firebaseAdmin'
 import { finalizeSchedule, filterSchema, groupInputSchema, idSchema, isOpen, normalize, slugify, taskInputSchema, type Action, type Group, type Intent, type Message, type Proposal, type Task, type TaskInput } from '../_lib/model'
-import { findTasks, getGroups, groupCollection, messageCollection, migrateTaskTree, row, scanTasks, sessionRef, taskCollection, userRoot } from './repository'
+import { findDisplayTasks, getGroups, groupCollection, messageCollection, migrateTaskTree, row, scanTasks, sessionRef, taskCollection, userRoot } from './repository'
 import { descendants, treePath, treePositions, upgradeParentField, validParents } from '../_lib/tree'
 
 export async function saveGroup(uid: string, raw: unknown, id?: string) {
@@ -30,49 +32,49 @@ function taskInput(t: Task): TaskInput {
   return taskInputSchema.parse({ title: t.title, description: t.description, groupId: t.groupId, priority: t.priority, status: t.status, parentId: t.parentId, deadline: t.deadline, startTime: t.startTime, duration: t.duration, withinDay: t.withinDay, scheduleMode: t.scheduleMode, startNow: false })
 }
 function resolveGroup(groups: Group[], name?: string) {
-  const inbox = groups.find(g => g.isDefault && g.isActive)
-  if (!inbox) throw new Error('Không tìm thấy Inbox.')
+  const inbox = groups.find(g => g.isDefault && g.isActive) || groups.find(g => g.isActive)
+  if (!inbox) throw new Error('Không có nhóm đang hoạt động.')
   if (!name) return { group: inbox, note: '' }
-  const found = groups.filter(g => g.isActive && [g.name, g.slug].some(n => normalize(n) === normalize(name)))
-  return found.length === 1 ? { group: found[0], note: '' } : { group: inbox, note: `Không xác định được nhóm “${name}”; đang đề xuất Inbox. Bạn có thể đổi nhóm trong form.\n` }
+  const found = groups.filter(g => g.isActive && [g.id, g.name, g.slug].some(n => normalize(n) === normalize(name)))
+  return found.length === 1 ? { group: found[0], note: '' } : { group: inbox, note: `Mình chưa thấy nhóm “${name}”, tạm chọn “${inbox.name}” nhé.\n` }
 }
 
-export async function prepareIntent(uid: string, intent: Intent | Conversation, chosenId?: string): Promise<PreparedReply> {
+export async function prepareIntent(uid: string, intent: Intent | Conversation, chosenId?: string, context: TaskConversationMemory = newContext(), overview: TaskOverviewMemory = {}): Promise<PreparedReply> {
   const groups = await getGroups(uid)
   if (intent.action === 'CHAT') {
-    if (!intent.memory) return { status: 'normal', content: intent.reply }
+    if (!intent.memory) return { status: 'normal', content: conversationalReply(intent.reply) }
     const { scope, groupName, parentQuery, notes, reset, ...values } = intent.memory
     const update: MemoryUpdate = { scope, values, ...(notes !== undefined ? { notes } : {}), ...(reset ? { reset: true } : {}) }
     if (groupName !== undefined) {
-      const group = groupName === null ? groups.find(g => g.isDefault && g.isActive) : groups.find(g => g.isActive && normalize(g.name) === normalize(groupName))
+      const group = groupName === null ? groups.find(g => g.isDefault && g.isActive) : groups.find(g => g.isActive && [g.id, g.name, g.slug].some(name => normalize(name) === normalize(groupName)))
       if (!group) return { status: 'normal', content: 'Mình chưa tìm thấy nhóm đó. Bạn cho mình tên nhóm đã có nhé.' }
-      update.values.groupId = group.id; update.values.parentId = null
+      update.values.groupId = group.id
     }
     if (parentQuery !== undefined) {
       if (parentQuery === null) update.values.parentId = null
       else {
         const tasks = await scanTasks(uid)
-        const matches = validParents(tasks).filter(t => (!update.values.groupId || tasks.find(n => n.id === t.id)?.groupId === update.values.groupId) && (normalize(t.title) === normalize(parentQuery) || normalize(treePath(t.id, tasks)).replace(/\s*[/>→]\s*/g, '/') === normalize(parentQuery).replace(/\s*[/>→]\s*/g, '/')))
-        if (matches.length !== 1) return { status: 'normal', content: matches.length ? 'Mình thấy nhiều nhánh cùng tên. Bạn nói đầy đủ đường dẫn nhóm/người học/môn học nhé.' : 'Mình chưa tìm thấy nhánh đó. Bạn chọn nhánh trong form hoặc nói đúng tên task cha nhé.' }
+        const matches = validParents(tasks).filter(t => isOpen(t) && (normalize(t.title) === normalize(parentQuery) || normalize(treePath(t.id, tasks)).replace(/\s*[/>→]\s*/g, '/') === normalize(parentQuery).replace(/\s*[/>→]\s*/g, '/')))
+        if (matches.length !== 1) return { status: 'normal', content: matches.length ? 'Có vài việc cùng tên. Bạn muốn đặt dưới việc nào?' : 'Mình chưa thấy việc đó. Bạn muốn đặt dưới việc nào khác?' }
         update.values.parentId = matches[0].id
         update.values.groupId = tasks.find(t => t.id === matches[0].id)!.groupId
       }
     }
     if ('startClock' in values && values.startClock) update.values.startNow = false
     if (values.startNow) update.values.startClock = null
-    return { status: 'normal', content: reset ? 'Mình đã xóa bộ nhớ gợi ý. Các công việc vẫn được giữ nguyên.' : 'Mình đã ghi nhớ để gợi ý cho các công việc tiếp theo. Bạn có thể xem hoặc xóa ở phần Bộ nhớ gợi ý.', memoryUpdate: update }
+    return { status: 'normal', content: reset ? 'Được, mình bỏ các lựa chọn vừa rồi nhé.' : 'Được, mình dùng lựa chọn này nhé.', memoryUpdate: update }
   }
   if (intent.action === 'GET_TASKS') {
     const { groupName, ...rest } = intent.filters || {}
     let groupId: string | undefined
     if (groupName) {
-      const found = groups.filter(g => [g.name, g.slug].some(n => normalize(n) === normalize(groupName)))
+      const found = groups.filter(g => [g.id, g.name, g.slug].some(n => normalize(n) === normalize(groupName)))
       if (found.length !== 1) return { content: `Không tìm thấy nhóm “${groupName}”. Hãy chọn tên nhóm trong Tổng quan.`, status: 'normal' }
       groupId = found[0].id
     }
     const filters = filterSchema.parse({ ...rest, ...(groupId ? { groupId } : {}) })
-    const result = await findTasks(uid, filters)
-    return { content: filters.recommend ? `Các việc nên ưu tiên theo quá hạn, mức gấp và deadline (${result.total} việc phù hợp).` : `Tìm thấy ${result.total} công việc${result.total > 30 ? ', đang hiển thị 30 việc đầu; hãy thêm điều kiện để thu hẹp' : ''}.`, tasks: result.tasks, total: result.total, status: 'normal' }
+    const result = await findDisplayTasks(uid, filters)
+    return { content: taskListReply(filters, result.total, result.tasks.length), tasks: result.tasks, total: result.total, intent, status: 'normal' }
   }
   let target: Task | undefined
   if (intent.action !== 'CREATE_TASK') {
@@ -82,35 +84,32 @@ export async function prepareIntent(uid: string, intent: Intent | Conversation, 
     if (chosenId) target = candidates.find(t => t.id === chosenId)
     else if (candidates.length === 1) target = candidates[0]
     if (!target) {
-      if (chosenId) throw new Error('Task đã thay đổi hoặc không còn phù hợp. Hãy gửi lại yêu cầu.')
-      if (!candidates.length) return { content: 'Không tìm thấy công việc phù hợp. Hãy nhập tên cụ thể hơn.', status: 'normal' }
-      if (candidates.length > 30) return { content: `Có ${candidates.length} công việc phù hợp. Hãy thêm từ vào tên task để thu hẹp (tối đa 30 lựa chọn).`, status: 'normal' }
-      return { content: 'Có nhiều công việc phù hợp. Chọn đúng công việc để tiếp tục.', status: 'choose', candidates, candidatePaths: Object.fromEntries(candidates.map(t => [t.id, treePath(t.id, tasks)])), intent }
+      if (chosenId) throw new Error('Công việc đã thay đổi hoặc không còn phù hợp. Hãy gửi lại yêu cầu.')
+      if (!candidates.length) return { content: 'Mình chưa thấy việc đó. Bạn nói rõ tên giúp mình nhé?', status: 'normal' }
+      if (candidates.length > 30) return { content: `Có ${candidates.length} việc gần giống. Bạn nói rõ hơn tên việc cần tìm nhé?`, status: 'normal' }
+      return { content: 'Bạn đang nói đến việc nào trong những việc này?', status: 'choose', candidates, candidatePaths: Object.fromEntries(candidates.map(t => [t.id, treePath(t.id, tasks)])), intent }
     }
     if (intent.action === 'GET_TASK_DETAIL') {
       const children = (await scanTasks(uid)).filter(t => t.parentId === target!.id && !t.deletedAt)
-      return { content: `Chi tiết công việc${children.length ? ` và ${children.length} task con${children.length > 29 ? ' (hiển thị 29 task con đầu)' : ''}` : ''}.`, tasks: [target, ...children.slice(0, 29)], status: 'normal' }
+      return { content: children.length > 29 ? `Đây là “${target.title}” và 29 việc nhỏ bên dưới.` : `Đây là “${target.title}”${children.length ? " và các việc nhỏ bên dưới" : ""}.`, tasks: [target, ...children.slice(0, 29)], intent, status: 'normal' }
     }
   }
   const fields = intent.action === 'UPDATE_TASK' ? intent.changes || {} : intent.data || {}
   const { groupName, ...changes } = fields
   const resolved = resolveGroup(groups, groupName)
   let data: TaskInput
-  let suggestionNote = ''
   if (intent.action === 'CREATE_TASK' || intent.action === 'CREATE_SUBTASK') {
-    const suggestion = await suggestedTaskFields(uid, groups, groupName !== undefined || !!target)
-    const defaults = { ...suggestion.fields }
-    if ('startTime' in changes || 'startNow' in changes) { delete defaults.startTime; delete defaults.startNow }
-    if ('deadline' in changes) { delete defaults.duration; delete defaults.startTime; delete defaults.startNow }
-    data = taskInputSchema.parse({ ...defaults, ...changes, groupId: groupName ? resolved.group.id : target?.groupId || defaults.groupId || resolved.group.id, parentId: target?.id || defaults.parentId || null })
-    const used = [...suggestion.notes]
-    if (!('duration' in changes) && defaults.duration) used.push('thời lượng ' + defaults.duration + ' phút')
-    if (!('startTime' in changes) && !('startNow' in changes) && (defaults.startNow || defaults.startTime)) used.push(defaults.startNow ? 'bắt đầu ngay khi xác nhận' : 'giờ bắt đầu quen thuộc (lần tới)')
-    if (!('priority' in changes) && defaults.priority) used.push('mức ưu tiên gần đây')
-    if (used.length) suggestionNote = 'Mình điền gợi ý từ ngữ cảnh/bộ nhớ của bạn: ' + used.join(', ') + '. Bạn có thể sửa trong form.\n'
+    const explicit = { ...changes, ...(groupName !== undefined ? { groupId: resolved.group.id } : {}), ...(target ? { parentId: target.id, groupId: target.groupId } : {}) }
+    const result = resolveTaskMemory(explicit, context, overview, groups, await scanTasks(uid))
+    data = result.data
+
   } else {
     data = taskInput(target!)
     if (intent.action === 'UPDATE_TASK') data = taskInputSchema.parse({ ...data, ...changes, ...('deadline' in changes ? { scheduleMode: 'deadline' } : 'duration' in changes ? { scheduleMode: 'duration' } : {}), ...(groupName ? { groupId: resolved.group.id } : {}) })
+    if (intent.action === 'UPDATE_TASK' && data.parentId) {
+      const parent = (await scanTasks(uid)).find(t => t.id === data.parentId)
+      if (parent) data.groupId = parent.groupId
+    }
     if (intent.action === 'COMPLETE_TASK') data.status = 'done'
     if (intent.action === 'CANCEL_TASK') data.status = 'cancelled'
   }
@@ -123,36 +122,28 @@ export async function prepareIntent(uid: string, intent: Intent | Conversation, 
     if (changes.startNow) { contextValues.startTime = null; contextValues.startClock = null }
     if ('duration' in changes && !('deadline' in changes)) { contextValues.deadline = null; contextValues.scheduleMode = 'duration' }
   }
-  return { ...(Object.keys(contextValues).length ? { memoryUpdate: { scope: 'context' as const, values: contextValues } } : {}), status: 'pending', content: `${suggestionNote}${groupName ? resolved.note : ''}Mình đã chuẩn bị thông tin. Kiểm tra thông tin rồi xác nhận để ${intent.action === 'DELETE_TASK' ? 'chuyển công việc vào thùng rác' : intent.action === 'RESTORE_TASK' ? 'khôi phục công việc' : 'lưu công việc'}.`, proposal: { action: intent.action, data, taskId: create ? null : target!.id, expectedVersion: create ? null : target!.version, before: create ? null : target! } }
+  return { ...(Object.keys(contextValues).length ? { memoryUpdate: { scope: 'context' as const, values: contextValues } } : {}), status: 'pending', content: `${groupName ? resolved.note : ''}${taskReply(intent.action, data.title)}`, proposal: { action: intent.action, data, taskId: create ? null : target!.id, expectedVersion: create ? null : target!.version, before: create ? null : target! } }
 }
 
-export async function appendTurn(uid: string, requestId: string, text: string, reply: PreparedReply) {
+export async function appendTurn(uid: string, requestId: string, text: string, reply: PreparedReply, replacePendingId?: string) {
   idSchema.parse(requestId)
   const ref = messageCollection(uid).doc(requestId)
   return getAdminDb().runTransaction(async tx => {
     const existing = await tx.get(ref)
     if (existing.exists) return { id: ref.id }
     const session = await tx.get(sessionRef(uid))
-    if (session.get('pendingId')) throw new Error('Hãy xác nhận hoặc hủy yêu cầu đang chờ trước.')
-    const owner = await tx.get(userRoot(uid))
+    const pendingId = session.get('pendingId')
+    const previous = replacePendingId ? await tx.get(messageCollection(uid).doc(idSchema.parse(replacePendingId))) : null
+    if (pendingId && (pendingId !== replacePendingId || previous?.get('status') !== 'pending')) throw new Error('Hãy xác nhận hoặc hủy yêu cầu đang chờ trước.')
+    if (replacePendingId && pendingId !== replacePendingId) throw new Error('Bản nháp đã thay đổi. Hãy tải lại trước khi tiếp tục.')
     const { memoryUpdate, ...messageReply } = reply
-    let context: ContextMemory = session.get('contextMemory') || { ...emptyContext(), values: owner.get('workMemory')?.context || {} }
-    if (memoryUpdate) {
-      const memory = owner.get('workMemory') || emptyMemory()
-      if (memoryUpdate.reset) context = emptyContext()
-      else if (memoryUpdate.scope === 'context') context = { ...context, values: { ...context.values, ...memoryUpdate.values }, ...(memoryUpdate.notes !== undefined ? { notes: memoryUpdate.notes } : {}) }
-      if (memoryUpdate.reset || memoryUpdate.scope === 'preferences') {
-        const next = memoryUpdate.reset ? emptyMemory() : { ...memory, preferences: { ...memory.preferences, ...memoryUpdate.values }, ...(memoryUpdate.notes !== undefined ? { notes: memoryUpdate.notes } : {}) }
-        tx.set(userRoot(uid), { workMemory: { ...next, updatedAt: new Date().toISOString() } }, { merge: true })
-      }
-    }
-    context = { ...context, updatedAt: new Date().toISOString(), recent: [...context.recent, { id: `user_${requestId}`, role: 'user', content: text.slice(0, 2000), status: 'normal' }, { id: requestId, role: 'assistant', content: (reply.content || '').slice(0, 2000), status: reply.status || 'normal' }].slice(-10) }
     const sequence = Number(session.get('sequence') || 0) + 2
     const now = FieldValue.serverTimestamp()
+    if (previous && reply.proposal) tx.update(previous.ref, { status: 'cancelled' })
     tx.set(messageCollection(uid).doc(`user_${requestId}`), { role: 'user', content: text, sequence: sequence - 1, createdAt: now, status: 'normal' })
     tx.set(ref, { role: 'assistant', sequence, createdAt: now, ...messageReply })
-    tx.set(sessionRef(uid), { sequence, contextMemory: context, pendingId: ['pending', 'choose'].includes(reply.status || '') ? ref.id : null }, { merge: true })
-    return { id: ref.id }
+    tx.set(sessionRef(uid), { sequence, pendingId: ['pending', 'choose'].includes(reply.status || '') ? ref.id : pendingId || null }, { merge: true })
+    return { id: ref.id, memoryUpdate }
   })
 }
 
@@ -162,30 +153,29 @@ export async function proposeManual(uid: string, requestId: string, action: Acti
   let before: Task | null = null
   if (!create) {
     const snapshot = await taskCollection(uid).doc(idSchema.parse(taskId)).get()
-    if (!snapshot.exists) throw new Error('Task không tồn tại.')
+    if (!snapshot.exists) throw new Error('Công việc không tồn tại.')
     before = row<Task>(snapshot)
-    if (before.version !== expectedVersion) throw new Error('Task đã thay đổi. Hãy tải lại danh sách.')
-    if (action === 'RESTORE_TASK' ? !before.deletedAt : !!before.deletedAt) throw new Error('Trạng thái task đã thay đổi.')
+    if (before.version !== expectedVersion) throw new Error('Công việc đã thay đổi. Hãy tải lại danh sách.')
+    if (action === 'RESTORE_TASK' ? !before.deletedAt : !!before.deletedAt) throw new Error('Trạng thái công việc đã thay đổi.')
   }
   const data = taskInputSchema.parse(raw || (before && taskInput(before)))
   const proposal: Proposal = { action, data, taskId: before?.id || null, expectedVersion: before?.version || null, before }
-  return appendTurn(uid, requestId, `Yêu cầu ${create ? 'tạo' : action === 'DELETE_TASK' ? 'xóa' : action === 'RESTORE_TASK' ? 'khôi phục' : 'sửa'}: ${data.title}`, { status: 'pending', content: 'Kiểm tra thông tin và xác nhận để lưu.', proposal })
+  return appendTurn(uid, requestId, `Yêu cầu ${create ? 'tạo' : action === 'DELETE_TASK' ? 'xóa' : action === 'RESTORE_TASK' ? 'khôi phục' : 'sửa'}: ${data.title}`, { status: 'pending', content: taskReply(action, data.title), proposal })
 }
 
-export async function chooseTask(uid: string, messageId: string, taskId: string) {
+export async function chooseTask(uid: string, messageId: string, taskId: string, context: TaskConversationMemory = newContext(), overview: TaskOverviewMemory = {}) {
   const ref = messageCollection(uid).doc(idSchema.parse(messageId))
   const snapshot = await ref.get()
   const old = row<Message>(snapshot)
   if (old.status !== 'choose' || !old.intent || !old.candidates?.some(t => t.id === taskId)) throw new Error('Lựa chọn không hợp lệ.')
-  const reply = await prepareIntent(uid, old.intent, idSchema.parse(taskId))
+  const reply = await prepareIntent(uid, old.intent, idSchema.parse(taskId), context, overview)
   await getAdminDb().runTransaction(async tx => {
     const current = await tx.get(ref)
     const session = await tx.get(sessionRef(uid))
     if (current.get('status') !== 'choose' || session.get('pendingId') !== messageId) throw new Error('Yêu cầu đã được xử lý.')
     const { memoryUpdate, ...messageReply } = reply
-    const context: ContextMemory = session.get('contextMemory') || emptyContext()
     tx.update(ref, { ...messageReply, candidates: [], intent: null })
-    tx.set(sessionRef(uid), { pendingId: reply.status === 'pending' ? messageId : null, contextMemory: { ...context, values: { ...context.values, ...(memoryUpdate?.values || {}) }, recent: context.recent.map(item => item.id === messageId ? { ...item, status: reply.status || 'normal', content: reply.content || '' } : item), updatedAt: new Date().toISOString() } }, { merge: true })
+    tx.set(sessionRef(uid), { pendingId: reply.status === 'pending' ? messageId : null }, { merge: true })
   })
 }
 
@@ -196,9 +186,8 @@ export async function cancelProposal(uid: string, messageId: string) {
     const session = await tx.get(sessionRef(uid))
     if (message.get('status') === 'cancelled') return
     if (!['pending', 'choose'].includes(message.get('status')) || session.get('pendingId') !== messageId) throw new Error('Yêu cầu đã được xử lý.')
-    const context: ContextMemory = session.get('contextMemory') || emptyContext()
     tx.update(ref, { status: 'cancelled' })
-    tx.set(sessionRef(uid), { pendingId: null, contextMemory: { ...context, recent: context.recent.map(item => item.id === messageId ? { ...item, status: 'cancelled' } : item) } }, { merge: true })
+    tx.set(sessionRef(uid), { pendingId: null }, { merge: true })
   })
 }
 
@@ -217,7 +206,7 @@ async function persistTask(uid: string, messageId: string, raw: unknown, direct?
   const newTaskRef = taskCollection(uid).doc()
   return getAdminDb().runTransaction(async tx => {
     const message = await tx.get(ref)
-    if (message.get('status') === 'confirmed') return { id: message.get('resultTaskId') as string }
+    if (message.get('status') === 'confirmed') return { id: message.get('resultTaskId') as string, overview: message.get('confirmedOverview') as TaskOverviewMemory | undefined }
     const session = await tx.get(sessionRef(uid))
     const root = await tx.get(userRoot(uid))
     if (!direct && (message.get('status') !== 'pending' || session.get('pendingId') !== messageId)) throw new Error('Yêu cầu không còn chờ xác nhận.')
@@ -227,26 +216,36 @@ async function persistTask(uid: string, messageId: string, raw: unknown, direct?
     const restoring = proposal.action === 'RESTORE_TASK'
     const parsedData = taskInputSchema.parse(deleting || restoring ? proposal.data : raw)
     const data = deleting || restoring ? parsedData : finalizeSchedule(parsedData)
-    if (!['CREATE_TASK', 'CREATE_SUBTASK', 'UPDATE_TASK'].includes(proposal.action) && data.parentId !== proposal.data.parentId) throw new Error('Hành động này không thay đổi task cha. Hãy dùng Sửa công việc.')
-    if (proposal.action === 'CREATE_SUBTASK' && !data.parentId) throw new Error('Hãy chọn task cha cho công việc con.')
+    if (!['CREATE_TASK', 'CREATE_SUBTASK', 'UPDATE_TASK'].includes(proposal.action) && data.parentId !== proposal.data.parentId) throw new Error('Hành động này không thay đổi công việc cha. Hãy dùng Sửa công việc.')
+    if (proposal.action === 'CREATE_SUBTASK' && !data.parentId) throw new Error('Hãy chọn công việc cha cho công việc con.')
     if (proposal.action === 'COMPLETE_TASK' && data.status !== 'done' || proposal.action === 'CANCEL_TASK' && data.status !== 'cancelled') throw new Error('Trạng thái không khớp hành động.')
     const taskRef = proposal.taskId ? taskCollection(uid).doc(idSchema.parse(proposal.taskId)) : newTaskRef
     const current = await tx.get(taskRef)
     const old = current.exists ? row<Task>(current) : null
-    if (proposal.taskId && (!old || old.version !== proposal.expectedVersion)) throw new Error(direct ? 'Task đã thay đổi. Hãy đóng form và mở lại công việc để xem dữ liệu mới.' : 'Task đã thay đổi. Hủy đề xuất này và mở lại task để xem dữ liệu mới.')
-    if (old && (restoring ? !old.deletedAt : !!old.deletedAt)) throw new Error('Task đã đổi trạng thái xóa.')
+    if (proposal.taskId && (!old || old.version !== proposal.expectedVersion)) throw new Error(direct ? 'Công việc đã thay đổi. Hãy đóng form và mở lại công việc để xem dữ liệu mới.' : 'Công việc đã thay đổi. Hủy đề xuất này và mở lại công việc để xem dữ liệu mới.')
+    if (old && (restoring ? !old.deletedAt : !!old.deletedAt)) throw new Error('Công việc đã đổi trạng thái xóa.')
     const group = await tx.get(groupCollection(uid).doc(data.groupId))
     if (!group.exists || (!group.get('isActive') && (!old || old.groupId !== data.groupId))) throw new Error('Nhóm đã bị ẩn hoặc không tồn tại. Chọn nhóm đang hoạt động.')
     const snapshot = await tx.get(taskCollection(uid))
     const tasks = snapshot.docs.map(d => row<Task>(d))
     const beforePositions = treePositions(tasks)
     const nodes = tasks.map(t => ({ ...t, ...beforePositions.get(t.id)! }))
-    if (data.parentId === taskRef.id) throw new Error('Task không được làm cha của chính nó.')
+    if (data.parentId === taskRef.id) throw new Error('Công việc không được làm cha của chính nó.')
     const branch = descendants(nodes, taskRef.id)
-    if (data.parentId && branch.has(data.parentId)) throw new Error('Không thể chuyển task vào nhánh con của chính nó vì sẽ tạo quan hệ vòng.')
-    if (data.parentId && !deleting && !validParents(nodes, old?.id).some(t => t.id === data.parentId)) throw new Error('Task cha không hợp lệ, thuộc tài khoản khác hoặc nhánh cha đã bị xóa.')
+    if (data.parentId && branch.has(data.parentId)) throw new Error('Không thể chuyển công việc vào nhánh con của chính nó vì sẽ tạo quan hệ vòng.')
+    if (data.parentId && !deleting && !validParents(nodes, old?.id).some(t => t.id === data.parentId)) throw new Error('Công việc cha không hợp lệ, thuộc tài khoản khác hoặc nhánh cha đã bị xóa.')
+    if (data.parentId && !deleting && !nodes.some(t => t.id === data.parentId && t.groupId === data.groupId && isOpen(t))) throw new Error('Công việc cha không hoạt động hoặc không thuộc nhóm đã chọn.')
+    if (!deleting) {
+      const byId = new Map(nodes.map(t => [t.id, t]))
+      let ancestorId = data.parentId
+      while (ancestorId) {
+        const ancestor = byId.get(ancestorId)!
+        if (ancestor.groupId !== data.groupId) throw new Error('Nhánh cha đang có công việc khác nhóm. Hãy sửa nhóm ở công việc gốc trước.')
+        ancestorId = ancestor.parentId
+      }
+    }
     if (deleting) {
-      if (nodes.some(t => branch.has(t.id) && !t.deletedAt)) throw new Error('Hãy xử lý/xóa task con trong toàn bộ nhánh trước khi xóa task cha.')
+      if (nodes.some(t => branch.has(t.id) && !t.deletedAt)) throw new Error('Hãy xử lý/xóa công việc con trong toàn bộ nhánh trước khi xóa công việc cha.')
     }
     const positions = treePositions([...nodes.filter(t => t.id !== taskRef.id), { id: taskRef.id, parentId: data.parentId }])
     const now = FieldValue.serverTimestamp()
@@ -254,37 +253,36 @@ async function persistTask(uid: string, messageId: string, raw: unknown, direct?
     tx.set(taskRef, {
       ...data, ...positions.get(taskRef.id)!, deadline: timestamp(data.deadline), startTime: timestamp(data.startTime), createdAt: old ? current.get('createdAt') : now, updatedAt: now,
       version: (old?.version || 0) + 1,
-      completedAt: data.status === 'done' ? old?.status === 'done' ? current.get('completedAt') : now : null,
+      completedAt: data.status === 'done' ? old?.status === 'done' ? current.get('completedAt') ?? null : now : null,
+      completionPercent: data.status === 'done' ? old?.status === 'done' ? old.completionPercent ?? null : data.completionPercent ?? null : null,
+      completionNote: data.status === 'done' ? old?.status === 'done' ? old.completionNote ?? null : data.completionNote?.trim() || null : null,
       cancelledAt: data.status === 'cancelled' ? old?.status === 'cancelled' ? current.get('cancelledAt') : now : null,
       deletedAt: deleting ? now : restoring ? null : old ? current.get('deletedAt') : null,
     })
     // Updating the whole branch atomically avoids stale roots/depths and invalidates
     // outstanding descendant proposals. Deleted descendants keep their links too.
-    if (old && old.parentId !== data.parentId) {
-      for (const document of snapshot.docs) if (branch.has(document.id)) {
-        tx.update(document.ref, { ...positions.get(document.id)!, version: Number(document.get('version') || 0) + 1, updatedAt: now })
+    if (old && !deleting) {
+      for (const document of snapshot.docs) if (branch.has(document.id) && (old.parentId !== data.parentId || document.get('groupId') !== data.groupId)) {
+        tx.update(document.ref, { ...positions.get(document.id)!, groupId: data.groupId, version: Number(document.get('version') || 0) + 1, updatedAt: now })
       }
     }
     if (direct) tx.set(ref, { status: 'confirmed', resultTaskId: taskRef.id, createdAt: now })
     else {
-      tx.update(ref, { status: 'confirmed', proposal: { ...proposal, data }, resultTaskId: taskRef.id })
-      tx.set(sessionRef(uid), { pendingId: null }, { merge: true })
+      tx.update(ref, { status: 'confirmed', content: taskReply(proposal.action, data.title, true), proposal: { ...proposal, data }, resultTaskId: taskRef.id })
+      tx.set(sessionRef(uid), { pendingId: null, contextMemory: FieldValue.delete() }, { merge: true })
     }
     const learnsForm = ['CREATE_TASK', 'CREATE_SUBTASK', 'UPDATE_TASK'].includes(proposal.action)
-    const memory = root.get('workMemory') || emptyMemory()
-    const priorSample = memory.samples.find((sample: { taskId?: string; startNow?: boolean }) => sample.taskId === taskRef.id)
-    const memoryInput = old && parsedData.startTime === old.startTime && priorSample?.startNow ? { ...parsedData, startNow: true } : parsedData
-    const learned = learnsForm ? rememberForm(memory, memoryInput, new Date().toISOString(), taskRef.id) : memory
-    const context: ContextMemory = session.get('contextMemory') || emptyContext()
-    tx.set(sessionRef(uid), { contextMemory: { ...context, ...(learnsForm ? { values: { ...learned.lastForm, startTime: memoryInput.startNow ? null : data.startTime, deadline: data.scheduleMode === 'deadline' ? data.deadline : null, scheduleMode: data.scheduleMode || 'duration' }, updatedAt: new Date().toISOString() } : {}), recent: context.recent.map(item => !direct && item.id === messageId ? { ...item, status: 'confirmed' } : item) } }, { merge: true })
-    tx.set(userRoot(uid), { revision: Number(root.get('revision') || 0) + 1, ...(learnsForm ? { workMemory: { ...learned, context: {} } } : {}) }, { merge: true })
-    return { id: taskRef.id }
+    const overview = learnsForm ? confirmedOverview(parsedData, new Date().toISOString()) : undefined
+    if (overview) tx.set(ref, { confirmedOverview: overview }, { merge: true })
+    tx.set(userRoot(uid), { revision: Number(root.get('revision') || 0) + 1, ...(overview ? { overviewMemory: { ...overview, updatedAt: now }, workMemory: FieldValue.delete() } : {}) }, { merge: true })
+    return { id: taskRef.id, overview }
+
   })
 }
 
 export async function summary(uid: string) {
   const tasks = await scanTasks(uid)
-  const open = tasks.filter(isOpen)
+  const open = leafTasks(tasks.filter(isOpen), tasks)
   const today = filterSchema.parse({ view: 'today' })
   const { matches } = await import('../_lib/model')
   return { today: open.filter(t => matches(t, today)).length, urgent: open.filter(t => t.priority === 'urgent').length, inProgress: open.filter(t => t.status === 'in_progress').length, waiting: open.filter(t => t.status === 'waiting').length, overdue: open.filter(t => t.deadline && Date.parse(t.deadline) < Date.now()).length, groups: Object.fromEntries((await getGroups(uid)).map(g => [g.id, open.filter(t => t.groupId === g.id).length])) }

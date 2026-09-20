@@ -4,12 +4,13 @@ import { useRouter } from 'next/navigation'
 import { ChevronDown, ChevronRight, Plus, Search } from 'lucide-react'
 import { api, useTasks } from './Provider'
 import TaskForm, { emptyTask } from './TaskForm'
-import { displayDate, priorities, priorityLabels, statuses, statusLabels, type Action, type Task, type TaskInput } from '../_lib/model'
+import { displayDate, priorities, priorityLabels, statusLabels, type Action, type Task, type TaskInput } from '../_lib/model'
+import { uiStatuses, waitingTree } from '../_lib/status-presentation'
 import { visibleTree } from '../_lib/tree'
 
-const viewLabels = { active: 'Đang mở', today: 'Hôm nay', upcoming: 'Sắp tới', overdue: 'Quá hạn', no_deadline: 'Không deadline', completed: 'Hoàn thành', all: 'Tất cả', deleted: 'Thùng rác' }
+const viewLabels = { active: 'Đang mở', today: 'Hạn hôm nay', upcoming: 'Hạn sắp tới', overdue: 'Đã quá hạn hoàn thành', no_deadline: 'Không deadline', completed: 'Hoàn thành', all: 'Tất cả', deleted: 'Thùng rác' }
 export default function Tasks() {
-  const { groups, revision, busy, run, refresh, notify } = useTasks()
+  const { acceptOverview, groups, revision, busy, run, refresh, notify } = useTasks()
   const router = useRouter()
   const [tasks, setTasks] = useState<Task[]>([])
   const [total, setTotal] = useState(0)
@@ -28,7 +29,8 @@ export default function Tasks() {
   useEffect(() => {
     const controller = new AbortController()
     setLoading(true); setError('')
-    api<{ tasks: Task[]; total: number; matchingIds: string[] }>(undefined, { resource: 'tree', ...filters }, controller.signal)
+    api<{ tasks: Task[]; total: number; matchingIds: string[] }>(undefined, { resource: 'tree', ...filters, status: filters.status === 'waiting' ? '' : filters.status }, controller.signal)
+      .then(data => filters.status === 'waiting' ? waitingTree(data) : data)
       .then(data => { if (!controller.signal.aborted) { setTasks(data.tasks); setTotal(data.total); setMatchingIds(new Set(data.matchingIds)) } })
       .catch(reason => { if (!controller.signal.aborted) setError(reason.message) })
       .finally(() => { if (!controller.signal.aborted) setLoading(false) })
@@ -51,18 +53,18 @@ export default function Tasks() {
       <div className="demo-filters"><label className="demo-search"><Search size={17} /><input aria-label="Tìm công việc" placeholder="Tìm tên hoặc mô tả…" maxLength={250} value={search} onChange={e => setSearch(e.target.value)} /></label>
         <select aria-label="Lọc nhóm" value={filters.groupId} onChange={e => changeFilter('groupId', e.target.value)}><option value="">Tất cả nhóm</option>{groups.map(g => <option key={g.id} value={g.id}>{g.name}{g.isActive ? '' : ' (đã ẩn)'}</option>)}</select>
         <select aria-label="Lọc ưu tiên" value={filters.priority} onChange={e => changeFilter('priority', e.target.value)}><option value="">Mọi ưu tiên</option>{priorities.map(p => <option key={p} value={p}>{priorityLabels[p]}</option>)}</select>
-        <select aria-label="Lọc trạng thái" value={filters.status} onChange={e => changeFilter('status', e.target.value)}><option value="">Mọi trạng thái</option>{statuses.map(s => <option key={s} value={s}>{statusLabels[s]}</option>)}</select>
+        <select aria-label="Lọc trạng thái" value={filters.status} onChange={e => changeFilter('status', e.target.value)}><option value="">Mọi trạng thái</option>{uiStatuses.map(s => <option key={s} value={s}>{statusLabels[s]}</option>)}</select>
         <button onClick={() => setReload(v => v + 1)} disabled={loading}>Tải lại</button>
         <button onClick={() => setCollapsed(new Set())} disabled={loading}>Mở tất cả</button>
         <button onClick={() => setCollapsed(new Set(tasks.filter(t => parentsWithChildren.has(t.id)).map(t => t.id)))} disabled={loading}>Thu gọn tất cả</button>
       </div>
       {error ? <p className="demo-alert" role="alert">{error}</p> : loading ? <p className="demo-empty" role="status">Đang tìm công việc…</p> : !tasks.length ? <p className="demo-empty">Chưa có công việc phù hợp.</p> : <div className="demo-table-wrap"><table aria-label="Cây công việc"><thead><tr><th>Công việc</th><th>Nhóm</th><th>Ưu tiên</th><th>Trạng thái</th><th>Deadline</th><th>Thao tác</th></tr></thead><tbody>{visibleTasks.map(t => <tr key={t.id} data-task-id={t.id} data-depth={t.depth} className={`${t.status === 'done' ? 'is-done' : ''} ${matchingIds.has(t.id) ? '' : 'ai-task-tree-context'}`}>
-        <td className="ai-task-tree-cell"><div style={{ paddingLeft: t.depth * 20 }}><div className="ai-task-tree-title">{parentsWithChildren.has(t.id) ? <button type="button" className="ai-task-tree-toggle" aria-expanded={!collapsed.has(t.id)} aria-label={`${collapsed.has(t.id) ? 'Mở' : 'Thu gọn'} nhánh ${t.title}`} onClick={() => toggleBranch(t.id)}>{collapsed.has(t.id) ? <ChevronRight size={16} /> : <ChevronDown size={16} />}</button> : <span className="ai-task-tree-spacer" />}<strong>{t.title}</strong></div>{!matchingIds.has(t.id) && <small>Task tổ tiên · ngoài bộ lọc</small>}{t.deletedAt && <small>Đã xóa mềm</small>}{t.description && <details><summary>Mô tả</summary><p className="ai-task-description">{t.description}</p></details>}</div></td>
+        <td className="ai-task-tree-cell"><div style={{ paddingLeft: t.depth * 20 }}><div className="ai-task-tree-title">{parentsWithChildren.has(t.id) ? <button type="button" className="ai-task-tree-toggle" aria-expanded={!collapsed.has(t.id)} aria-label={`${collapsed.has(t.id) ? 'Mở' : 'Thu gọn'} nhánh ${t.title}`} onClick={() => toggleBranch(t.id)}>{collapsed.has(t.id) ? <ChevronRight size={16} /> : <ChevronDown size={16} />}</button> : <span className="ai-task-tree-spacer" />}<strong>{t.title}</strong></div>{!matchingIds.has(t.id) && <small>Công việc tổ tiên · ngoài bộ lọc</small>}{t.deletedAt && <small>Đã xóa mềm</small>}{t.description && <details><summary>Mô tả</summary><p className="ai-task-description">{t.description}</p></details>}</div></td>
         <td>{groups.find(g => g.id === t.groupId)?.name}</td><td><span className={`ai-task-badge priority-${t.priority}`}>{priorityLabels[t.priority]}</span></td><td><span className={`ai-task-badge status-${t.status}`}>{statusLabels[t.status]}</span></td><td><span className={t.deadline && Date.parse(t.deadline) < Date.now() && !['done', 'cancelled'].includes(t.status) ? 'demo-danger-text' : ''}>{displayDate(t.deadline)}</span>{t.startTime && <small>Bắt đầu: {displayDate(t.startTime)}</small>}{t.duration && <small>Thời lượng: {t.duration} phút</small>}</td>
-        <td><div className="demo-row-actions">{t.deletedAt ? <button disabled={busy} onClick={() => void propose(t, 'RESTORE_TASK')}>Khôi phục</button> : <><button disabled={busy} onClick={() => setEditor({ initial: inputFor(t), task: t, action: 'UPDATE_TASK', requestId: crypto.randomUUID() })}>Sửa / trạng thái</button><button disabled={busy} onClick={() => setEditor({ initial: { ...emptyTask(t.groupId), parentId: t.id }, action: 'CREATE_SUBTASK', requestId: crypto.randomUUID() })}>Thêm task con</button><button disabled={busy} className="demo-danger-text" onClick={() => void propose(t, 'DELETE_TASK')}>Xóa</button></>}</div></td>
+        <td><div className="demo-row-actions">{t.deletedAt ? <button disabled={busy} onClick={() => void propose(t, 'RESTORE_TASK')}>Khôi phục</button> : <><button disabled={busy} onClick={() => setEditor({ initial: inputFor(t), task: t, action: 'UPDATE_TASK', requestId: crypto.randomUUID() })}>Sửa / trạng thái</button><button disabled={busy} onClick={() => setEditor({ initial: { ...emptyTask(t.groupId), parentId: t.id }, action: 'CREATE_SUBTASK', requestId: crypto.randomUUID() })}>Thêm công việc con</button><button disabled={busy} className="demo-danger-text" onClick={() => void propose(t, 'DELETE_TASK')}>Xóa</button></>}</div></td>
       </tr>)}</tbody></table></div>}
-      <div className="ai-task-pagination"><span>{total} công việc phù hợp · {visibleTasks.length} dòng đang mở{tasks.length > total ? ' · Giữ task tổ tiên để hiển thị đúng cây' : ''}</span></div>
+      <div className="ai-task-pagination"><span>{total} công việc phù hợp · {visibleTasks.length} dòng đang mở{tasks.length > total ? ' · Giữ công việc tổ tiên để hiển thị đúng cây' : ''}</span></div>
     </section>
-    <dialog ref={dialog} className="ai-task-dialog" onCancel={e => { if (busy) e.preventDefault(); else setEditor(null) }} onClose={() => setEditor(null)}>{editor && <><h2>{editor.action === 'UPDATE_TASK' ? 'Chỉnh sửa công việc' : editor.action === 'CREATE_SUBTASK' ? 'Thêm task con' : 'Thêm công việc'}</h2><TaskForm initial={editor.initial} before={editor.task} action={editor.action} groups={groups} busy={busy} onCancel={() => setEditor(null)} onSubmit={async data => { await run(async () => { await api({ operation: 'saveTask', requestId: editor.requestId, action: editor.action, data, ...(editor.task ? { taskId: editor.task.id, expectedVersion: editor.task.version } : {}) }); setEditor(null); notify('Đã lưu công việc.'); await refresh() }) }} /></>}</dialog>
+    <dialog ref={dialog} className="ai-task-dialog" onCancel={e => { if (busy) e.preventDefault(); else setEditor(null) }} onClose={() => setEditor(null)}>{editor && <><h2>{editor.action === 'UPDATE_TASK' ? 'Chỉnh sửa công việc' : editor.action === 'CREATE_SUBTASK' ? 'Thêm công việc con' : 'Thêm công việc'}</h2><TaskForm initial={editor.initial} before={editor.task} action={editor.action} groups={groups} busy={busy} onCancel={() => setEditor(null)} onSubmit={async data => { await run(async () => { const saved = await api<{ result: { overview?: import('../_lib/task-memory').TaskOverviewMemory } }>({ operation: 'saveTask', requestId: editor.requestId, action: editor.action, data, ...(editor.task ? { taskId: editor.task.id, expectedVersion: editor.task.version } : {}) }); if (saved.result.overview) acceptOverview(saved.result.overview); setEditor(null); notify('Đã lưu công việc.'); await refresh() }) }} /></>}</dialog>
   </>
 }

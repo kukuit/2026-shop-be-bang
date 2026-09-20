@@ -1,7 +1,8 @@
 import 'server-only'
+import { buildTaskDisplayGroups, leafTasks } from '../_lib/task-display'
 import { FieldPath, FieldValue, Timestamp } from 'firebase-admin/firestore'
 import { getAdminDb } from '@/lib/firebaseAdmin'
-import { idSchema, matches, rankTasks, type Filters, type Group, type Message, type Task, type TreeNode } from '../_lib/model'
+import { idSchema, isOpen, matches, rankTasks, type Filters, type Group, type Message, type Task, type TreeNode } from '../_lib/model'
 import { treePositions, upgradeParentField, validParents } from '../_lib/tree'
 
 export function userRoot(userId: string) {
@@ -71,9 +72,10 @@ export async function scanTasks(uid: string): Promise<Task[]> {
 
 export async function getParentOptions(uid: string, taskId?: string) {
   if (taskId) idSchema.parse(taskId)
-  const nodes: TreeNode[] = (await scanTasks(uid)).map(({ id, title, parentId, rootTaskId, depth, deletedAt }) => ({ id, title, parentId, rootTaskId, depth, deletedAt }))
-  if (taskId && !nodes.some(n => n.id === taskId)) throw new Error('Task không tồn tại trong tài khoản này.')
-  return { nodes, candidates: validParents(nodes, taskId) }
+  const tasks = await scanTasks(uid)
+  const nodes: TreeNode[] = tasks.map(({ id, title, parentId, rootTaskId, depth, deletedAt, groupId, status }) => ({ id, title, parentId, rootTaskId, depth, deletedAt, groupId, status }))
+  if (taskId && !nodes.some(n => n.id === taskId)) throw new Error('Công việc không tồn tại trong tài khoản này.')
+  return { nodes, candidates: validParents(tasks, taskId).filter(isOpen).map(t => nodes.find(n => n.id === t.id)!) }
 }
 
 export async function findTaskTree(uid: string, filters: Filters) {
@@ -96,25 +98,42 @@ export async function findTasks(uid: string, filters: Filters, page = 0) {
   tasks = filters.recommend ? rankTasks(tasks) : tasks.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt) || a.id.localeCompare(b.id))
   return { tasks: tasks.slice(page * 30, (page + 1) * 30), total: tasks.length, page }
 }
+// Presentation query: preserve filter/ranking semantics, then exclude containers
+// before pagination so counts and the 30 displayed rows agree.
+export async function findDisplayTasks(uid: string, filters: Filters, page = 0) {
+  const lookup = await scanTasks(uid)
+  let tasks = leafTasks(lookup.filter(task => matches(task, filters)), lookup)
+  tasks = filters.recommend ? rankTasks(tasks) : tasks.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt) || a.id.localeCompare(b.id))
+  return { tasks: tasks.slice(page * 30, (page + 1) * 30), total: tasks.length, page }
+}
+
+async function withDisplayGroups(uid: string, messages: Message[]): Promise<Message[]> {
+  if (!messages.some(message => message.tasks && message.intent?.action !== 'GET_TASK_DETAIL')) return messages
+  const [lookup, groups] = await Promise.all([scanTasks(uid), getGroups(uid)])
+  return messages.map(message => message.tasks && message.intent?.action !== 'GET_TASK_DETAIL'
+    ? { ...message, displayGroups: buildTaskDisplayGroups(message.tasks, groups, lookup) }
+    : message)
+}
+
 export async function getMessages(uid: string, before?: number) {
   let query = messageCollection(uid).orderBy('sequence', 'desc').limit(10)
   if (before !== undefined) query = query.startAfter(before)
   const snapshot = await query.get()
-  return { messages: snapshot.docs.map(d => {
+  return { messages: await withDisplayGroups(uid, snapshot.docs.map(d => {
     const message = row<Message>(d)
     if (message.proposal) message.proposal = { ...message.proposal, data: upgradeParentField(message.proposal.data), before: upgradeParentField(message.proposal.before) }
     if (message.tasks) message.tasks = message.tasks.map(upgradeParentField)
     if (message.candidates) message.candidates = message.candidates.map(upgradeParentField)
     return message
-  }).reverse(), hasMore: snapshot.size === 10 }
+  }).reverse()), hasMore: snapshot.size === 10 }
 }
 
 export async function getTurn(uid: string, messageId: string) {
   idSchema.parse(messageId)
   const docs = await Promise.all([messageCollection(uid).doc(`user_${messageId}`).get(), messageCollection(uid).doc(messageId).get()])
-  return { messages: docs.filter(doc => doc.exists).map(doc => {
+  return { messages: await withDisplayGroups(uid, docs.filter(doc => doc.exists).map(doc => {
     const message = row<Message>(doc)
     if (message.proposal) message.proposal = { ...message.proposal, data: upgradeParentField(message.proposal.data), before: upgradeParentField(message.proposal.before) }
     return message
-  }) }
+  })) }
 }

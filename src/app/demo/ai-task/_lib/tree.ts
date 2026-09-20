@@ -13,12 +13,12 @@ export function treePositions(nodes: readonly Link[]): Map<string, TreePosition>
     const visiting = new Set<string>()
     let current: Link | undefined = node
     while (current && !positions.has(current.id)) {
-      if (visiting.has(current.id)) throw new Error('Không thể tạo quan hệ vòng: task không được làm cha của chính nó hoặc chuyển vào nhánh con của nó.')
+      if (visiting.has(current.id)) throw new Error('Không thể tạo quan hệ vòng: công việc không được làm cha của chính nó hoặc chuyển vào nhánh con của nó.')
       visiting.add(current.id)
       chain.push(current)
       if (current.parentId === null) break
       const parent = byId.get(current.parentId)
-      if (!parent) throw new Error('Task cha không tồn tại trong tài khoản này. Cần xử lý quan hệ cũ trước.')
+      if (!parent) throw new Error('Công việc cha không tồn tại trong tài khoản này. Cần xử lý quan hệ cũ trước.')
       current = parent
     }
     while (chain.length) {
@@ -56,14 +56,14 @@ export function validParents<T extends TreeNode>(nodes: readonly T[], taskId?: s
 }
 
 export function treePath(id: string | null, nodes: readonly TreeNode[]): string {
-  if (!id) return 'Không có · Task gốc'
+  if (!id) return 'Không có · Công việc gốc'
   const byId = new Map(nodes.map(n => [n.id, n]))
   const path: string[] = [], seen = new Set<string>()
   let current = id
   while (current && !seen.has(current)) {
     seen.add(current)
     const node = byId.get(current)
-    if (!node) { path.push('Task không còn khả dụng'); break }
+    if (!node) { path.push('Công việc không còn khả dụng'); break }
     path.push(node.title); current = node.parentId || ''
   }
   return path.reverse().join(' / ')

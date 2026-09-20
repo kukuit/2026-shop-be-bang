@@ -3,6 +3,8 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState } f
 import { fetchWithAuthRetry } from '@/lib/auth/client-fetch'
 import { useAuth } from '@/components/auth/AuthProvider'
 import type { Group } from '../_lib/model'
+import { useTaskMemory } from './useTaskMemory'
+import TaskWorkflow from './TaskWorkflow'
 
 export async function api<T = unknown>(body?: unknown, params?: Record<string, string>, signal?: AbortSignal): Promise<T> {
   const response = await fetchWithAuthRetry(`/demo/ai-task/api${params ? `?${new URLSearchParams(params)}` : ''}`, body ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal } : { cache: 'no-store', signal })
@@ -10,11 +12,12 @@ export async function api<T = unknown>(body?: unknown, params?: Record<string, s
   if (!response.ok) throw new Error(response.status === 401 ? 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.' : data.error || 'Không thể xử lý yêu cầu.')
   return data
 }
-type Context = { groups: Group[]; revision: number; busy: boolean; ready: boolean; notify(message: string): void; run<T>(fn: () => Promise<T>): Promise<T>; refresh(): Promise<void> }
+type Context = ReturnType<typeof useTaskMemory> & { groups: Group[]; revision: number; busy: boolean; ready: boolean; notify(message: string): void; run<T>(fn: () => Promise<T>): Promise<T>; refresh(): Promise<void> }
 const TaskContext = createContext<Context | null>(null)
 export function useTasks() { const value = useContext(TaskContext); if (!value) throw new Error('Missing AI Task provider'); return value }
 export default function Provider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth()
+  const memory = useTaskMemory(user?.id)
   const [groups, setGroups] = useState<Group[]>([])
   const [revision, setRevision] = useState(0)
   const [ready, setReady] = useState(false)
@@ -38,8 +41,8 @@ export default function Provider({ children }: { children: React.ReactNode }) {
     lock.current = true; setBusy(true)
     try { return await fn() } finally { lock.current = false; setBusy(false) }
   }, [])
-  return <TaskContext.Provider value={{ groups, revision, ready, busy, run, refresh, notify: setToast }}>
-    {error ? <div className="demo-alert" role="alert">{error} <button onClick={initialize}>Thử lại</button></div> : !ready ? <p role="status">Đang mở không gian công việc…</p> : children}
+  return <TaskContext.Provider value={{ ...memory, groups, revision, ready, busy, run, refresh, notify: setToast }}>
+    {error ? <div className="demo-alert" role="alert">{error} <button onClick={initialize}>Thử lại</button></div> : !ready ? <p role="status">Đang mở không gian công việc…</p> : <TaskWorkflow>{children}</TaskWorkflow>}
     {toast && <div className="demo-toast" role="status">{toast}</div>}
   </TaskContext.Provider>
 }

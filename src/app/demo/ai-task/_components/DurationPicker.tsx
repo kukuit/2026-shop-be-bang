@@ -1,30 +1,19 @@
 'use client'
-import { useId, useState } from 'react'
+import { useState } from 'react'
 
-const units = [
-  { label: 'Ngày', suffix: 'ngày', minutes: 1440, count: 4 },
-  { label: 'Giờ', suffix: 'giờ', minutes: 60, count: 24 },
-  { label: 'Phút', suffix: 'phút', minutes: 1, count: 60 },
-]
+const units = [{ label: 'phút', minutes: 1 }, { label: 'giờ', minutes: 60 }, { label: 'ngày', minutes: 1440 }]
+const presets = [{ label: '30 phút', minutes: 30 }, { label: '1 giờ', minutes: 60 }, { label: '2 giờ', minutes: 120 }, { label: '1 ngày', minutes: 1440 }, { label: '2 ngày', minutes: 2880 }]
 
 export default function DurationPicker({ value, onChange }: { value: number | null; onChange(value: number | null): void }) {
-  const id = useId()
-  const [tab, setTab] = useState(() => value ? Math.max(0, units.findIndex(unit => value % unit.minutes === 0 && value / unit.minutes <= unit.count)) : 0)
-  const unit = units[tab]
-  const displayUnit = value ? units.find(item => value % item.minutes === 0 && value / item.minutes <= item.count) : undefined
-  return <div className="ai-task-duration demo-full">
+  const [unit, setUnit] = useState(() => value && value % 1440 === 0 ? 1440 : value && value % 60 === 0 ? 60 : 1)
+  return <div className="ai-task-duration">
     <strong>Thời lượng</strong>
-    <div className="demo-tabs" role="tablist" aria-label="Đơn vị thời lượng">
-      {units.map((item, index) => <button key={item.label} type="button" role="tab" id={`${id}-tab-${index}`} aria-controls={`${id}-panel`} aria-selected={tab === index} tabIndex={tab === index ? 0 : -1} className={tab === index ? 'demo-primary' : ''} onClick={() => setTab(index)} onKeyDown={event => {
-        const next = event.key === 'ArrowRight' ? (index + 1) % units.length : event.key === 'ArrowLeft' ? (index + units.length - 1) % units.length : event.key === 'Home' ? 0 : event.key === 'End' ? units.length - 1 : null
-        if (next === null) return
-        event.preventDefault(); setTab(next)
-        document.getElementById(`${id}-tab-${next}`)?.focus()
-      }}>{item.label}</button>)}
+    <div className="ai-task-duration-options" role="group" aria-label="Thời lượng gợi ý">
+      {presets.map(item => <button key={item.minutes} type="button" aria-pressed={value === item.minutes} className={value === item.minutes ? 'demo-primary' : ''} onClick={() => { setUnit(item.minutes >= 1440 ? 1440 : item.minutes >= 60 ? 60 : 1); onChange(item.minutes) }}>{item.label}</button>)}
     </div>
-    <div className="ai-task-duration-options" role="tabpanel" id={`${id}-panel`} aria-labelledby={`${id}-tab-${tab}`}>
-      {Array.from({ length: unit.count }, (_, index) => index + 1).map(amount => <button type="button" key={amount} aria-pressed={value === amount * unit.minutes} className={value === amount * unit.minutes ? 'demo-primary' : ''} onClick={() => onChange(amount * unit.minutes)}>{amount} {unit.suffix}</button>)}
+    <div className="ai-task-duration-custom">
+      <label>Tùy chỉnh<input aria-label="Số lượng thời gian" type="number" min={1 / unit} max={525600 / unit} step="any" value={value === null ? '' : Number((value / unit).toFixed(6))} onChange={e => onChange(e.target.value ? Math.round(Number(e.target.value) * unit) : null)} /></label>
+      <label>Đơn vị<select value={unit} onChange={e => { const next = Number(e.target.value); setUnit(next); if (value !== null) onChange(Math.round(value / unit * next)) }}>{units.map(item => <option key={item.minutes} value={item.minutes}>{item.label}</option>)}</select></label>
     </div>
-    <div className="demo-inline"><small aria-live="polite">{value ? `Đã chọn: ${displayUnit ? `${value / displayUnit.minutes} ${displayUnit.suffix}` : `${value} phút`}` : 'Chưa chọn thời lượng'}</small>{value !== null && <button type="button" onClick={() => onChange(null)}>Bỏ chọn</button>}</div>
   </div>
 }
