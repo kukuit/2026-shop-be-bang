@@ -3,9 +3,12 @@ import { useEffect, useRef, useState } from 'react'
 import { Plus } from 'lucide-react'
 import { api, useTasks } from './Provider'
 import type { Group } from '../_lib/model'
+import { useTaskCompletion } from './TaskWorkflow'
+import styles from './TaskWorkflow.module.css'
 
 type Summary = { today: number; urgent: number; inProgress: number; waiting: number; overdue: number; groups: Record<string, number> }
 export default function Dashboard() {
+  const { openOverdueReview } = useTaskCompletion()
   const { groups, revision, busy, run, refresh, notify } = useTasks()
   const [summary, setSummary] = useState<Summary | null>(null)
   const [error, setError] = useState('')
@@ -28,7 +31,7 @@ export default function Dashboard() {
   return <>
     <div className="demo-page-heading"><div><h1>Tổng quan</h1><p>Một góc nhìn nhanh về những việc còn mở.</p></div><button onClick={() => setReload(v => v + 1)}>Tải lại</button></div>
     {error && <p className="demo-alert" role="alert">{error}</p>}
-    <div className="demo-kpis">{([['today', 'Hạn hôm nay'], ['urgent', 'Gấp'], ['inProgress', 'Đang làm'], ['overdue', 'Đã quá hạn hoàn thành']] as const).map(([key, label]) => <article className="demo-kpi" key={key}><span>{label}</span><strong>{summary ? summary[key] : '…'}</strong></article>)}</div>
+    <div className="demo-kpis">{([['today', 'Hạn hôm nay'], ['urgent', 'Gấp'], ['inProgress', 'Đang làm'], ['overdue', 'Đã quá hạn hoàn thành']] as const).map(([key, label]) => key === 'overdue' ? <button type="button" className={`demo-kpi ${styles.overdueKpi}`} key={key} disabled={busy} aria-haspopup="dialog" onClick={() => void openOverdueReview()}><span>{label}</span><strong>{summary ? summary[key] : '…'}</strong></button> : <article className="demo-kpi" key={key}><span>{label}</span><strong>{summary ? summary[key] : '…'}</strong></article>)}</div>
     <section className="demo-panel"><div className="demo-section-heading"><div><h2>Nhóm công việc</h2><p>Tạo nhóm theo cách bạn tổ chức công việc. Inbox luôn sẵn sàng cho ghi chú nhanh.</p></div><button className="demo-primary" disabled={busy} onClick={() => setEditor({ name: '', color: '', order: Math.max(-1, ...groups.map(g => g.order)) + 1 })}><Plus size={16} /> Thêm nhóm</button></div>
       {groups.map(g => <div className="demo-stat-row ai-task-group" key={g.id}><div><strong><span className="ai-task-dot" style={{ background: g.color || '#94a3b8' }} />{g.name}</strong><p>{summary?.groups[g.id] ?? '…'} việc đang mở{g.isDefault ? ' · Mặc định' : ''}{g.isActive ? '' : ' · Đã ẩn'}</p></div><div className="demo-inline"><button disabled={busy} onClick={() => setEditor({ group: g, name: g.name, color: g.color || '', order: g.order })}>Sửa</button>{!g.isDefault && <button disabled={busy} onClick={() => void toggle(g)}>{g.isActive ? 'Ẩn nhóm' : 'Hiện lại'}</button>}</div></div>)}
     </section>

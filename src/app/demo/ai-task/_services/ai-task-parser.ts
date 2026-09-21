@@ -5,7 +5,7 @@ import { quickCreateIntent } from '../_lib/quick-create'
 import { actions, intentSchema, type Group, type Intent } from '../_lib/model'
 
 // Pure parser: no database imports and no mutation capability.
-export async function parseTaskIntent(message: string, groups: Group[], now = new Date(), context?: { memory: string; history: { role: string; content: string; status: string }[] }): Promise<Intent | Conversation> {
+export async function parseTaskIntent(message: string, groups: Group[], now = new Date(), context?: { memory: string; history: { role: string; content: string; status: string }[]; recognitionHint?: string }): Promise<Intent | Conversation> {
   const quickCreate = quickCreateIntent(message)
   if (quickCreate) return quickCreate
   const provider = process.env.CHAT_PROVIDER || 'groq'
@@ -33,6 +33,7 @@ Nhóm đang hoạt động: ${JSON.stringify(groups.filter(g => g.isActive).map(
 startTime là ngày giờ bắt đầu ISO8601 +07:00; duration là số phút nguyên dương (1 ngày = 1440 phút, 1 giờ = 60 phút). Khi có startTime và duration, deadline tự tính bằng startTime + duration, có thể sang ngày khác. Thiếu thời lượng thì bỏ trường duration để backend dùng gợi ý. Khi cập nhật chỉ đổi trường được yêu cầu; đổi deadline cụ thể thì đặt duration=null để dùng deadline thủ công.
 Ngày tự nhiên phải chuyển thành ISO có +07:00. Ngày không có giờ dùng 17:00, chiều dùng 15:00, sáng dùng 09:00, cuối tuần dùng Chủ nhật 17:00; thứ không kèm ngày/tuần cụ thể dùng quy tắc thứ kế tiếp và bảng ngày bên dưới. Người dùng sẽ thấy ngày giờ chính xác để sửa trước khi xác nhận. "mai làm" không kèm giờ/thời lượng hoặc yêu cầu trong ngày được hiểu đề xuất deadline ngày mai 17:00 trong MVP.
 ${secretaryTraining}
+${context?.recognitionHint || ''}
 ${upcomingWeekdayTraining(now)}
 Bộ nhớ của riêng người dùng: ${context?.memory || "Chưa có"}
 Lịch sử gần đây (chú ý trạng thái confirmed/cancelled/pending): ${JSON.stringify(context?.history || [])}

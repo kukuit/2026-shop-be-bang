@@ -13,15 +13,18 @@ import { displayDate, priorityLabels, statusLabels, type Message, type TreeNode 
 import { newContext, readContext, type TaskConversationMemory, type TaskOverviewMemory } from '../_lib/task-memory'
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '@/components/auth/AuthProvider'
+import { useBrowserContext } from '@/modules/ai-task/action-recognition/context/useBrowserContext'
 
 export default function Chat() {
   const { groups, revision, busy, run, refresh, notify, overview, overviewLoading, overviewError, reloadOverview, acceptOverview, context, setContext, contextReady } = useTasks()
   const { user } = useAuth()
+  const actionContext = useBrowserContext(user?.id)
   const parents = useQuery({ queryKey: ['ai-task', 'parent-labels', user?.id, revision], queryFn: () => api<{ nodes: TreeNode[] }>(undefined, { resource: 'parents' }), enabled: !!user?.id })
   const [messages, setMessages] = useState<Message[]>([])
   const messagesRef = useRef(messages)
   messagesRef.current = messages
   const [historyLoading, setHistoryLoading] = useState(false)
+  const [historyLoaded, setHistoryLoaded] = useState(false)
   const [pendingId, setPendingId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -34,7 +37,7 @@ export default function Chat() {
   const pendingRef = useRef<HTMLDivElement>(null)
   const pending = messages.find(m => m.status === 'pending' || m.status === 'choose')
   const lastMessageId = messages[messages.length - 1]?.id
-  const blocked = overviewLoading || !contextReady || !!overviewError || !!pendingId && (!pending || pending.status === 'choose' || !pending.proposal || !['CREATE_TASK', 'CREATE_SUBTASK', 'UPDATE_TASK'].includes(pending.proposal.action))
+  const blocked = overviewLoading || !contextReady || !!overviewError
   const hideVoice = !voiceText && !!text
   const voice = useVoice(t => { setText(t); setVoiceText(true) }, notify, !busy && !loading && !blocked && !hideVoice)
   const mergeMessages = useCallback((incoming: Message[]) => setMessages(old => {
@@ -62,7 +65,7 @@ export default function Chat() {
   }
   const loadHistory = async () => {
     setHistoryLoading(true)
-    try { const data = await api<{ messages: Message[] }>(undefined, { resource: 'messages' }); mergeMessages(data.messages) }
+    try { const data = await api<{ messages: Message[] }>(undefined, { resource: 'messages' }); mergeMessages(data.messages); setHistoryLoaded(true) }
     catch (reason) { notify(reason instanceof Error ? reason.message : 'Không tải được lịch sử. Bạn vẫn có thể chat.') }
     finally { setHistoryLoading(false) }
   }
@@ -83,6 +86,7 @@ export default function Chat() {
       const response = await api<{ result?: { id?: string; overview?: TaskOverviewMemory } }>({ ...body, ...(body.operation === 'choose' ? { context: readContext(context), overview } : {}) })
       const id = body.messageId || response.result?.id
       const turn = id ? await loadTurn(id) : []
+      actionContext.remember(turn, body.operation === 'confirm' ? response.result?.id : undefined)
       if (response.result?.overview) {
         const saved = response.result.overview
         acceptOverview(saved)
@@ -103,27 +107,29 @@ export default function Chat() {
     try {
       await run(async () => {
         setOutgoing(submitted)
-        const response = await api<{ result: { id: string; context: TaskConversationMemory } }>({ operation: 'chat', text: submitted, requestId: request.current!.id, context: readContext(context), overview, ...(pendingId ? { pendingId } : {}) })
+        const response = await api<{ result: { id: string; context: TaskConversationMemory } }>({ operation: 'chat', text: submitted, requestId: request.current!.id, context: readContext(context), browserContext: actionContext.current(), overview, ...(pendingId ? { pendingId } : {}) })
         setContext(response.result.context)
         if (pendingId) await loadTurn(pendingId)
-        await loadTurn(response.result.id); setText(''); setVoiceText(false); request.current = null; await load()
+        actionContext.remember(await loadTurn(response.result.id)); setText(''); setVoiceText(false); request.current = null; await load()
       })
     } catch (reason) { notify(reason instanceof Error ? reason.message : 'Gửi thất bại.') }
     finally { setOutgoing('') }
   }
   return <div className="demo-chat-view ai-task-chat">
-    <div className="demo-page-heading"><div><h1>Trợ lý công việc</h1><p>Nói điều bạn cần làm, mình giúp bạn sắp xếp.</p></div></div>
-    <details className="ai-task-before"><summary>Bộ nhớ tổng quan và ngữ cảnh</summary>
+    <div className="demo-page-heading ai-task-chat-heading"><h1>Trợ lý công việc</h1>
+    <details className="ai-task-memory"><summary>Bộ nhớ tổng quan và ngữ cảnh</summary>
+      <div className="ai-task-before ai-task-memory-panel">
       <MemoryDetails title="Bộ nhớ tổng quan" values={overview} groups={groups} nodes={parents.data?.nodes || []} />
       <MemoryDetails title="Bộ nhớ ngữ cảnh" values={{ ...context.conversationDefaults, ...context.activeDraft }} groups={groups} nodes={parents.data?.nodes || []} />
       <p>{context.mode === 'idle' ? 'Chưa có công việc đang tạo.' : context.mode === 'editing-task' ? 'Đang sửa công việc.' : 'Đang tạo công việc.'} Ngữ cảnh giữ trong tab này tối đa 2 giờ không hoạt động.</p>
-      <button disabled={busy || loading || !!pendingId} onClick={() => setContext(newContext())}>Xóa ngữ cảnh</button>
+      <button disabled={busy || loading || !!pendingId} onClick={() => { setContext(newContext()); actionContext.clear() }}>Xóa ngữ cảnh</button>
+      </div>
     </details>
+    </div>
     {overviewError && <p role="alert">Không tải được bộ nhớ tổng quan. <button onClick={() => void reloadOverview()}>Thử lại</button></p>}
     <section className="demo-chat">
+      {!historyLoaded && <button className="ai-task-history" type="button" disabled={busy || historyLoading} onClick={() => void loadHistory()}>{historyLoading ? 'Đang tải…' : '↻ Tải 10 tin nhắn gần nhất'}</button>}
       <div className="demo-chat-messages" ref={list} aria-label="Cuộc trò chuyện">
-        <button type="button" disabled={busy || historyLoading} onClick={() => void loadHistory()}>{historyLoading ? 'Đang tải 10 tin nhắn…' : 'Tải lại lịch sử chat'}</button>
-        {!messages.length && !outgoing && <p className="demo-chat-hint">Bạn có thể chat ngay hoặc tải 10 tin nhắn gần nhất.</p>}
         {loading && <p role="status">Đang mở chat…</p>}
         {pendingId && !pending && <p className="demo-alert">Có yêu cầu chưa xử lý. <button disabled={busy} onClick={() => void loadTurn(pendingId).catch(e => notify(e.message))}>Mở yêu cầu đang chờ</button> <button disabled={busy} onClick={() => cancel(pendingId)}>Hủy yêu cầu cũ</button></p>}
         {error && <div className="demo-alert" role="alert">{error} <button onClick={() => void load()}>Thử lại</button></div>}
@@ -138,9 +144,9 @@ export default function Chat() {
       </div>
       <form className="demo-chat-input demo-chat-voice-input" onSubmit={e => { e.preventDefault(); void send() }}>
         <VoiceInputSlot hidden={hideVoice}><button type="button" className={`demo-mic ${voice.listening ? 'listening' : ''}`} disabled={!voice.supported || busy || loading || blocked || !!error || hideVoice} tabIndex={hideVoice ? -1 : 0} onClick={voice.toggle} aria-pressed={voice.listening} aria-label={voice.listening ? 'Dừng ghi âm' : 'Nhập bằng giọng nói'} title={!voice.supported ? 'Trình duyệt chưa hỗ trợ nhập giọng nói' : undefined}><Mic size={24} /></button></VoiceInputSlot>
-        <textarea ref={input} rows={1} maxLength={4000} placeholder="Ví dụ: EDA đang làm…" aria-label="Tin nhắn" disabled={busy || loading || blocked || !!error} value={text} onChange={e => { setText(e.target.value); setVoiceText(false) }} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); void send() } }} />
+        <textarea ref={input} rows={1} maxLength={4000} placeholder="Nhập công việc…" aria-label="Tin nhắn" disabled={busy || loading || blocked || !!error} value={text} onChange={e => { setText(e.target.value); setVoiceText(false) }} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); void send() } }} />
         <button className="demo-primary" aria-label="Gửi tin nhắn" disabled={busy || loading || blocked || !!error || voice.listening || !text.trim()}><Send size={20} /></button>
-      </form><p className="demo-chat-hint">{voice.listening ? 'Đang nghe… Dừng ghi âm rồi kiểm tra nội dung và bấm Gửi.' : 'Enter để gửi · Shift + Enter để xuống dòng · Giờ Việt Nam'}</p>
+      </form><p className={`demo-chat-hint${voice.listening ? '' : ' ai-task-keyboard-hint'}`}>{voice.listening ? 'Đang nghe… Dừng ghi âm rồi kiểm tra nội dung và bấm Gửi.' : 'Enter để gửi · Shift + Enter để xuống dòng · Giờ Việt Nam'}</p>
     </section>
   </div>
 }

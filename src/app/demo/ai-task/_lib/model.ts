@@ -60,7 +60,7 @@ export const filterSchema = z.object({
 export type Filters = z.infer<typeof filterSchema>
 export const actions = ['CREATE_TASK', 'UPDATE_TASK', 'CREATE_SUBTASK', 'COMPLETE_TASK', 'CANCEL_TASK', 'DELETE_TASK', 'RESTORE_TASK', 'GET_TASKS', 'GET_TASK_DETAIL'] as const
 export type Action = typeof actions[number]
-const aiFields = z.object({ title: z.string().trim().min(1).max(250).optional(), description: z.string().max(5000).nullable().optional(), groupName: z.string().max(80).optional(), priority: z.enum(priorities).optional(), status: z.enum(statuses).optional(), deadline: dateSchema.optional(), startTime: dateSchema.optional(), duration: durationSchema.optional(), withinDay: z.boolean().optional(), startNow: z.boolean().optional(), scheduleMode: z.enum(['duration', 'deadline']).optional() }).strict()
+const aiFields = z.object({ title: z.string().trim().min(1).max(250).optional(), description: z.string().max(5000).nullable().optional(), groupName: z.string().max(80).optional(), parentQuery: z.string().trim().min(1).max(250).nullable().optional(), completionPercent: z.number().int().min(0).max(100).nullable().optional(), priority: z.enum(priorities).optional(), status: z.enum(statuses).optional(), deadline: dateSchema.optional(), startTime: dateSchema.optional(), duration: durationSchema.optional(), withinDay: z.boolean().optional(), startNow: z.boolean().optional(), scheduleMode: z.enum(['duration', 'deadline']).optional() }).strict()
 export const intentSchema = z.object({
   action: z.enum(actions), target: z.object({ query: z.string().trim().min(1).max(250) }).strict().optional(),
   data: aiFields.optional(), changes: aiFields.optional(),
@@ -74,7 +74,7 @@ export const intentSchema = z.object({
 })
 export type Intent = z.infer<typeof intentSchema>
 export type Proposal = { action: Action; taskId: string | null; expectedVersion: number | null; data: TaskInput; before: Task | null }
-export type Message = { id: string; role: 'user' | 'assistant'; content: string; sequence: number; createdAt: string; status: 'normal' | 'choose' | 'pending' | 'confirmed' | 'cancelled'; proposal?: Proposal | null; intent?: Intent | null; candidates?: Task[]; candidatePaths?: Record<string, string>; tasks?: Task[]; displayGroups?: import('./task-display').TaskDisplayGroup[]; total?: number }
+export type Message = { id: string; role: 'user' | 'assistant'; content: string; sequence: number; createdAt: string; status: 'normal' | 'choose' | 'pending' | 'confirmed' | 'cancelled'; proposal?: Proposal | null; intent?: Intent | null; candidates?: Task[]; candidatePaths?: Record<string, string>; tasks?: Task[]; displayGroups?: import('./task-display').TaskDisplayGroup[]; total?: number; resultTaskId?: string; recognition?: import('@/modules/ai-task/action-recognition/types').RecognitionRecord }
 export const normalize = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase().trim()
 export const slugify = (s: string) => normalize(s).replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'nhom'
 export const dayKey = (date: string | number | Date) => new Date(new Date(date).getTime() + 7 * 3600000).toISOString().slice(0, 10)

@@ -30,7 +30,15 @@ global.fetch = async (url, options) => {
       'bắt đầu ngay': { action: 'CHAT', reply: 'Bắt đầu', memory: { scope: 'context', startNow: true } },
       'Thêm task tiếp theo': { action: 'CREATE_TASK', data: { title: 'Task tiếp theo' } },
     }
-    const intent = memoryExamples[text] || treeExamples[text] || (text.includes('xong rồi') ? { action: 'COMPLETE_TASK', target: { query: 'EDA' } }
+    const recognitionExamples = process.argv.includes('--recognition-only') ? {
+      'Rà soát hợp đồng 5': { action: 'GET_TASKS', filters: { query: 'hợp đồng 5' } },
+      'Rà soát hợp đồng 8': { action: 'GET_TASKS', filters: { query: 'hợp đồng 8' } },
+      'Dời nó sang mai': { action: 'UPDATE_TASK', target: { query: 'nó' }, changes: { deadline: fixtureDeadline } },
+      'Việc này được 50% rồi': { action: 'UPDATE_TASK', target: { query: 'việc này' }, changes: { completionPercent: 50 } },
+      'Ghi chú cần gọi trước': { action: 'UPDATE_TASK', target: { query: 'việc đó' }, changes: { description: 'Cần gọi trước' } },
+      'Xong rồi': { action: 'COMPLETE_TASK', target: { query: 'việc đó' } },
+    } : {}
+    const intent = recognitionExamples[text] || memoryExamples[text] || treeExamples[text] || (text.includes('xong rồi') ? { action: 'COMPLETE_TASK', target: { query: 'EDA' } }
       : text.includes('còn việc') ? { action: 'GET_TASKS', filters: { view: 'active' } }
       : { action: 'CREATE_TASK', data: { title: text.includes('ABC') ? 'Code EDA cho ABC' : 'Code EDA cho MSD', groupName: 'Ainka', priority: 'urgent', deadline: fixtureDeadline } })
     return Response.json({ choices: [{ message: { content: JSON.stringify(intent) } }] })
@@ -100,6 +108,57 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms))
     await click('[role="dialog"] button[type="submit"], [role="dialog"] form>button')
     await wait(`document.querySelector('textarea[aria-label="Tin nhắn"]') && !document.querySelector('textarea[aria-label="Tin nhắn"]').disabled`)
     assert.equal((await repo.getGroups('alice')).length, 4)
+    if (process.argv.includes('--recognition-only')) {
+      assert.equal(await evaluate(`document.querySelector('.ai-task-memory').getBoundingClientRect().left > document.querySelector('h1').getBoundingClientRect().right`), true)
+      const confirm = async () => {
+        await wait(`document.querySelector('.ai-task-form .demo-primary') && !document.querySelector('.ai-task-form .demo-primary').disabled`)
+        await click('.ai-task-form .demo-primary')
+        await wait(`!document.querySelector('.demo-chat-confirmation')`)
+      }
+      await send('Rà soát hợp đồng 5')
+      await wait(`JSON.parse(sessionStorage.getItem('ai-task-action-context:alice') || '{}').lastMessageId`)
+      await send('Không, thêm công việc.')
+      await wait(`document.querySelector('.ai-task-form')`)
+      assert.equal((await repo.scanTasks('alice')).length, 0)
+      await confirm()
+      let task = (await repo.scanTasks('alice'))[0]
+      assert.equal(task.title, 'Rà soát hợp đồng 5')
+      assert.equal(await evaluate(`JSON.parse(sessionStorage.getItem('ai-task-action-context:alice')).lastTaskId`), task.id)
+      await cdp('Page.reload')
+      await wait(`document.querySelector('textarea[aria-label="Tin nhắn"]') && !document.querySelector('textarea[aria-label="Tin nhắn"]').disabled`)
+      await send('Dời nó sang mai')
+      await wait(`document.querySelector('.ai-task-form')`)
+      assert.equal((await repo.scanTasks('alice'))[0].deadline, null)
+      await confirm()
+      assert.equal((await repo.scanTasks('alice')).length, 1)
+      assert.equal((await repo.scanTasks('alice'))[0].deadline, new Date(fixtureDeadline).toISOString())
+      await send('Việc này được 50% rồi')
+      await wait(`document.querySelector('.ai-task-form input[type="number"][max="100"]')`)
+      assert.equal(await evaluate(`document.querySelector('.ai-task-form input[type="number"][max="100"]').value`), '50')
+      await screenshot('recognition-progress-desktop')
+      await confirm()
+      task = (await repo.scanTasks('alice'))[0]
+      assert.equal(task.completionPercent, 50); assert.equal(task.status, 'in_progress')
+      await cdp('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: true })
+      assert.equal(await evaluate(`getComputedStyle(document.querySelector('.ai-task-memory')).display`), 'none')
+      await send('Ghi chú cần gọi trước'); await wait(`document.querySelector('.ai-task-form')`); await confirm()
+      assert.equal((await repo.scanTasks('alice'))[0].description, 'Cần gọi trước')
+      await send('Xong rồi'); await wait(`document.querySelector('[data-completion-dialog][open]')`)
+      assert.equal((await repo.scanTasks('alice'))[0].status, 'in_progress')
+      await click('[data-completion-dialog] .demo-primary')
+      await wait(`!document.querySelector('[data-completion-dialog]') && !document.querySelector('.demo-chat-confirmation')`)
+      assert.equal((await repo.scanTasks('alice'))[0].status, 'done')
+      await send('Rà soát hợp đồng 8'); await wait(`document.querySelector('.ai-task-form')`)
+      const pending = (await repo.sessionRef('alice').get()).get('pendingId')
+      assert.equal((await repo.messageCollection('alice').doc(pending).get()).get('recognition').result.source, 'personal_memory')
+      assert.equal(await evaluate(`document.documentElement.scrollWidth <= innerWidth`), true)
+      await screenshot('recognition-personal-memory-mobile')
+      await clickText('Hủy yêu cầu'); await wait(`!document.querySelector('.demo-chat-confirmation')`)
+      assert.equal((await repo.scanTasks('alice')).length, 1)
+      assert.deepEqual(errors, [])
+      console.log('PASS: recognition browser flow, correction learning, confirmed target persistence across reload, rescheduling, progress, notes, completion confirmation, learned variants, mobile layout; screenshots:', output)
+      return
+    }
     await screenshot('chat-desktop')
     // Voice fills the composer; it never sends by itself.
     const beforeVoice = requests.filter(r => r.body?.operation === 'chat').length
@@ -265,8 +324,8 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms))
     assert.equal(await evaluate(`document.querySelector('.ai-task-confirm-title').textContent`), 'Bản nháp giữ sau refresh')
     assert.equal(await evaluate(`JSON.parse(sessionStorage.getItem('ai-task-chat-context:alice')).activeDraft.duration`), 2880)
     const readsAfterReload = memoryReads()
-    await click('details.ai-task-before summary')
-    assert.equal(await evaluate(`document.querySelector('details.ai-task-before').textContent.includes('{"groupId"')`), false)
+    await click('details.ai-task-memory summary')
+    assert.equal(await evaluate(`document.querySelector('details.ai-task-memory').textContent.includes('{"groupId"')`), false)
     await screenshot('memory-context-desktop')
     await click('.ai-task-form .demo-form-actions .demo-primary'); await wait(`!document.querySelector('.demo-chat-confirmation')`)
     await wait(`JSON.parse(sessionStorage.getItem('ai-task-chat-context:alice')).mode === 'idle'`)

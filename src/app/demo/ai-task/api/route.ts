@@ -9,7 +9,9 @@ import { appendTurn, cancelProposal, chooseTask, confirmProposal, prepareIntent,
 import { describeMemory } from '../_services/work-memory'
 import { contextSchema, overviewSchema, newContext, readContext, resolveTaskMemory } from '../_lib/task-memory'
 import { scanTasks } from '../_services/repository'
-import { parseTaskIntent } from '../_services/ai-task-parser'
+import { browserContextSchema } from '@/modules/ai-task/action-recognition/context/browserContext'
+import { recognizeRequest } from '@/modules/ai-task/action-recognition/recognitionService'
+import { learnSafely } from '@/modules/ai-task/action-recognition/feedback/feedbackService'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -17,7 +19,7 @@ export const maxDuration = 60
 const json = (body: unknown, status = 200) => NextResponse.json(body, { status, headers: { 'Cache-Control': 'private, no-store' } })
 const mutationSchema = z.discriminatedUnion('operation', [
   z.object({ operation: z.literal('initialize') }).strict(),
-  z.object({ operation: z.literal('chat'), text: z.string().trim().min(1).max(4000), requestId: idSchema, context: contextSchema.optional(), overview: overviewSchema.optional(), pendingId: idSchema.optional() }).strict(),
+  z.object({ operation: z.literal('chat'), text: z.string().trim().min(1).max(4000), requestId: idSchema, context: contextSchema.optional(), browserContext: browserContextSchema.optional(), overview: overviewSchema.optional(), pendingId: idSchema.optional() }).strict(),
   z.object({ operation: z.literal('propose'), requestId: idSchema, action: z.enum(['CREATE_TASK', 'CREATE_SUBTASK', 'UPDATE_TASK', 'DELETE_TASK', 'RESTORE_TASK']), data: z.unknown().optional(), taskId: idSchema.optional(), expectedVersion: z.number().int().positive().optional() }).strict(),
   z.object({ operation: z.literal('saveTask'), requestId: idSchema, action: z.enum(['CREATE_TASK', 'CREATE_SUBTASK', 'UPDATE_TASK']), data: z.unknown(), taskId: idSchema.optional(), expectedVersion: z.number().int().positive().optional() }).strict(),
   z.object({ operation: z.literal('confirm'), messageId: idSchema, data: z.unknown() }).strict(),
@@ -80,14 +82,15 @@ export async function POST(req: NextRequest) {
       case 'choose': result = await chooseTask(uid, input.messageId, input.taskId, readContext(input.context), input.overview || {}); break
       case 'chat': {
         const existing = await messageCollection(uid).doc(input.requestId).get()
-        if (existing.exists) { const proposal = existing.get('proposal'); result = { id: existing.id, context: proposal ? { ...readContext(input.context), mode: proposal.taskId ? 'editing-task' : 'creating-task', activeDraft: proposal.data, updatedAt: Date.now() } : readContext(input.context) }; break }
+        if (existing.exists) { await learnSafely(uid, existing.id, 'correction'); const proposal = existing.get('proposal'); result = { id: existing.id, context: proposal ? { ...readContext(input.context), mode: proposal.taskId ? 'editing-task' : 'creating-task', activeDraft: proposal.data, updatedAt: Date.now() } : readContext(input.context) }; break }
         let context = readContext(input.context)
         const overview = input.overview || {}
         const groups = await getGroups(uid)
-        const intent = await parseTaskIntent(input.text, groups, new Date(), { memory: JSON.stringify({ mode: context.mode, activeTitle: context.activeDraft.title }), history: [] })
+        const recognized = await recognizeRequest(uid, input.text, groups, input.browserContext, context.activeDraft, input.pendingId)
+        const intent = recognized.intent
         // A new create request starts a fresh task; only conversation defaults carry over.
         if (intent.action === 'CREATE_TASK' || intent.action === 'CREATE_SUBTASK') context = { ...context, conversationDefaults: { ...context.conversationDefaults, ...overviewSchema.pick({ groupId: true, parentId: true, priority: true, status: true }).parse(context.activeDraft) }, activeDraft: {}, mode: 'creating-task' }
-        let reply = await prepareIntent(uid, intent, undefined, context, overview)
+        let reply = await prepareIntent(uid, intent, recognized.targetId, context, overview, recognized.recognition?.result.action)
         if (reply.memoryUpdate) {
           const update = reply.memoryUpdate
           if (update.reset) context = newContext()
@@ -95,7 +98,7 @@ export async function POST(req: NextRequest) {
             const values = { ...update.values, ...(update.notes !== undefined ? { description: update.notes } : {}) }
             context = { ...context, activeDraft: { ...context.activeDraft, ...values }, updatedAt: Date.now() }
             if (context.mode === 'idle') context.conversationDefaults = { ...context.conversationDefaults, ...overviewSchema.pick({ groupId: true, parentId: true, priority: true, status: true }).parse(values) }
-            if (context.activeDraft.title) {
+            if (context.activeDraft.title && intent.action === 'CHAT') {
               const resolved = resolveTaskMemory(values, context, overview, groups, await scanTasks(uid))
               if (input.pendingId) {
                 const previous = await messageCollection(uid).doc(input.pendingId).get()
@@ -106,8 +109,11 @@ export async function POST(req: NextRequest) {
             }
           }
         }
+        if (!reply.proposal && recognized.recognition?.correctionOf === input.pendingId && input.pendingId) context = { ...newContext(), conversationDefaults: context.conversationDefaults }
         if (reply.proposal) context = { ...context, mode: reply.proposal.taskId ? 'editing-task' : 'creating-task', activeDraft: reply.proposal.data, updatedAt: Date.now() }
+        if (recognized.recognition) reply.recognition = recognized.recognition
         const turn = await appendTurn(uid, input.requestId, input.text, reply, input.pendingId)
+        await learnSafely(uid, turn.id, 'correction')
         result = { ...turn, context }
 
         break

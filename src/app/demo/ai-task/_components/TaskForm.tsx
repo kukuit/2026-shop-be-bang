@@ -70,6 +70,7 @@ export default function TaskForm({ initial, groups, busy, onSubmit, onCancel, be
           <div className="demo-inline"><span className={`ai-task-badge priority-${value.priority}`}>{priorityLabels[value.priority]}</span><span className={`ai-task-badge status-${uiStatus(value.status)}`}>{statusLabels[value.status]}</span></div>
           {!expanded && value.description && <p className="ai-task-confirm-note">{value.description}</p>}
         </div>}
+        {value.status !== 'done' && (expanded || value.completionPercent != null) && <label className="demo-full">Tiến độ (%)<input type="number" min={0} max={100} step={1} value={value.completionPercent ?? ''} onChange={e => set('completionPercent', e.target.value === '' ? null : Number(e.target.value))} /></label>}
         {expanded && <>
         <label className="demo-full">Thuộc công việc{parentEditable ? <select aria-label="Thuộc công việc" disabled={parentLoading || !!parentError} value={value.parentId || ''} onChange={e => { const parent = parentCandidates.find(p => p.id === e.target.value); setValue(old => ({ ...old, parentId: parent?.id || null, groupId: parent?.groupId || old.groupId })) }}>
           <option value="" disabled={action === 'CREATE_SUBTASK'}>{action === 'CREATE_SUBTASK' ? 'Chọn công việc' : 'Không có'}</option>
