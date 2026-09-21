@@ -9,6 +9,8 @@ export const conversationSchema = z.object({
     scope: z.enum(['context', 'preferences']),
     title: z.string().trim().min(1).max(250).optional(),
     status: z.enum(['todo', 'in_progress', 'waiting', 'blocked', 'done', 'cancelled']).optional(),
+    completionPercent: z.number().int().min(0).max(100).nullable().optional(),
+    scheduleMode: z.enum(['duration', 'deadline']).optional(),
     groupName: z.string().trim().min(1).max(80).nullable().optional(),
     parentQuery: z.string().trim().min(1).max(250).nullable().optional(),
     duration: z.number().int().positive().max(525600).nullable().optional(),
@@ -17,7 +19,7 @@ export const conversationSchema = z.object({
     startTime: z.string().datetime({ offset: true }).nullable().optional(),
     deadline: z.string().datetime({ offset: true }).nullable().optional(),
     priority: z.enum(['urgent', 'normal', 'low']).optional(),
-    notes: z.string().max(1500).optional(),
+    notes: z.string().max(5000).optional(),
     reset: z.boolean().optional(),
   }).strict().optional(),
 }).strict()

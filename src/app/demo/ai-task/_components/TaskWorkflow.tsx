@@ -12,6 +12,7 @@ import {
   type CompletionRating,
 } from '../_lib/task-review'
 import type { TaskOverviewMemory } from '../_lib/task-memory'
+import { leafTasks } from '../_lib/task-display'
 import CompleteTaskDialog from './CompleteTaskDialog'
 import TaskReviewDialog from './TaskReviewDialog'
 import { ReviewReminderBanner, ReviewReminderToast } from './ReviewReminders'
@@ -22,7 +23,10 @@ type CompletionRequest = {
   autoKey?: string
   onConfirm(data: TaskInput): Promise<void>
 }
-type Workflow = { requestCompletion(request: CompletionRequest): void }
+type Workflow = {
+  requestCompletion(request: CompletionRequest): void
+  openOverdueReview(): Promise<void>
+}
 const WorkflowContext = createContext<Workflow | null>(null)
 export function useTaskCompletion() {
   const value = useContext(WorkflowContext)
@@ -57,6 +61,7 @@ export default function TaskWorkflow({ children }: { children: React.ReactNode }
   const completionRef = useRef<CompletionRequest | null>(null)
   const autoCompletions = useRef(new Set<string>())
   const [reviewOpen, setReviewOpen] = useState(false)
+  const [overdueOnly, setOverdueOnly] = useState(false)
   const [leaving, setLeaving] = useState<string | null>(null)
   const [dueToast, setDueToast] = useState<Task | null>(null)
   const [snoozedUntil, setSnoozedUntil] = useState(
@@ -118,6 +123,14 @@ export default function TaskWorkflow({ children }: { children: React.ReactNode }
     }
   }, [prefix])
   const items = useMemo(() => getReviewableTasks(tasks, now), [tasks, now])
+  const overdueItems = useMemo(() => {
+    const ids = new Set(
+      leafTasks(tasks.filter(isOpen), tasks)
+        .filter((task) => task.deadline && Date.parse(task.deadline) < now)
+        .map((task) => task.id)
+    )
+    return items.filter((item) => ids.has(item.task.id))
+  }, [tasks, now, items])
   const requestCompletion = useCallback((request: CompletionRequest) => {
     if (completionRef.current || (request.autoKey && autoCompletions.current.has(request.autoKey)))
       return
@@ -159,7 +172,10 @@ export default function TaskWorkflow({ children }: { children: React.ReactNode }
           document.querySelectorAll<HTMLTextAreaElement>('.demo-chat-input textarea')
         ).some((e) => e.value.trim())
       markShown()
-      if (!interrupted) setReviewOpen(true)
+      if (!interrupted) {
+        setOverdueOnly(false)
+        setReviewOpen(true)
+      }
     }, 1500)
     return () => window.clearTimeout(timer)
   }, [ready, items.length, now, snoozedUntil, busy, context.mode, markShown])
@@ -223,13 +239,39 @@ export default function TaskWorkflow({ children }: { children: React.ReactNode }
     markShown()
   }
   return (
-    <WorkflowContext.Provider value={{ requestCompletion }}>
+    <WorkflowContext.Provider
+      value={{
+        requestCompletion,
+        openOverdueReview: async () => {
+          if (busy || completionRef.current) return
+          markShown()
+          try {
+            await run(async () => {
+              const data = await api<{ tasks: Task[] }>(undefined, {
+                resource: 'tree',
+                view: 'all',
+              })
+              setTasks(data.tasks)
+              setReady(true)
+              setLoadError('')
+              setNow(Date.now())
+              setDueToast(null)
+              setOverdueOnly(true)
+              setReviewOpen(true)
+            })
+          } catch (reason) {
+            notify(reason instanceof Error ? reason.message : 'Không tải được công việc quá hạn.')
+          }
+        },
+      }}
+    >
       {ready && items.length > 0 && snoozedUntil <= now && (
         <ReviewReminderBanner
           count={items.length}
           disabled={busy || !!completion}
           onReview={() => {
             markShown()
+            setOverdueOnly(false)
             setDueToast(null)
             setReviewOpen(true)
           }}
@@ -244,11 +286,46 @@ export default function TaskWorkflow({ children }: { children: React.ReactNode }
       {children}
       {reviewOpen && (
         <TaskReviewDialog
-          items={items}
+          items={overdueOnly ? overdueItems : items}
+          overdueOnly={overdueOnly}
           context={(task) => taskContext(task, groups, tasks)}
           leaving={leaving}
           disabled={busy || !!completion}
           onComplete={completeTask}
+          onUpdate={async (task, deadline) => {
+            await run(async () => {
+              const data = {
+                ...taskToInput(task),
+                ...(deadline === null
+                  ? { status: 'cancelled' as const }
+                  : { deadline, scheduleMode: 'deadline' as const, duration: null }),
+              }
+              const saved = await api<{ result: { overview?: TaskOverviewMemory } }>({
+                operation: 'saveTask',
+                requestId: crypto.randomUUID(),
+                action: 'UPDATE_TASK',
+                taskId: task.id,
+                expectedVersion: task.version,
+                data,
+              })
+              if (saved.result.overview) acceptOverview(saved.result.overview)
+              setTasks((old) =>
+                old.map((t) =>
+                  t.id === task.id
+                    ? {
+                        ...t,
+                        ...data,
+                        updatedAt: new Date().toISOString(),
+                        version: t.version + 1,
+                      }
+                    : t
+                )
+              )
+              setDueToast(null)
+              notify(deadline === null ? 'Đã hủy công việc.' : 'Đã đổi deadline.')
+              await refresh().catch(() => setReload((v) => v + 1))
+            })
+          }}
           onClose={() => {
             markShown()
             setReviewOpen(false)

@@ -2,6 +2,12 @@
   width: 540px;
   animation: appear 0.15s ease-out;
 }
+button.overdueKpi {
+  display: block;
+  padding: 22px;
+  text-align: left;
+  white-space: normal;
+}
 .heading {
   display: flex;
   align-items: center;
@@ -137,13 +143,13 @@
 }
 .reviewItem {
   display: flex;
+  flex-direction: column;
   gap: 14px;
-  align-items: center;
+  align-items: stretch;
   justify-content: space-between;
   padding: 15px 0;
   border-bottom: 1px solid #edf1ef;
-  max-height: 200px;
-  overflow: hidden;
+  max-height: 600px;
 }
 .reviewItem > div {
   min-width: 0;
@@ -164,12 +170,28 @@
   color: #64786d;
 }
 .reviewItem button {
-  width: 42px;
-  height: 42px;
+  min-height: 42px;
   flex-shrink: 0;
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   color: #17705d;
+}
+.reviewActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.reviewDeadline,
+.reviewDeadline label {
+  display: grid;
+  gap: 8px;
+  font-size: 13px;
+}
+.reviewDeadline input {
+  width: 100%;
+  min-width: 0;
 }
 .leaving {
   animation: collapse 0.22s ease forwards;

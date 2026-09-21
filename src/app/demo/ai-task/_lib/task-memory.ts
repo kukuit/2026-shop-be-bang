@@ -11,6 +11,7 @@ export const overviewSchema = z.object({
 export type TaskOverviewMemory = z.infer<typeof overviewSchema>
 export const draftSchema = overviewSchema.omit({ updatedAt: true }).extend({
   title: z.string().max(250).optional(), description: z.string().max(5000).nullable().optional(),
+  completionPercent: z.number().int().min(0).max(100).nullable().optional(),
   duration: z.number().int().positive().max(525600).nullable().optional(),
   startTime: z.string().datetime({ offset: true }).nullable().optional(), deadline: z.string().datetime({ offset: true }).nullable().optional(),
   scheduleMode: z.enum(['duration', 'deadline']).optional(), withinDay: z.boolean().optional(),
@@ -35,7 +36,7 @@ export function confirmedOverview(input: TaskInput, now: string): TaskOverviewMe
 export const TASK_MEMORY_POLICY = {
   groupId: 'overview+context', parentId: 'overview+context', priority: 'overview+context', status: 'overview+context',
   startNow: 'overview+context', startClock: 'overview+context',
-  title: 'context-only', description: 'context-only', deadline: 'context-only', duration: 'context-only', startTime: 'context-only', scheduleMode: 'context-only', withinDay: 'context-only',
+  title: 'context-only', description: 'context-only', completionPercent: 'context-only', deadline: 'context-only', duration: 'context-only', startTime: 'context-only', scheduleMode: 'context-only', withinDay: 'context-only',
 } as const
 export type ResolvedSource = 'explicit' | 'draft' | 'context' | 'overview' | 'default'
 export function resolveTaskMemory(explicit: Partial<TaskInput> & { startClock?: string | null }, context: TaskConversationMemory, overview: TaskOverviewMemory, groups: Group[], tasks: Task[], now = Date.now()) {
