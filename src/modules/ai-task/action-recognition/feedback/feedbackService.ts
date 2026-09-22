@@ -6,7 +6,7 @@ import { messageCollection, row } from '@/app/demo/ai-task/_services/repository'
 import { memoryRoot, patternId } from '../memory/memoryRepository'
 import { updateIntentPattern } from '../memory/intentMemory'
 import { normalizePattern } from '../normalizePattern'
-import type { PersonalIntentPattern, RecognitionRecord, TaskAction } from '../types'
+import type { PersonalIntentPattern, RecognitionIntent, RecognitionRecord } from '../types'
 
 /** Learns only from committed server messages; UID comes from authenticated route. */
 export async function learnFromTurn(
@@ -24,14 +24,14 @@ export async function learnFromTurn(
       .collection(kind === 'correction' ? 'correctionEvents' : 'confirmationEvents')
       .doc(messageId)
     if ((await tx.get(eventRef)).exists) return
-    let predicted: TaskAction | undefined
+    let predicted: RecognitionIntent | undefined
     let originalText = record.originalText
     let predictedConfidence = record.result.confidence
     if (kind === 'correction') {
       const previous = await tx.get(messageCollection(uid).doc(idSchema.parse(record.correctionOf)))
       const original = previous.get('recognition') as RecognitionRecord | undefined
-      if (!original || original.result.action === record.result.action) return
-      predicted = original.result.action
+      if (!original || original.result.intent === record.result.intent) return
+      predicted = original.result.intent
       predictedConfidence = original.result.confidence
       originalText = original.originalText
     }
@@ -39,21 +39,23 @@ export async function learnFromTurn(
     const snapshot = await tx.get(ref)
     const pattern = normalizePattern(originalText)
     const proposal = turn.get('proposal')
-    const finalAction =
+    const finalIntent =
       kind === 'confirmation' && proposal?.before && proposal.data.status !== proposal.before.status
         ? proposal.data.status === 'done'
           ? 'task.complete'
           : proposal.data.status === 'cancelled'
             ? 'task.cancel'
-            : record.result.action
-        : record.result.action
-    if (finalAction !== record.result.action) predicted = record.result.action
+            : record.result.intent
+        : record.result.intent
+    if (finalIntent !== record.result.intent) predicted = record.result.intent
     const learned = updateIntentPattern(
       snapshot.exists ? row<PersonalIntentPattern>(snapshot) : undefined,
       pattern,
       originalText,
-      finalAction,
-      predicted
+      finalIntent,
+      predicted,
+      record.result.speechAct,
+      record.result.entities
     )
     const now = FieldValue.serverTimestamp()
     tx.set(ref, {
@@ -66,7 +68,7 @@ export async function learnFromTurn(
       originalText,
       normalizedPattern: pattern,
       ...(predicted ? { predictedAction: predicted } : {}),
-      correctedAction: finalAction,
+      correctedAction: finalIntent,
       predictedConfidence,
       createdAt: now,
     })

@@ -7,6 +7,7 @@ const { recognizeAction } = require(root + 'recognizeAction.ts')
 const { explicitAction } = require(root + 'explicitAction.ts')
 const { normalizePattern } = require(root + 'normalizePattern.ts')
 const { resolveTarget } = require(root + 'resolveTarget.ts')
+const { detectSpeechAct, extractEntities } = require(root + 'signals.ts')
 const { readBrowserContext, loadBrowserContext, saveBrowserContext } = require(
   root + 'context/browserContext.ts'
 )
@@ -119,6 +120,19 @@ test('normalization groups numeric variations without removing query/action sema
     'goi khach {time} ngay {day} thu {weekday}'
   )
   assert.notEqual(normalizePattern('Tìm bài 3'), normalizePattern('Thêm bài 3'))
+})
+
+test('speech acts and entities keep supplied context out of task mutations', async () => {
+  assert.equal(detectSpeechAct('CÃ³ nÃªn dá»i task nÃ y khÃ´ng?'), 'QUESTION')
+  assert.equal(detectSpeechAct('Van de day Nhat Anh nhe'), 'CONTEXT_SETTING')
+  assert.equal(extractEntities('Mai bai 3').date, 'tomorrow')
+  const output = await recognizeAction({
+    text: 'Mai bai 3', tasks: [], groups: [], context: ctx(),
+    parse: async () => { throw new Error('inform must not invoke semantic task parsing') },
+  })
+  assert.equal(output.intent.action, 'CHAT')
+  assert.equal(output.result.intent, 'INFORM')
+  assert.equal(output.result.action, undefined)
 })
 
 test('recognition is side effect free and explicit query beats personal prior', async () => {

@@ -8,6 +8,9 @@
 .ai-task-nav a[aria-current=page]{background:#e2f0e8;color:#17674f;font-weight:650}
 .ai-task-main{max-width:1180px;margin:0 auto;padding:26px 20px 40px}
 .ai-task-login{max-width:640px;margin:50px auto;text-align:center}.ai-task-login>svg{margin:10px auto 22px;color:#17705d}.ai-task-login h1{font-size:28px;margin-bottom:18px}.ai-task-login p{line-height:1.7}
+/* demo.css styles every button in the shell with a white background. Restore
+   the AuthMenu sign-in CTA in the AI Task green palette. */
+.ai-task-shell button.bg-pink-500{background:#17705d;border-color:#17705d;color:#fff;box-shadow:0 1px 2px #17362c33}.ai-task-shell button.bg-pink-500:hover:not(:disabled){background:#106252;border-color:#106252}.ai-task-shell button.bg-pink-500:focus-visible{outline:3px solid #7fd1bd;outline-offset:3px}
 .ai-task-chat{max-width:900px;margin:auto}.ai-task-chat .demo-chat-messages{height:calc(100dvh - 360px);min-height:360px;max-height:850px}.ai-task-chat .demo-chat-input textarea{overflow-y:auto}.ai-task-chat .demo-chat-hint{color:#64786d}
 .ai-task-chat .ai-task-chat-heading{position:relative;flex-direction:row;align-items:center;justify-content:space-between;gap:16px}
 .ai-task-memory{margin-left:auto;flex-shrink:0;font-size:12px;color:#64786d}

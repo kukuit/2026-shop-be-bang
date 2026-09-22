@@ -11,6 +11,9 @@ import {
 } from './types'
 import { actionRecognitionPrompt } from './prompts/actionRecognitionPrompt'
 import { resolveTarget } from './resolveTarget'
+import { conversationalIntent, detectSpeechAct, extractEntities } from './signals'
+
+export const confidencePolicy = { execute: 0.9, confirm: 0.65, clarify: 0.4 } as const
 
 export function actionFromIntent(intent: Intent): TaskAction {
   if (intent.action === 'GET_TASKS') return intent.filters?.query ? 'task.search' : 'task.list'
@@ -71,7 +74,17 @@ export async function recognizeAction(input: {
   ): Promise<Intent | Conversation>
   now?: Date
 }): Promise<{ result?: ActionRecognitionResult; intent: Intent | Conversation }> {
+  const entities = extractEntities(input.text)
+  const speechAct = detectSpeechAct(input.text)
   const explicit = input.correctedAction || explicitAction(input.text)
+  const conversational = !explicit && conversationalIntent(input.text, speechAct, entities)
+  // A fact/topic is useful context, but never an implicit task mutation.
+  if (conversational) {
+    return {
+      intent: { action: 'CHAT', reply: conversational === 'SET_CONTEXT' ? 'Mình đã ghi nhận chủ đề này. Bạn muốn mình làm gì tiếp theo?' : conversational === 'INFORM' ? 'Mình đã ghi nhận thông tin này.' : 'Mình chưa đủ thông tin để thực hiện thao tác. Bạn muốn tạo, sửa hay tìm công việc nào?' },
+      result: { intent: conversational, speechAct, confidence: conversational === 'INFORM' ? 0.78 : 0.52, source: 'default', requiresConfirmation: false, entities, decision: conversational === 'INFORM' ? 'converse' : 'clarify', payload: {} },
+    }
+  }
   const prior =
     !explicit &&
     !/[?]|\b(?:khong|dung|tim|doi|xoa|huy)\b/.test(normalizedText(input.text)) &&
@@ -108,6 +121,9 @@ export async function recognizeAction(input: {
     recognitionHint: actionRecognitionPrompt(preferred),
   })
   if (intent.action === 'CHAT') return { intent }
+  // Questions may contain verbs such as "dời" but are not a request to mutate.
+  if (speechAct === 'QUESTION' && !explicit)
+    return { intent: { action: 'CHAT', reply: 'Mình hiểu đây là câu hỏi, nên chưa thay đổi công việc nào. Bạn có muốn mình đề xuất phương án không?' }, result: { intent: 'UNKNOWN', speechAct, confidence: 0.7, source: 'default', requiresConfirmation: false, entities, decision: 'converse', payload: {} } }
   // Explicit commands beat both model defaults and learned priors. Subtask creation remains intact.
   if (
     preferred &&
@@ -132,7 +148,10 @@ export async function recognizeAction(input: {
       return { intent: { action: 'CHAT', reply: 'Bạn nói rõ phần muốn thay đổi giúp mình nhé.' } }
     intent = parsed.data
   }
-  const action = preferred || actionFromIntent(intent)
+  const semanticAction = actionFromIntent(intent)
+  // Explicit > learned memory > semantic parser.  The parser is one candidate,
+  // never the only signal used for a mutation.
+  const action = preferred || semanticAction
   const target = intent.target
     ? resolveTarget(intent.target.query, input.context, input.tasks)
     : undefined
@@ -145,14 +164,21 @@ export async function recognizeAction(input: {
         : 'default'
   const confidence = Math.min(
     0.98,
-    (explicit ? 0.9 : source === 'context' ? 0.8 : 0.62) +
+    // A semantic parse is only a proposal (the existing confirmation UI still
+    // guards mutations); explicit commands and resolved context add certainty.
+    (explicit ? 0.9 : source === 'context' ? 0.8 : 0.7) +
       (target?.task ? 0.04 : 0) +
       (prior ? 0.18 * prior.confidence : 0)
   )
+  const decision = confidence >= confidencePolicy.execute ? 'execute' : confidence >= confidencePolicy.confirm ? 'confirm_interpretation' : confidence >= confidencePolicy.clarify ? 'clarify' : 'converse'
+  if (decision === 'clarify' && actionDefinitions[action].mutation && !target?.task && action !== 'task.create')
+    return { intent: { action: 'CHAT', reply: 'Bạn muốn thao tác với công việc nào? Nói giúp mình tên công việc nhé.' }, result: { intent: action, speechAct, confidence, source, requiresConfirmation: false, entities, decision, payload: { ...(intent.changes || intent.data || intent.filters || {}) } } }
   return {
     intent,
     result: {
       action,
+      intent: action,
+      speechAct,
       confidence,
       source,
       requiresConfirmation: actionDefinitions[action].mutation,
@@ -165,6 +191,8 @@ export async function recognizeAction(input: {
           }
         : {}),
       payload: { ...(intent.changes || intent.data || intent.filters || {}) },
+      entities,
+      decision,
     },
   }
 }

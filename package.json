@@ -10,7 +10,7 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:deploy": "prisma migrate deploy",
-    "vercel-build": "prisma generate && prisma migrate deploy && next build",
+    "vercel-build": "prisma generate && next build",
     "typecheck": "tsc --noEmit",
     "build:local": "prisma generate && npm run typecheck && next build",
     "start:local": "NODE_ENV=production next start -p 3000",
