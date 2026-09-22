@@ -32,12 +32,21 @@ export function useBrowserContext(uid?: string) {
       ...previous,
       updatedAt: Date.now(),
       lastMessageId: reply.id,
-      ...(reply.recognition ? { lastAction: reply.recognition.result.action } : {}),
+      ...(reply.recognition?.result.action ? { lastAction: reply.recognition.result.action } : {}),
+      ...(reply.recognition ? {
+        previousIntent: reply.recognition.result.intent,
+        pendingIntent: reply.recognition.result.decision === 'confirm_interpretation' ? reply.recognition.result.intent : undefined,
+        pendingEntities: reply.recognition.result.entities,
+        recentTurns: [...(previous.recentTurns || []), { text: reply.recognition.originalText.slice(0, 500), intent: reply.recognition.result.intent, at: Date.now() }].slice(-8),
+        ...(reply.recognition.result.entities?.person ? { activePerson: reply.recognition.result.entities.person } : {}),
+        ...(reply.recognition.result.entities?.project ? { activeProject: reply.recognition.result.entities.project } : {}),
+        ...(reply.recognition.result.speechAct === 'CONTEXT_SETTING' ? { activeTopic: reply.recognition.originalText, activePerson: reply.recognition.result.entities?.person } : {}),
+      } : {}),
       ...(reply.intent?.filters ? { lastQuery: reply.intent.filters } : {}),
       ...(ids
         ? { lastTaskIds: ids.slice(0, 30), lastTaskId: ids.length === 1 ? ids[0] : undefined }
         : {}),
-      ...(taskId ? { lastTaskId: taskId, lastTaskIds: [taskId] } : {}),
+      ...(taskId ? { lastTaskId: taskId, activeTaskId: taskId, lastTaskIds: [taskId], recentMentionedTaskIds: [taskId, ...(previous.recentMentionedTaskIds || [])].slice(0, 30) } : {}),
       ...(reply.proposal
         ? {
             lastGroupId: reply.proposal.data.groupId,

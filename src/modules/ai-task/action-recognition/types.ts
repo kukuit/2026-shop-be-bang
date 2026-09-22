@@ -15,13 +15,28 @@ export const actionDefinitions = {
   'task.restore': { mutation: true },
 } as const
 export type TaskAction = keyof typeof actionDefinitions
+/** These are conversational intents, not task mutations.  Keep them outside the
+ * legacy task Action schema so existing task persistence stays unchanged. */
+export type ConversationalIntent = 'SET_CONTEXT' | 'INFORM' | 'REFERENCE' | 'UNKNOWN'
+export type RecognitionIntent = TaskAction | ConversationalIntent
+export type SpeechAct = 'COMMAND' | 'INFORM' | 'QUESTION' | 'CORRECTION' | 'CONFIRMATION' | 'REJECTION' | 'CONTEXT_SETTING'
+export type ExtractedEntities = {
+  taskName?: string; person?: string; project?: string; group?: string; parent?: string
+  date?: string; time?: string; duration?: number; priority?: 'urgent' | 'normal' | 'low'
+  progress?: number; note?: string; reference?: string
+}
 export interface ActionRecognitionResult {
-  action: TaskAction
+  /** Present only when a task action has passed the decision policy. */
+  action?: TaskAction
+  intent: RecognitionIntent
+  speechAct: SpeechAct
   confidence: number
   target?: { taskId?: string; reference?: string }
   payload?: Record<string, unknown>
   source: 'explicit' | 'context' | 'personal_memory' | 'default'
   requiresConfirmation: boolean
+  entities?: ExtractedEntities
+  decision: 'execute' | 'confirm_interpretation' | 'clarify' | 'converse'
   assistantMessage?: string
 }
 export interface AssistantBrowserContext {
@@ -31,14 +46,30 @@ export interface AssistantBrowserContext {
   lastGroupId?: string
   lastParentId?: string | null
   lastQuery?: Record<string, unknown>
+  activeTopic?: string
+  activeTaskId?: string
+  activeParentId?: string | null
+  activeGroupId?: string
+  activePerson?: string
+  activeProject?: string
+  previousIntent?: RecognitionIntent
+  pendingIntent?: RecognitionIntent
+  pendingEntities?: ExtractedEntities
+  recentMentionedTaskIds?: string[]
+  recentTurns?: { text: string; intent?: RecognitionIntent; at: number }[]
   lastMessageId?: string
   updatedAt: number
 }
 export interface PersonalIntentPattern {
   id: string
   pattern: string
-  preferredAction: TaskAction
-  scores: Partial<Record<TaskAction, number>>
+  preferredAction?: TaskAction
+  intent?: RecognitionIntent
+  speechAct?: SpeechAct
+  entityMapping?: Partial<ExtractedEntities>
+  confirmedCount?: number
+  correctedCount?: number
+  scores: Partial<Record<RecognitionIntent, number>>
   examples: string[]
   confidence: number
   source: 'user_correction' | 'confirmed_action' | 'manual'

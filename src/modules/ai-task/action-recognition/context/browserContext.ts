@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { actionDefinitions, type AssistantBrowserContext, type TaskAction } from '../types'
+import { actionDefinitions, type AssistantBrowserContext, type RecognitionIntent, type TaskAction } from '../types'
 const id = z.string().regex(/^[a-zA-Z0-9_-]{1,150}$/)
 export const browserContextSchema = z
   .object({
@@ -16,6 +16,17 @@ export const browserContextSchema = z
     lastQuery: z
       .record(z.string().max(80), z.union([z.string().max(250), z.boolean(), z.number(), z.null()]))
       .optional(),
+    activeTopic: z.string().max(250).optional(),
+    activeTaskId: id.optional(),
+    activeParentId: id.nullable().optional(),
+    activeGroupId: id.optional(),
+    activePerson: z.string().max(120).optional(),
+    activeProject: z.string().max(120).optional(),
+    previousIntent: z.string().max(40).optional() as z.ZodType<RecognitionIntent | undefined>,
+    pendingIntent: z.string().max(40).optional() as z.ZodType<RecognitionIntent | undefined>,
+    pendingEntities: z.record(z.string().max(40), z.union([z.string().max(250), z.number(), z.null()])).optional(),
+    recentMentionedTaskIds: z.array(id).max(30).optional(),
+    recentTurns: z.array(z.object({ text: z.string().max(500), intent: z.string().max(40).optional() as z.ZodType<RecognitionIntent | undefined>, at: z.number().finite() }).strict()).max(8).optional(),
     updatedAt: z.number().finite(),
   })
   .strict()
