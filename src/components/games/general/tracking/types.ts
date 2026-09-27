@@ -30,6 +30,10 @@ export interface CompletedGameSession {
   duration: number
   startedAt: number
   results: GameQuestionResult[]
+  bubbleSurvival?: { levelReached: number; levelsCompleted: number; livesRemaining: number }
+  dragDropSurvival?: { levelReached: number; levelsCompleted: number; livesRemaining: number }
+  goldMinerSurvival?: { levelReached: number; levelsCompleted: number; livesRemaining: number }
+  racingSurvival?: { levelReached: number; levelsCompleted: number; livesRemaining: number }
 }
 
 export type LearningKeyProgress = {

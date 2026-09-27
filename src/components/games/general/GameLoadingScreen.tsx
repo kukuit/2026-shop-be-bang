@@ -2,7 +2,7 @@
 
 import { motion } from 'framer-motion'
 import Image from 'next/image'
-import { Play, Pointer, Sparkles } from 'lucide-react'
+import { Play, Pointer } from 'lucide-react'
 import { KeyboardEvent, PointerEvent, useRef, useState } from 'react'
 
 type GameLoadingScreenProps = {
@@ -64,33 +64,26 @@ export default function GameLoadingScreen({
       onPointerDown={handlePointerDown}
       onKeyDown={handleKeyDown}
     >
-      <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
-        <motion.div animate={{ x: [-8, 10, -8] }} transition={{ duration: 12, repeat: Infinity, ease: 'easeInOut' }} className="absolute left-[7%] top-[10%] h-9 w-24 rounded-full bg-white/35 shadow-[28px_5px_0_-5px_rgba(255,255,255,0.35),-18px_8px_0_-8px_rgba(255,255,255,0.3)]" />
-        <motion.div animate={{ x: [8, -12, 8] }} transition={{ duration: 15, repeat: Infinity, ease: 'easeInOut' }} className="absolute right-[8%] top-[20%] h-7 w-20 rounded-full bg-white/30 shadow-[22px_4px_0_-5px_rgba(255,255,255,0.3),-15px_7px_0_-7px_rgba(255,255,255,0.25)]" />
-        <Sparkles className="absolute bottom-[15%] left-[12%] h-8 w-8 animate-pulse text-white/40" />
-        <Sparkles className="absolute right-[13%] top-[48%] h-6 w-6 animate-pulse text-amber-200/55 [animation-delay:700ms]" />
-        <div className="absolute bottom-[9%] right-[20%] h-4 w-4 animate-pulse rounded-full bg-white/25 [animation-delay:350ms]" />
-      </div>
-
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="pointer-events-none absolute inset-0 z-10 overflow-hidden" aria-hidden="true">
+      {/* Paused loading-screen cloud, sparkle, and character motion effects can be restored here later. */}
+      <div className="pointer-events-none absolute inset-0 z-10 overflow-hidden" aria-hidden="true">
           <div className="absolute left-1/2 top-[15%] h-[38%] w-[88%] max-w-sm -translate-x-1/2">
-            <motion.div animate={{ y: [0, -5, 0] }} transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }} className="relative h-full w-full">
+            <div className="relative h-full w-full">
               <div className="absolute bottom-0 left-1/2 z-0 w-[58%] -translate-x-1/2">
-                <motion.div animate={{ y: [0, -5, 0], rotate: [-0.8, 0.8, -0.8] }} transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}>
+                <div>
                   <Image src="/games/general/images/optimize/ready-avatar.png" alt="" width={1103} height={1426} sizes="223px" priority className="h-auto w-full drop-shadow-[0_14px_18px_rgba(15,80,120,0.2)]" />
-                </motion.div>
+                </div>
               </div>
               <div className="absolute bottom-0 left-[2%] z-10 w-[34.4%]">
-                <motion.div animate={{ y: [0, 5, 0], rotate: [-2, 1.5, -2] }} transition={{ duration: 2.1, repeat: Infinity, ease: 'easeInOut' }}>
+                <div>
                   <Image src="/games/general/images/optimize/ready-cappy.png" alt="" width={1149} height={1369} sizes="132px" priority className="h-auto w-full drop-shadow-[0_12px_16px_rgba(15,80,120,0.2)]" />
-                </motion.div>
+                </div>
               </div>
               <div className="absolute bottom-0 right-[2%] z-10 w-[33.6%]">
-                <motion.div animate={{ y: [4, -4, 4], rotate: [2, -1.5, 2] }} transition={{ duration: 1.9, repeat: Infinity, ease: 'easeInOut' }}>
+                <div>
                   <Image src="/games/general/images/optimize/ready-wolf.png" alt="" width={1177} height={1337} sizes="129px" priority className="h-auto w-full drop-shadow-[0_12px_16px_rgba(15,80,120,0.2)]" />
-                </motion.div>
+                </div>
               </div>
-            </motion.div>
+            </div>
           </div>
 
           {ready && (
@@ -104,7 +97,7 @@ export default function GameLoadingScreen({
             </motion.div>
           </div>
           )}
-        </motion.div>
+        </div>
 
       {!ready && <div className="absolute left-1/2 top-[60%] z-20 flex w-full max-w-sm -translate-x-1/2 -translate-y-1/2 flex-col items-center">
         <div className="flex w-full items-start justify-center">

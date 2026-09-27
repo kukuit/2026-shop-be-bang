@@ -11,7 +11,14 @@ const shuffle = <T,>(items: T[]) => {
 export class QuestionSystem {
   private index = 0
 
-  constructor(private readonly questions: MathQuestion[]) {}
+  constructor(private questions: MathQuestion[]) {}
+
+  get exhausted() { return this.index >= this.questions.length }
+
+  refill(questions: MathQuestion[]) {
+    this.questions = questions
+    this.index = 0
+  }
 
   next(): MathQuestion {
     if (this.questions.length) {
