@@ -2,6 +2,7 @@ import * as Phaser from 'phaser'
 import { BUBBLE_COLORS, BUBBLE_CONFIG } from '../config/bubble'
 import { Bubble, type BubbleMovement } from '../objects/Bubble'
 import type { MathQuestion } from '../types/game'
+import { speedMultiplier } from './survival'
 
 interface BubbleSpawnerOptions {
   width: number
@@ -16,15 +17,17 @@ export class BubbleSpawner {
   private lastSpawnLane = -1
   private spawnedCount = 0
   private correctSpawnOrder: number = BUBBLE_CONFIG.correctSpawnOrderMin
+  private level = 1
 
   constructor(
     private readonly scene: Phaser.Scene,
     private readonly options: BubbleSpawnerOptions,
   ) {}
 
-  start(question: MathQuestion) {
+  start(question: MathQuestion, level = 1) {
     this.stopTimer()
     this.question = question
+    this.level = level
     this.lastSpawnLane = -1
     this.spawnedCount = 0
     this.correctSpawnOrder = Phaser.Math.Between(
@@ -84,7 +87,7 @@ export class BubbleSpawner {
 
     const movement: BubbleMovement = {
       radius,
-      verticalSpeed: Phaser.Utils.Array.GetRandom([...BUBBLE_CONFIG.speedLevels]),
+      verticalSpeed: Phaser.Utils.Array.GetRandom([...BUBBLE_CONFIG.speedLevels]) * speedMultiplier(this.level),
       horizontalAmplitude: amplitude,
       horizontalFrequency: Phaser.Math.FloatBetween(BUBBLE_CONFIG.frequencyMin, BUBBLE_CONFIG.frequencyMax),
       phase: Phaser.Math.FloatBetween(0, Math.PI * 2),

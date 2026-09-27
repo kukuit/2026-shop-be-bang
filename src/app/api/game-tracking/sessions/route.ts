@@ -15,6 +15,7 @@ import { rejectCrossSiteMutation } from '@/lib/auth/request-security'
 import { gameSessionRef } from '@/lib/gameTrackingPaths'
 import { subjectProgressRef } from '@/lib/game-progress/paths'
 import { getSubjectLessons } from '@/lib/game-progress/config'
+import { survivalBaseCoinEarned as baseCoinEarned, survivalRewardMultiplier as rewardMultiplier } from '@/components/games/general/survival-rewards'
 import { buildSubjectProgress, summarizeLesson, type SubjectProgress } from '@/lib/game-progress/model'
 
 export const runtime = 'nodejs'
@@ -34,6 +35,11 @@ const resultSchema = z.object({
   skill: z.enum(['listening', 'reading', 'speaking', 'writing']).optional(),
   inputMode: z.enum(['audio', 'text', 'image', 'scene']).optional(),
   answerMode: z.enum(['select-image', 'select-text', 'drag-image', 'drag-text', 'speak']).optional(),
+})
+const survivalSchema = z.object({
+  levelReached: z.number().int().min(1).max(25),
+  levelsCompleted: z.number().int().min(0).max(25),
+  livesRemaining: z.number().int().min(0).max(3),
 })
 
 const sessionSchema = z
@@ -57,6 +63,10 @@ const sessionSchema = z
       .max(24 * 60 * 60 * 1000),
     startedAt: z.number().int().positive(),
     results: z.array(resultSchema).max(1000),
+    bubbleSurvival: survivalSchema.optional(),
+    dragDropSurvival: survivalSchema.optional(),
+    goldMinerSurvival: survivalSchema.optional(),
+    racingSurvival: survivalSchema.optional(),
   })
   .superRefine((session, context) => {
     const correctCount = session.results.filter((result) => result.correct).length
@@ -80,6 +90,33 @@ const sessionSchema = z
         message: 'Does not match results',
       })
     const lesson = getLessonDefinition(session.lessonId)
+    if (session.bubbleSurvival && session.gameId !== GAME_IDS.BUBBLE_SHOOTER) context.addIssue({ code: z.ZodIssueCode.custom, path: ['bubbleSurvival'], message: 'Only bubble shooter supports survival data' })
+    if (session.bubbleSurvival) {
+      const { levelReached, levelsCompleted, livesRemaining } = session.bubbleSurvival
+      if (levelsCompleted !== (levelReached === 25 && livesRemaining > 0 ? 25 : levelReached - 1)) context.addIssue({ code: z.ZodIssueCode.custom, path: ['bubbleSurvival', 'levelsCompleted'], message: 'Invalid completed level count' })
+      if (session.correctCount < levelsCompleted) context.addIssue({ code: z.ZodIssueCode.custom, path: ['bubbleSurvival'], message: 'Completed levels exceed correct answers' })
+      if (session.wrongCount < 3 - livesRemaining) context.addIssue({ code: z.ZodIssueCode.custom, path: ['bubbleSurvival'], message: 'Lives do not match wrong answers' })
+    }
+    if (session.dragDropSurvival && session.gameId !== GAME_IDS.DRAG_DROP) context.addIssue({ code: z.ZodIssueCode.custom, path: ['dragDropSurvival'], message: 'Only drag-drop supports this survival data' })
+    if (session.dragDropSurvival) {
+      const { levelReached, levelsCompleted, livesRemaining } = session.dragDropSurvival
+      if (levelsCompleted !== (levelReached === 25 && livesRemaining > 0 ? 25 : levelReached - 1)) context.addIssue({ code: z.ZodIssueCode.custom, path: ['dragDropSurvival', 'levelsCompleted'], message: 'Invalid completed level count' })
+      if (session.correctCount < levelsCompleted) context.addIssue({ code: z.ZodIssueCode.custom, path: ['dragDropSurvival'], message: 'Completed levels exceed correct answers' })
+      if (session.wrongCount < 3 - livesRemaining) context.addIssue({ code: z.ZodIssueCode.custom, path: ['dragDropSurvival'], message: 'Lives do not match wrong answers' })
+    }
+    if (session.goldMinerSurvival && session.gameId !== GAME_IDS.GOLD_MINING) context.addIssue({ code: z.ZodIssueCode.custom, path: ['goldMinerSurvival'], message: 'Only gold mining supports this survival data' })
+    if (session.goldMinerSurvival) {
+      const { levelReached, levelsCompleted, livesRemaining } = session.goldMinerSurvival
+      if (levelsCompleted !== (levelReached === 25 && livesRemaining > 0 ? 25 : levelReached - 1)) context.addIssue({ code: z.ZodIssueCode.custom, path: ['goldMinerSurvival', 'levelsCompleted'], message: 'Invalid completed level count' })
+      if (session.correctCount < levelsCompleted) context.addIssue({ code: z.ZodIssueCode.custom, path: ['goldMinerSurvival'], message: 'Completed levels exceed correct answers' })
+      if (session.wrongCount < 3 - livesRemaining) context.addIssue({ code: z.ZodIssueCode.custom, path: ['goldMinerSurvival'], message: 'Lives do not match wrong answers' })
+    }
+    if (session.racingSurvival && session.gameId !== GAME_IDS.RACING) context.addIssue({ code: z.ZodIssueCode.custom, path: ['racingSurvival'], message: 'Only racing supports this survival data' })
+    if (session.racingSurvival) {
+      const { levelReached, levelsCompleted } = session.racingSurvival
+      if (levelsCompleted !== (levelReached === 25 && session.racingSurvival.livesRemaining > 0 ? 25 : levelReached - 1)) context.addIssue({ code: z.ZodIssueCode.custom, path: ['racingSurvival', 'levelsCompleted'], message: 'Invalid completed level count' })
+      if (session.correctCount < levelsCompleted) context.addIssue({ code: z.ZodIssueCode.custom, path: ['racingSurvival'], message: 'Completed levels exceed correct answers' })
+    }
     if (!lesson) return
     session.results.forEach((result, index) => {
       if (!isLearningKeyForLesson(session.lessonId, result.learningKey)) {
@@ -131,6 +168,15 @@ export async function POST(request: Request) {
       userId: user?.id,
       guestId: guestId ?? undefined,
     })
+    const survival = session.bubbleSurvival ?? session.dragDropSurvival ?? session.goldMinerSurvival ?? session.racingSurvival
+    const survivalCollection = session.bubbleSurvival ? 'bubble_survival' : session.dragDropSurvival ? 'drag_drop_survival' : session.goldMinerSurvival ? 'gold_mining_survival' : 'racing_survival'
+    const survivalField = session.bubbleSurvival ? 'bubbleSurvival' : session.dragDropSurvival ? 'dragDropSurvival' : session.goldMinerSurvival ? 'goldMinerSurvival' : 'racingSurvival'
+    const survivalRef = survival
+      ? db.collection('shopbebangcom').doc('game').collection(survivalCollection).doc(`${user?.id ?? guestId}_${session.lessonId}`)
+      : null
+    const walletRef = survival
+      ? db.collection('shopbebangcom').doc('game').collection('coin_wallets').doc(user?.id ?? guestId!)
+      : null
     const progressId = user ? `${user.id}_${session.lessonId}` : null
     const progressRef = progressId
       ? db.collection('shopbebangcom').doc('game').collection('learning_progress').doc(progressId)
@@ -147,6 +193,17 @@ export async function POST(request: Request) {
       const progressSnapshot =
         progressRef && progressUserId ? await transaction.get(progressRef) : null
       const subjectSnapshot = subjectRef ? await transaction.get(subjectRef) : null
+      const survivalSnapshot = survivalRef ? await transaction.get(survivalRef) : null
+      const walletSnapshot = walletRef ? await transaction.get(walletRef) : null
+      const oldSurvival = survivalSnapshot?.data()
+      const playCount = (oldSurvival?.playCount ?? 0) + 1
+      const legacyBestLevel = oldSurvival?.bestLevelCompleted ?? (oldSurvival?.bestLevel
+        ? oldSurvival.bestLevel === 25 ? 25 : Math.max(0, oldSurvival.bestLevel - 1)
+        : 0)
+      const bestLevel = Math.max(legacyBestLevel, survival?.levelsCompleted ?? 0)
+      const baseCoin = survival ? baseCoinEarned(survival.levelsCompleted) : 0
+      const multiplier = rewardMultiplier(playCount)
+      const finalCoin = Math.round(baseCoin * multiplier)
       const existingKeys = (progressSnapshot?.data()?.keys ?? {}) as Record<
         string,
         Partial<Aggregate>
@@ -183,6 +240,7 @@ export async function POST(request: Request) {
 
       transaction.create(sessionRef, {
         ...session,
+        ...(survival ? { [survivalField]: { ...survival, bestLevel, bestLevelCompleted: bestLevel, playCount, baseCoinEarned: baseCoin, rewardMultiplier: multiplier, finalCoinEarned: finalCoin } } : {}),
         userId: user?.id ?? null,
         guestId,
         isGuest: !user,
@@ -191,12 +249,18 @@ export async function POST(request: Request) {
         startedAt: Timestamp.fromMillis(session.startedAt),
         completedAt: FieldValue.serverTimestamp(),
       })
+      if (survivalRef) transaction.set(survivalRef, {
+        userId: user?.id ?? null, guestId, lessonId: session.lessonId, gameId: session.gameId,
+        bestLevel, bestLevelCompleted: bestLevel, playCount,
+        updatedAt: FieldValue.serverTimestamp(),
+      })
+      if (walletRef) transaction.set(walletRef, { balance: (walletSnapshot?.data()?.balance ?? 0) + finalCoin, updatedAt: FieldValue.serverTimestamp() })
       if (progressRef && progressSnapshot && progressUserId) {
         const games = {
           ...(progressSnapshot.data()?.games ?? {}),
-          [session.gameId]: {
+          ...(!survival || survival.levelsCompleted === 25 ? { [session.gameId]: {
             completedAt: progressSnapshot.data()?.games?.[session.gameId]?.completedAt ?? FieldValue.serverTimestamp(),
-          },
+          } } : {}),
         }
         transaction.set(progressRef, {
           userId: progressUserId,

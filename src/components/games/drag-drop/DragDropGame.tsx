@@ -1,7 +1,7 @@
 'use client'
 
 import { PointerEvent as ReactPointerEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { GameCompletion, GameLoadingScreen, GameShell, preloadAssets, useBackgroundMusic } from '../general'
+import { GameLoadingScreen, GameShell, preloadAssets, useBackgroundMusic } from '../general'
 import { GAME_BACKGROUND_MUSIC } from '../general/audio'
 import { NUMBER_COLORS } from './levels'
 import type { CountGroup, DragAnswerValue, DragDropGameConfig, DragDropLevel, NumberValue, SequenceCell } from './types'
@@ -16,6 +16,9 @@ import CappyCompanion, { type CappyReaction } from './CappyCompanion'
 import WolfCompanion from './WolfCompanion'
 import FittedTileContent from './FittedTileContent'
 import { resolveIntroVoice } from '../general/intro-voice'
+import DragDropCompletion from './DragDropCompletion'
+import { MAX_SURVIVAL_LEVEL, MAX_SURVIVAL_LIVES, MAX_SURVIVAL_LIFE_RECOVERIES, survivalBaseCoinEarned, survivalRewardMultiplier } from '../general/survival-rewards'
+import Image from 'next/image'
 
 type DragState = { value: DragAnswerValue; x: number; y: number; pointerId: number } | null
 type FloatingScore = { id: number; x: number; y: number; value: '+10' | '-2' | '0'; correct: boolean } | null
@@ -35,13 +38,12 @@ const shuffleNumbers = (domain: readonly DragAnswerValue[]) => {
 }
 
 const createWolfRounds = () => {
-  // Round 9 needs all six values, so there is no wrong tile for the wolf to steal.
-  const eligibleRounds = [2, 3, 4, 5, 6, 7, 9]
+  const eligibleRounds = Array.from({ length: MAX_SURVIVAL_LEVEL - 2 }, (_, index) => index + 2)
   for (let index = eligibleRounds.length - 1; index > 0; index -= 1) {
     const swapIndex = Math.floor(Math.random() * (index + 1))
     ;[eligibleRounds[index], eligibleRounds[swapIndex]] = [eligibleRounds[swapIndex], eligibleRounds[index]]
   }
-  return new Set(eligibleRounds.slice(0, 4))
+  return new Set(eligibleRounds.slice(0, 8))
 }
 const TRUE_VOICES = ['voice-true-1', 'voice-true-2', 'voice-true-3', 'voice-true-4', 'voice-true-5']
 const FALSE_VOICES = ['voice-false-1', 'voice-false-2', 'voice-false-3', 'voice-false-4', 'voice-false-5']
@@ -74,12 +76,21 @@ function ReadyDragDropGame({ config }: { config: DragDropGameConfig }) {
   const targetStartedAtRef = useRef<Record<string, number>>({})
   const targetAttemptsRef = useRef<Record<string, number>>({})
   const [currentLevel, setCurrentLevel] = useState(0)
-  const [levels, setLevels] = useState(config.initialLevels)
+  const [levels, setLevels] = useState(config.initialLevels.slice(0, MAX_SURVIVAL_LEVEL).map((item, index) => ({ ...item, id: index + 1 })))
   const [score, setScore] = useState(0)
   const [completedTargets, setCompletedTargets] = useState<Record<string, DragAnswerValue>>({})
   const [isTransitioning, setIsTransitioning] = useState(false)
   const [soundEnabled, setSoundEnabled] = useState(true)
   const [gameCompleted, setGameCompleted] = useState(false)
+  const [gameVictory, setGameVictory] = useState(false)
+  const [lives, setLives] = useState(MAX_SURVIVAL_LIVES)
+  const livesRef = useRef(MAX_SURVIVAL_LIVES)
+  const correctStreakRef = useRef(0)
+  const lifeRecoveriesRef = useRef(0)
+  const [bestLevel, setBestLevel] = useState(0)
+  const [playCount, setPlayCount] = useState(0)
+  const [coinBalance, setCoinBalance] = useState(0)
+  const [rewardToast, setRewardToast] = useState(0)
   const [trackingTask, setTrackingTask] = useState<Promise<unknown>>()
   const [gamePaused, setGamePaused] = useState(false)
   const [isReady, setIsReady] = useState(false)
@@ -120,6 +131,14 @@ function ReadyDragDropGame({ config }: { config: DragDropGameConfig }) {
     : SHARED_DRAG_DROP_VOICES, [config.introVoice])
   const voices = useGameVoices(voiceAssets, soundEnabled)
   const [voiceBusy, setVoiceBusy] = useState(false)
+  useEffect(() => {
+    let active = true
+    fetch(`/api/game-tracking/drag-drop-survival?lessonId=${encodeURIComponent(config.lessonId)}`)
+      .then(response => response.ok ? response.json() : null)
+      .then(data => { if (active && data) { setBestLevel(data.bestLevel ?? 0); setPlayCount(data.playCount ?? 0); setCoinBalance(data.coinBalance ?? 0) } })
+      .catch(() => {})
+    return () => { active = false }
+  }, [config.lessonId])
   useEffect(() => voices.channel.subscribe((busy) => {
     if (busy && 'speechSynthesis' in window) window.speechSynthesis.cancel()
     setVoiceBusy(busy)
@@ -192,7 +211,7 @@ function ReadyDragDropGame({ config }: { config: DragDropGameConfig }) {
       if (!cancelled) setLoadProgress(progress)
     })
     void Promise.all([adaptiveLevels, assets]).then(([nextLevels]) => {
-      if (!cancelled) { setLevels(nextLevels); setIsReady(true) }
+      if (!cancelled) { setLevels(nextLevels.slice(0, MAX_SURVIVAL_LEVEL).map((item, index) => ({ ...item, id: index + 1 }))); setIsReady(true) }
     })
     return () => { cancelled = true }
   }, [config, voiceAssets])
@@ -213,12 +232,27 @@ function ReadyDragDropGame({ config }: { config: DragDropGameConfig }) {
   }, [config.gameId, config.lessonId, level.answers])
 
   const restart = useCallback(() => {
+    if (gameStarted && !gameCompleted) {
+      const task = trackerRef.current?.finishSession(score, undefined, {
+        levelReached: Math.min(MAX_SURVIVAL_LEVEL, currentLevel + 1),
+        levelsCompleted: currentLevel,
+        livesRemaining: livesRef.current,
+      })
+      void task?.then(() => fetch(`/api/game-tracking/drag-drop-survival?lessonId=${encodeURIComponent(config.lessonId)}`))
+        .then(response => response?.ok ? response.json() : null)
+        .then(data => { if (data) { setBestLevel(data.bestLevel ?? 0); setPlayCount(data.playCount ?? 0); setCoinBalance(data.coinBalance ?? 0) } })
+        .catch(() => {})
+    } else if (gameCompleted) {
+      setPlayCount(count => count + 1)
+    }
     const reset = () => {
     questionVoiceRef.current?.stop()
     voices.reset()
     if (config.introVoice) voices.scheduleIntro('drag-intro')
     setCurrentLevel(0); setScore(0); setCompletedTargets({}); setIsTransitioning(false)
-    setGameCompleted(false); setGamePaused(false); setGameStarted(true); setDrag(null); setTrackingTask(undefined)
+    setLives(MAX_SURVIVAL_LIVES); livesRef.current = MAX_SURVIVAL_LIVES
+    correctStreakRef.current = 0; lifeRecoveriesRef.current = 0
+    setGameCompleted(false); setGameVictory(false); setGamePaused(false); setGameStarted(true); setDrag(null); setTrackingTask(undefined); setRewardToast(0)
     setCappyReaction(null)
     setStolenNumber(null)
     setWolfRounds(createWolfRounds())
@@ -228,17 +262,17 @@ function ReadyDragDropGame({ config }: { config: DragDropGameConfig }) {
       questionVoiceRef.current?.stop()
       setGameStarted(false)
       setIsTransitioning(true)
-      void Promise.resolve(config.loadLevels(levels)).then(next => { setLevels(next); reset() })
+      void Promise.resolve(config.loadLevels(levels)).then(next => { setLevels(next.slice(0, MAX_SURVIVAL_LEVEL).map((item, index) => ({ ...item, id: index + 1 }))); reset() })
     } else {
-      void Promise.resolve(config.loadLevels(levels)).then(setLevels)
+      void Promise.resolve(config.loadLevels(levels)).then(next => setLevels(next.slice(0, MAX_SURVIVAL_LEVEL).map((item, index) => ({ ...item, id: index + 1 }))))
       reset()
     }
-  }, [config, levels, startTracking, voices])
+  }, [config, currentLevel, gameCompleted, gameStarted, levels, score, startTracking, voices])
 
   const finishDrop = useCallback((clientX: number, clientY: number, value: DragAnswerValue) => {
     const target = document.elementFromPoint(clientX, clientY)?.closest<HTMLElement>('[data-target-id]')
     const targetId = target?.dataset.targetId
-    if (!targetId || completedTargets[targetId] !== undefined || isTransitioning) return setDrag(null)
+    if (!targetId || completedTargets[targetId] !== undefined || isTransitioning || gameCompleted) return setDrag(null)
     questionVoiceRef.current?.stop()
     const expectedAnswer = level.answers[targetId]
     const correct = expectedAnswer === value
@@ -251,6 +285,16 @@ function ReadyDragDropGame({ config }: { config: DragDropGameConfig }) {
     targetAttemptsRef.current[targetId] = attempt
     targetStartedAtRef.current[targetId] = Date.now()
     if (correct) {
+      if (livesRef.current < MAX_SURVIVAL_LIVES && lifeRecoveriesRef.current < MAX_SURVIVAL_LIFE_RECOVERIES) {
+        correctStreakRef.current += 1
+        if (correctStreakRef.current >= 3) {
+          const nextLives = Math.min(MAX_SURVIVAL_LIVES, livesRef.current + 1)
+          livesRef.current = nextLives
+          lifeRecoveriesRef.current += 1
+          correctStreakRef.current = 0
+          setLives(nextLives)
+        }
+      } else correctStreakRef.current = 0
       setCappyReaction({ id: Date.now(), type: 'correct' })
       voices.playEffect('drag-ting')
       voices.play(TRUE_VOICES[Math.floor(Math.random() * TRUE_VOICES.length)], 'true')
@@ -259,25 +303,44 @@ function ReadyDragDropGame({ config }: { config: DragDropGameConfig }) {
       setFloatingScore({ id: Date.now(), x: clientX, y: clientY, value: '+10', correct: true })
       window.setTimeout(() => setCorrectTarget(null), 500)
     } else {
+      correctStreakRef.current = 0
       setCappyReaction({ id: Date.now(), type: 'wrong' })
       voices.playEffect('drag-buzzer')
       voices.play(FALSE_VOICES[Math.floor(Math.random() * FALSE_VOICES.length)], 'false')
       setScore((current) => Math.max(0, current - 2))
       setWrongTarget(targetId)
       setFloatingScore({ id: Date.now(), x: clientX, y: clientY, value: score > 0 ? '-2' : '0', correct: false })
+      const nextLives = Math.max(0, livesRef.current - 1)
+      livesRef.current = nextLives
+      setLives(nextLives)
+      if (nextLives === 0) {
+        setGameVictory(false)
+        setGameCompleted(true)
+      }
       window.setTimeout(() => setWrongTarget(null), 450)
     }
     window.setTimeout(() => setFloatingScore(null), 700)
     setDrag(null)
-  }, [completedTargets, isTransitioning, level.answerModes, level.answers, level.inputModes, level.learningKeys, level.skills, score, voices])
+  }, [completedTargets, gameCompleted, isTransitioning, level.answerModes, level.answers, level.inputModes, level.learningKeys, level.skills, score, voices])
 
   useEffect(() => {
-    if (gameCompleted) setTrackingTask(() => trackerRef.current?.finishSession(score))
-  }, [gameCompleted, score])
+    if (gameCompleted) {
+      const levelReached = Math.min(MAX_SURVIVAL_LEVEL, currentLevel + 1)
+      const levelsCompleted = gameVictory ? MAX_SURVIVAL_LEVEL : currentLevel
+      const task = trackerRef.current?.finishSession(score, undefined, {
+        levelReached, levelsCompleted, livesRemaining: livesRef.current,
+      })
+      setTrackingTask(() => task)
+      void task?.then(() => fetch(`/api/game-tracking/drag-drop-survival?lessonId=${encodeURIComponent(config.lessonId)}`))
+        .then(response => response?.ok ? response.json() : null)
+        .then(data => { if (data) { setBestLevel(data.bestLevel ?? 0); setCoinBalance(data.coinBalance ?? 0) } })
+        .catch(() => {})
+    }
+  }, [config.lessonId, currentLevel, gameCompleted, gameVictory, score])
 
   useEffect(() => {
-    if (gameCompleted) voices.playOnce('win', 'voice-win', 'win')
-  }, [gameCompleted, voices])
+    if (gameCompleted && gameVictory) voices.playOnce('win', 'voice-win', 'win')
+  }, [gameCompleted, gameVictory, voices])
 
   useEffect(() => {
     const targetCount = Object.keys(level.answers).length
@@ -287,13 +350,46 @@ function ReadyDragDropGame({ config }: { config: DragDropGameConfig }) {
   }, [completedTargets, gamePaused, gameStarted, isTransitioning, level.answers])
 
   useEffect(() => {
-    if (!isTransitioning || gamePaused) return
+    if (!isTransitioning || gamePaused || gameCompleted) return
     const timer = window.setTimeout(() => {
-      if (currentLevel === levels.length - 1) setGameCompleted(true)
-      else { setCurrentLevel((current) => current + 1); setCompletedTargets({}); setIsTransitioning(false) }
+      const completedLevel = currentLevel + 1
+      if (completedLevel % 5 === 0) {
+        const milestoneReward = survivalBaseCoinEarned(completedLevel) - survivalBaseCoinEarned(completedLevel - 1)
+        setRewardToast(Math.round(milestoneReward * survivalRewardMultiplier(playCount + 1)))
+        window.setTimeout(() => setRewardToast(0), 1800)
+      }
+      if (completedLevel === MAX_SURVIVAL_LEVEL) {
+        setGameVictory(true)
+        setGameCompleted(true)
+        return
+      }
+      const advance = () => {
+        setCurrentLevel(current => current + 1)
+        setCompletedTargets({})
+        setIsTransitioning(false)
+      }
+      if (currentLevel < levels.length - 1) {
+        advance()
+        return
+      }
+      void Promise.resolve(config.loadLevels(levels)).then((batch) => {
+        const additions = batch.slice(0, MAX_SURVIVAL_LEVEL - levels.length)
+          .map((item, index) => ({ ...item, id: levels.length + index + 1 }))
+        if (!additions.length) {
+          setGameVictory(false)
+          setGameCompleted(true)
+          return
+        }
+        setLevels(previous => [...previous, ...additions].slice(0, MAX_SURVIVAL_LEVEL))
+        advance()
+      }).catch((error) => {
+        console.error('[DragDrop] Could not load the next level batch', error)
+        setGameVictory(false)
+        setGameCompleted(true)
+      })
     }, 1000)
     return () => window.clearTimeout(timer)
-  }, [currentLevel, gamePaused, isTransitioning, levels.length])
+  }, [config, currentLevel, gameCompleted, gamePaused, isTransitioning, levels, playCount])
 
   const beginDrag = (event: ReactPointerEvent, value: DragAnswerValue) => {
     if (!gameStarted || isTransitioning || gameCompleted) return
@@ -316,7 +412,7 @@ function ReadyDragDropGame({ config }: { config: DragDropGameConfig }) {
 
   return (
     <GameImagesProvider value={config.images}>
-    <GameShell score={score} currentRound={level.id} muted={!soundEnabled} onMutedChange={(muted) => setSoundEnabled(!muted)} onPauseChange={(paused) => { setGamePaused(paused); if (paused) setDrag(null) }} onRestart={restart}>
+    <GameShell score={score} currentRound={level.id} levelOnly lives={lives} coinBalance={coinBalance} muted={!soundEnabled} onMutedChange={(muted) => setSoundEnabled(!muted)} onPauseChange={(paused) => { setGamePaused(paused); if (paused) setDrag(null) }} onRestart={restart}>
       <GameLoadingScreen progress={loadProgress} ready={isReady} unlockAudio={startMusic} onStart={() => {
         startTracking(); setGameStarted(true)
         if (config.introVoice) voices.scheduleIntro('drag-intro')
@@ -339,12 +435,13 @@ function ReadyDragDropGame({ config }: { config: DragDropGameConfig }) {
             })}
           </div>
         </div>
-        <CappyCompanion active={gameStarted && !gamePaused} round={currentLevel} dragPosition={drag ? { x: drag.x, y: drag.y } : null} reaction={cappyReaction} celebrating={gameCompleted} finalRound={currentLevel === levels.length - 1} gameRef={gameAreaRef} trayRef={answerTrayRef} />
+        <CappyCompanion active={gameStarted && !gamePaused} round={currentLevel} dragPosition={drag ? { x: drag.x, y: drag.y } : null} reaction={cappyReaction} celebrating={gameCompleted && gameVictory} finalRound={currentLevel === MAX_SURVIVAL_LEVEL - 1} gameRef={gameAreaRef} trayRef={answerTrayRef} />
         <WolfCompanion active={gameStarted && !gamePaused && !isTransitioning && !gameCompleted && wolfRounds.has(currentLevel)} round={currentLevel} correctValues={wolfCorrectValues} dragActive={drag !== null} gameRef={gameAreaRef} trayRef={answerTrayRef} onSteal={handleWolfSteal} onLaugh={playWolfLaugh} answerDomain={answerDomain} colorFor={colorFor} />
         {drag && <div data-drag-answer className="pointer-events-none fixed z-[100] grid h-14 w-14 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-2xl border-[3px] border-white text-3xl font-black text-white shadow-2xl" style={{ left: drag.x, top: drag.y, backgroundColor: colorFor(drag.value), transform: 'translate(-50%, -50%) scale(1.08)' }}><FittedTileContent><GameImageValue value={drag.value} /></FittedTileContent></div>}
         {floatingScore && <div key={floatingScore.id} className={`pointer-events-none fixed z-[110] text-xl font-black ${styles.floatingScore} ${floatingScore.correct ? 'text-emerald-600' : 'text-red-500'}`} style={{ left: floatingScore.x, top: floatingScore.y, textShadow: '0 2px 0 white, 0 -2px 0 white, 2px 0 0 white, -2px 0 0 white' }}>{floatingScore.value}</div>}
         {isTransitioning && !gameCompleted && <div className="pointer-events-none absolute inset-0 z-30" aria-hidden="true"><div className={styles.fireworks}>{Array.from({ length: 12 }, (_, index) => <span key={index} className={styles.fireworkParticle} />)}</div></div>}
-        {gameCompleted && trackingTask && <GameCompletion score={score} trackingTask={trackingTask} onRestart={restart} />}
+        {rewardToast > 0 && !gameCompleted && <div className="pointer-events-none absolute left-1/2 top-1/3 z-50 flex -translate-x-1/2 items-center gap-2 rounded-2xl bg-amber-300 px-6 py-3 text-3xl font-black text-amber-950 shadow-xl"><span>+{rewardToast}</span><Image src="/games/general/images/optimize/xu_icon.png" alt="xu" width={30} height={30} className="h-[30px] w-[30px] object-contain" /></div>}
+        {gameCompleted && trackingTask && <DragDropCompletion score={score} level={currentLevel + 1} victory={gameVictory} bestLevel={bestLevel} playCount={playCount} trackingTask={trackingTask} onRestart={restart} />}
       </div>
     </GameShell>
     </GameImagesProvider>

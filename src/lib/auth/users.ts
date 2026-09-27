@@ -13,6 +13,7 @@ export function safeUser(id: string, data: FirebaseFirestore.DocumentData): Safe
     id,
     username: String(data.username ?? ''),
     displayName: String(data.name ?? data.displayName ?? data.username ?? ''),
+    avatar: typeof data.avatar === 'string' && data.avatar.trim() ? data.avatar.trim() : null,
     role: (legacyRole === 'admin' ? 'admin' : 'user') as AuthRole,
     status: (data.status === 'active' ? 'active' : 'inactive') as AuthStatus,
     activeGame: data.activeGame !== false,

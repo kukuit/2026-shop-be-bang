@@ -14,14 +14,12 @@ export async function resolveIntroVoice({ gameId, lessonId, introVoice }: {
     : undefined)
   if (!preferred || preferred === fallback) return fallback
 
-  const controller = new AbortController()
-  const timeout = setTimeout(() => controller.abort(), 4000)
   try {
-    const response = await fetch(preferred, { method: 'HEAD', signal: controller.signal })
-    return response.ok ? preferred : fallback
+    const response = await fetch(`/api/game-intro-voice?path=${encodeURIComponent(preferred)}`)
+    if (!response.ok) return fallback
+    const result = await response.json() as { exists?: boolean }
+    return result.exists ? preferred : fallback
   } catch {
     return fallback
-  } finally {
-    clearTimeout(timeout)
   }
 }

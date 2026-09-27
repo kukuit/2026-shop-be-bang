@@ -12,11 +12,12 @@ import type { BubbleShooterGameConfig, MathQuestion } from '../types/game'
 import { GAME_BACKGROUND_MUSIC } from '../../general/audio'
 import { GameVoiceManager, type VoicePriority } from '../../general/GameVoiceManager'
 import { createGameTracker, type GameTracker } from '../../general/tracking'
+import { MAX_LEVEL, MAX_LIVES, MAX_SURVIVAL_LIFE_RECOVERIES, baseCoinEarned } from '../systems/survival'
 
 const WIDTH = 720
 const HEIGHT = 1280
 const HUD_TOP = 1182
-const QUESTION_Y = 170
+const QUESTION_Y = 179
 const QUESTION_PANEL_WIDTH = 672
 const QUESTION_PANEL_HEIGHT = 200
 const QUESTION_SAFE_WIDTH = QUESTION_PANEL_WIDTH - 128
@@ -61,13 +62,17 @@ export class BubbleMathScene extends Phaser.Scene {
   private wolfRounds = new Set<number>()
   private winVoiceTimer?: ReturnType<typeof setTimeout>
   private tracker?: GameTracker
+  private lives = MAX_LIVES
+  private recoveryStreak = 0
+  private heartAvailable = false
+  private heartRecoveries = 0
 
   constructor(private readonly lesson: BubbleShooterGameConfig) {
     super('BubbleMathScene')
   }
 
   private get totalQuestions() {
-    return this.lesson.totalRounds
+    return MAX_LEVEL
   }
 
   private get questionY() {
@@ -261,7 +266,7 @@ export class BubbleMathScene extends Phaser.Scene {
     this.game.registry.set('game-ui:started', true)
     const loadedQuestions = await this.lesson.loadQuestions()
     if (!this.sys.isActive()) return
-    this.questions = new QuestionSystem(loadedQuestions.slice(0, this.totalQuestions))
+    this.questions = new QuestionSystem(loadedQuestions)
     this.tracker = this.lesson.tracking ? createGameTracker(this.lesson.tracking) : undefined
     this.prepareWolfRounds()
     this.ensureBackgroundMusic()
@@ -278,6 +283,13 @@ export class BubbleMathScene extends Phaser.Scene {
   }
 
   private restartGame() {
+    if (this.gameStarted && this.roundState !== 'COMPLETE') {
+      void this.tracker?.finishSession(this.score.current, {
+        levelReached: this.questionNumber,
+        levelsCompleted: Math.max(0, this.questionNumber - 1),
+        livesRemaining: this.lives,
+      })
+    }
     this.gameStarted = false
     this.time.paused = false
     this.tweens.resumeAll()
@@ -285,6 +297,10 @@ export class BubbleMathScene extends Phaser.Scene {
     this.score.reset()
     this.emitScore()
     this.questionNumber = 1
+    this.lives = MAX_LIVES
+    this.recoveryStreak = 0
+    this.heartAvailable = false
+    this.heartRecoveries = 0
     this.wolfRounds.clear()
     this.selectedAmmo = 0
     this.isPauseMenuOpen = false
@@ -317,6 +333,7 @@ export class BubbleMathScene extends Phaser.Scene {
 
   private updateLevelHud() {
     this.game.events.emit('game-ui:round', this.questionNumber)
+    this.game.events.emit('game-ui:lives', this.lives)
   }
 
   private createBottomHud() {
@@ -388,11 +405,12 @@ export class BubbleMathScene extends Phaser.Scene {
     }
     this.renderQuestion(this.currentQuestion)
     this.feedbackText.setText('')
-    this.progressText.setText(`${this.questionNumber}/${this.totalQuestions}`)
+    this.progressText.setText(`MÀN ${this.questionNumber}`)
     this.updateLevelHud()
     this.nextButton.setVisible(false)
     this.locked = false
-    this.bubbleSpawner.start(this.currentQuestion)
+    this.bubbleSpawner.start(this.currentQuestion, this.questionNumber)
+    this.spawnHeart()
     this.beginWolfRound()
   }
 
@@ -425,8 +443,8 @@ export class BubbleMathScene extends Phaser.Scene {
   }
 
   private prepareWolfRounds() {
-    const eligibleRounds = Phaser.Utils.Array.Shuffle([3, 4, 5, 6, 7, 8, 9, 10])
-    this.wolfRounds = new Set(eligibleRounds.slice(0, 4))
+    const eligibleRounds = Phaser.Utils.Array.Shuffle(Array.from({ length: MAX_LEVEL - 2 }, (_, index) => index + 3))
+    this.wolfRounds = new Set(eligibleRounds.slice(0, 8))
   }
 
   private scheduleWolfShot(delay = Phaser.Math.Between(4500, 8000)) {
@@ -766,10 +784,22 @@ export class BubbleMathScene extends Phaser.Scene {
     const bubble = bubbleObject as Bubble
     if (!projectile.active || !bubble.active || this.roundState !== 'PLAYING') return
 
-    stopQuestionVoice(this)
     projectile.destroy()
     const hitX = bubble.x
     const hitY = bubble.y
+
+    if (bubble.value === '__heart__') {
+      this.lives = Math.min(MAX_LIVES, this.lives + 1)
+      this.heartRecoveries += 1
+      this.heartAvailable = false
+      this.recoveryStreak = 0
+      this.game.events.emit('game-ui:lives', this.lives)
+      this.pop(bubble, true)
+      this.showFloatingScore(hitX, hitY, '❤ +1', '#ef4444')
+      return
+    }
+
+    stopQuestionVoice(this)
 
     if (bubble.value !== this.currentQuestion.answer) {
       if (this.currentQuestion.learningKey) {
@@ -790,6 +820,16 @@ export class BubbleMathScene extends Phaser.Scene {
       this.scoreText.setText(`★  ${score}`)
       this.pop(bubble, false)
       this.showFloatingScore(hitX, hitY, deducted ? '-2' : '0', '#fb7185')
+      this.lives = Math.max(0, this.lives - 1)
+      this.recoveryStreak = 0
+      this.heartAvailable = false
+      this.bubbles.getChildren().forEach(item => { if ((item as Bubble).value === '__heart__') item.destroy() })
+      this.game.events.emit('game-ui:lives', this.lives)
+      if (this.lives === 0) {
+        this.roundState = 'COMPLETE'
+        this.bubbleSpawner.pause()
+        this.finishSession(false)
+      }
       return
     }
 
@@ -813,6 +853,11 @@ export class BubbleMathScene extends Phaser.Scene {
       )
     }
     const score = this.score.correct()
+    if (this.lives < MAX_LIVES && this.heartRecoveries < MAX_SURVIVAL_LIFE_RECOVERIES) {
+      this.recoveryStreak += 1
+      if (this.recoveryStreak >= 3) this.heartAvailable = true
+    }
+    if (this.questionNumber % 5 === 0) this.game.events.emit('game-ui:reward', baseCoinEarned(this.questionNumber) - baseCoinEarned(this.questionNumber - 1))
     this.emitScore()
     this.scoreText.setText(`★  ${score}`)
     this.pop(bubble, true)
@@ -888,13 +933,26 @@ export class BubbleMathScene extends Phaser.Scene {
     })
   }
 
-  private showNextQuestion() {
+  private async showNextQuestion() {
     if (this.roundState !== 'ROUND_TRANSITION') return
     this.roundState = 'NEW_QUESTION'
     this.bubbles.clear(true, true)
     this.projectiles.clear(true, true)
     this.questionNumber += 1
     this.showLevelTransitionLabel()
+    if (this.questions!.exhausted) {
+      try {
+        const nextBatch = await this.lesson.loadQuestions()
+        if (!this.sys.isActive() || this.roundState !== 'NEW_QUESTION') return
+        if (nextBatch.length === 0) throw new Error('Question pool is empty')
+        this.questions!.refill(nextBatch)
+      } catch (error) {
+        console.error('[BubbleShooter] Could not load more questions', error)
+        this.roundState = 'COMPLETE'
+        this.finishSession(false)
+        return
+      }
+    }
     this.currentQuestion = this.questions!.next()
     if (this.currentQuestion.learningKey) {
       this.tracker?.startQuestion({
@@ -918,7 +976,8 @@ export class BubbleMathScene extends Phaser.Scene {
         if (this.roundState !== 'NEW_QUESTION') return
         this.roundState = 'PLAYING'
         this.locked = false
-        this.bubbleSpawner.start(this.currentQuestion)
+        this.bubbleSpawner.start(this.currentQuestion, this.questionNumber)
+        this.spawnHeart()
         this.beginWolfRound()
       },
     })
@@ -965,15 +1024,37 @@ export class BubbleMathScene extends Phaser.Scene {
   private finishGame() {
     if (this.roundState !== 'ROUND_TRANSITION') return
     this.roundState = 'COMPLETE'
+    this.finishSession(true)
+  }
+
+  private finishSession(victory: boolean) {
     this.feedbackText.setColor('#047857').setText(`Hoàn thành!  ★ ${this.score.current}`)
     this.feedbackText.setAlpha(0).setScale(0.9)
     this.tweens.add({ targets: this.feedbackText, alpha: 1, scale: 1, duration: 350, ease: 'Back.Out' })
-    const trackingTask = this.tracker?.finishSession(this.score.current)
-    this.game.events.emit('game-ui:complete', this.score.current, trackingTask)
-    this.winVoiceTimer = setTimeout(() => {
+    const trackingTask = this.tracker?.finishSession(this.score.current, {
+      levelReached: this.questionNumber,
+      livesRemaining: this.lives,
+      levelsCompleted: victory ? MAX_LEVEL : this.questionNumber - 1,
+    })
+    this.game.events.emit('game-ui:complete', this.score.current, trackingTask, victory)
+    if (victory) this.winVoiceTimer = setTimeout(() => {
       this.winVoiceTimer = undefined
       this.voiceManager?.playOnce('win', 'voice-win', 'win')
     }, 500)
+  }
+
+  private spawnHeart() {
+    if (!this.heartAvailable || this.lives >= MAX_LIVES || this.heartRecoveries >= MAX_SURVIVAL_LIFE_RECOVERIES) return
+    const bubble = new Bubble(this, WIDTH / 2, 850, '__heart__', 0xff4d6d, {
+      radius: 54,
+      verticalSpeed: 70 * (1 + (this.questionNumber - 1) / 60),
+      horizontalAmplitude: 20,
+      horizontalFrequency: 0.001,
+      phase: 0,
+    }, WIDTH)
+    this.bubbles.add(bubble)
+    const label = bubble.list.find((item): item is Phaser.GameObjects.Text => item instanceof Phaser.GameObjects.Text)
+    label?.setText('❤').setColor('#ef4444').setStroke('#ffffff', 6).setFontSize(56).setScale(1)
   }
 
   private scheduleTransition(delay: number, callback: () => void) {

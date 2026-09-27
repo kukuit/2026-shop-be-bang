@@ -64,7 +64,7 @@ export class GameTracker {
     devLog('Answer', result)
   }
 
-  async finishSession(score: number) {
+  async finishSession(score: number, bubbleSurvival?: { levelReached: number; levelsCompleted: number; livesRemaining: number }, dragDropSurvival?: { levelReached: number; levelsCompleted: number; livesRemaining: number }, goldMinerSurvival?: { levelReached: number; levelsCompleted: number; livesRemaining: number }, racingSurvival?: { levelReached: number; levelsCompleted: number; livesRemaining: number }) {
     if (this.finished) return
     this.finished = true
     const sessionId = crypto.randomUUID()
@@ -80,6 +80,10 @@ export class GameTracker {
       duration: Math.max(0, Date.now() - this.startedAt),
       startedAt: this.startedAt,
       results: [...this.results],
+      ...(bubbleSurvival ? { bubbleSurvival } : {}),
+      ...(dragDropSurvival ? { dragDropSurvival } : {}),
+      ...(goldMinerSurvival ? { goldMinerSurvival } : {}),
+      ...(racingSurvival ? { racingSurvival } : {}),
     }
     try {
       const saved = await this.options.repository.saveSession(session)
