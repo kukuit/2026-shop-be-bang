@@ -72,6 +72,25 @@ Người dùng đã duyệt engine tại `/game/lop-1/tieng-anh/bai-2/racing`, g
 
 Đọc file này trước khi thực hiện mỗi yêu cầu code. Khi làm việc với `/game`, đọc thêm `docs/game-authoring.md` và tài liệu của bài học gần nhất cùng môn/dạng câu hỏi.
 
+## Chuẩn survival dùng chung cho 4 game
+
+Đã cập nhật và áp dụng chuẩn này cho `bubble-shooter`, `drag-drop`, `gold-mining` và `racing`. Bài mới dùng engine chung, không tự tạo luật sống sót hoặc lịch Sói riêng theo bài.
+
+- Mỗi lượt có tối đa 25 màn và 3 tim. Sai làm mất 1 tim; hết tim thì kết thúc lượt. Màn đạt được là số màn đã hoàn thành, không tính màn đang chơi dở khi hết tim. Lưu kỷ lục riêng theo từng `lessonId` và `gameId`, không trộn tiến độ giữa game hoặc bài.
+- Mỗi lượt chỉ được hồi tối đa **2 tim**, và không hồi vượt quá 3 tim hiện tại. Dùng `MAX_SURVIVAL_LIFE_RECOVERIES` trong `src/components/games/general/survival-rewards.ts`; reset bộ đếm khi bắt đầu/chơi lại lượt mới. Điều kiện chung là 3 câu/đáp án đúng liên tiếp khi tim đang dưới 3; câu sai xóa chuỗi đúng.
+  - Bắn bóng: tim là bong bóng hồi phục để người chơi bắn trúng; không tạo quá một vật phẩm cùng lúc và không spawn thêm sau 2 lần hồi.
+  - Kéo thả: hồi tự động 1 tim sau 3 đáp án đúng liên tiếp.
+  - Đào vàng: tim nằm bên trong sprite cục vàng, không hiện số; móc trúng mới hồi 1 tim. Tối đa 2 lần.
+  - Đua xe: hồi tự động 1 tim sau 3 màn đúng liên tiếp. Tối đa 2 lần.
+- Coin dùng công thức chung tại `survival-rewards.ts`, trao theo các mốc màn 5/10/15/20/25, áp dụng multiplier theo số lượt chơi và cộng ví trong transaction lưu session. Popup kết quả hiển thị coin thưởng cùng asset `/games/general/images/optimize/xu_icon.png`; footer dùng số dư ví hiện tại.
+- Khi bật Sói, màn 1–2 không có Sói; mỗi lượt chọn ngẫu nhiên đúng **8 màn trong nhóm màn 3–25**. Drag-drop lưu chỉ số nội bộ zero-based nên phải kiểm tra màn hiển thị khớp lịch này. Giữ quyền tắt Sói của config bài hiện có (`wolfEnabled: false` hoặc cơ chế tương ứng).
+- Đua xe tăng tốc theo nhóm 5 màn, mỗi nhóm sau nhanh thêm 8% so với tốc độ nền; vẫn giữ thời gian chờ đọc/nghe câu và luật đợi voice đã duyệt.
+- Footer dùng chung cho 4 game: trái là hộp quà + số dư xu + icon xu Cappy; giữa là card điểm `[⭐ điểm]` giữ nguyên; phải là `🏁 MÀN {currentLevel}`, không progress bar, không sao cũ, không `/25`. Card phải giữ màu chữ cam/vàng cùng tông footer.
+- Avatar trong khung header: khách/chưa đăng nhập dùng vòng tròn và icon người màu xám; tài khoản dùng URL avatar nếu có, nếu không thì dùng chữ cái đầu tên. Giữ ảnh/chữ gọn trong khung, không để tràn lên vùng chơi.
+- Intro voice ưu tiên file riêng theo bài; thiếu file thì dùng `/games/{gameId}/voices/intro.mp3`. Dùng `resolveIntroVoice` và API kiểm tra file ở server; không gửi `HEAD` đến file bài thiếu từ trình duyệt vì sẽ tạo log 404. Không bỏ fallback chung.
+- Loading dùng chung tại `GameLoadingScreen.tsx`: hiệu ứng mây/lấp lánh và chuyển động 3 nhân vật đang tạm dừng để giảm giật; giữ ảnh và bố cục, có thể khôi phục animation sau khi đo lại trên thiết bị. Không thêm nhiều animation nặng chạy trong lúc Phaser tải/giải mã asset.
+- Khi sửa các chuẩn này, rà soát đủ cả 4 engine, thử sai/đúng liên tiếp, cạn tim, hồi 1 và 2 tim, không hồi lần 3, restart, hoàn tất 25 màn, coin milestone, tracking theo bài/game và Sói xuất hiện đúng lịch. Chạy `npm run typecheck`; nói rõ nếu chưa chơi thử trên trình duyệt.
+
 ## Khi thêm bài học mới trong `/game`
 
 ### Voice tiếng Anh dùng lại kỹ thuật của Tiếng Anh 1 bài 2
