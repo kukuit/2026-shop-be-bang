@@ -23,6 +23,7 @@ export type DragDropLevel = {
   answers: Record<string, DragAnswerValue>
   answerDomain?: readonly DragAnswerValue[]
   learningKeys: Record<string, LearningKey>
+  sourceLessons?: Record<string, 1 | 2 | 3 | 4 | 5>
   skills?: Record<string, import('../general/learning-question').LearningSkill>
   inputModes?: Record<string, import('../general/learning-question').QuestionInputMode>
   answerModes?: Record<string, import('../general/learning-question').QuestionAnswerMode>

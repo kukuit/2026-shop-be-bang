@@ -279,6 +279,7 @@ function ReadyDragDropGame({ config }: { config: DragDropGameConfig }) {
     const attempt = (targetAttemptsRef.current[targetId] ?? 0) + 1
     trackerRef.current?.recordAnswer({
       learningKey: level.learningKeys[targetId], expectedAnswer, selectedAnswer: value, correct,
+      sourceLesson: level.sourceLessons?.[targetId],
       skill: level.skills?.[targetId], inputMode: level.inputModes?.[targetId], answerMode: level.answerModes?.[targetId],
       attempt, responseTime: Math.max(0, Date.now() - (targetStartedAtRef.current[targetId] ?? Date.now())),
     })

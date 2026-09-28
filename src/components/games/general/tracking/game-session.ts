@@ -7,10 +7,12 @@ import type {
   LessonId,
 } from './types'
 import type { LearningSkill, QuestionAnswerMode, QuestionInputMode } from '../learning-question'
+import { getLessonDefinition } from './lesson-catalog'
 
 type TrackerOptions = { lessonId: LessonId; gameId: GameId; repository: GameTrackingRepository }
 type ActiveQuestion = {
   learningKey: LearningKey
+  sourceLesson?: 1 | 2 | 3 | 4 | 5
   expectedAnswer?: AnswerValue
   startedAt: number
   attempt: number
@@ -33,12 +35,13 @@ export class GameTracker {
     devLog('Start', { lessonId: options.lessonId, gameId: options.gameId })
   }
 
-  startQuestion(input: { learningKey: LearningKey; expectedAnswer?: AnswerValue; skill?: LearningSkill; inputMode?: QuestionInputMode; answerMode?: QuestionAnswerMode }) {
+  startQuestion(input: { learningKey: LearningKey; sourceLesson?: 1 | 2 | 3 | 4 | 5; expectedAnswer?: AnswerValue; skill?: LearningSkill; inputMode?: QuestionInputMode; answerMode?: QuestionAnswerMode }) {
     this.question = { ...input, startedAt: Date.now(), attempt: 1 }
   }
 
   recordAnswer(input: {
     learningKey: LearningKey
+    sourceLesson?: 1 | 2 | 3 | 4 | 5
     correct: boolean
     expectedAnswer?: AnswerValue
     selectedAnswer?: AnswerValue
@@ -52,6 +55,7 @@ export class GameTracker {
     const result: GameQuestionResult = {
       ...active,
       ...input,
+      week: (() => { const lesson = getLessonDefinition(this.options.lessonId); return lesson && 'week' in lesson ? lesson.week : undefined })(),
       responseTime:
         input.responseTime ?? (active ? Math.max(0, Date.now() - active.startedAt) : undefined),
       attempt: input.attempt ?? active?.attempt ?? 1,

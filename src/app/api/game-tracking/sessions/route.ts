@@ -22,6 +22,8 @@ export const runtime = 'nodejs'
 
 const resultSchema = z.object({
   learningKey: z.string().min(1).max(100),
+  week: z.number().int().min(1).max(20).optional(),
+  sourceLesson: z.number().int().min(1).max(5).optional(),
   correct: z.boolean(),
   expectedAnswer: z.union([z.string(), z.number()]).optional(),
   selectedAnswer: z.union([z.string(), z.number()]).optional(),

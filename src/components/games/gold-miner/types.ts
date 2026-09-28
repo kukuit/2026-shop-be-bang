@@ -7,6 +7,7 @@ export type GoldMinerQuestion = {
   correctAnswer: string | number
   choices: Array<string | number>
   learningKey: LearningKey
+  sourceLesson?: 1 | 2 | 3 | 4 | 5
   prompt?: string
   skill?: import('../general/learning-question').LearningSkill
   inputMode?: import('../general/learning-question').QuestionInputMode

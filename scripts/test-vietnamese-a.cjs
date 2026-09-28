@@ -11,7 +11,7 @@ require.extensions['.ts'] = (module, filename) => module._compile(ts.transpileMo
   compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020, esModuleInterop: true },
 }).outputText, filename)
 const lessonPath = '../src/app/game/lop-1/tieng-viet/bai-1'
-const { DEFAULT_GOAL_COUNTS, generateQuestionSet, createQuestionPool, A_WORDS } = require(`${lessonPath}/content.ts`)
+const { DEFAULT_GOAL_COUNTS, generateQuestionSet, createQuestionPool } = require(`${lessonPath}/content.ts`)
 const { TIENG_VIET_1_BAI_1 } = require(`${lessonPath}/lesson.ts`)
 const { GameTracker } = require('../src/components/games/general/tracking/game-session.ts')
 const { isLearningKeyForLesson } = require('../src/components/games/general/tracking/lesson-catalog.ts')
@@ -27,12 +27,15 @@ async function main() {
     const pool = createQuestionPool(game)
     assert.ok(pool.length > 10)
     assert.equal(new Set(pool.map(q => q.id)).size, pool.length)
-    const correctPositions = new Set(), schedules = new Set(), words = new Set(), variants = new Set()
+    assert.ok(pool.every(q => q.voice), 'Every selected content target should use a recorded voice')
+    if (game === 'bubble-shooter') assert.ok(!pool.some(q => q.goalKey === 'REVIEW_SENTENCE_WEEK_1'), 'Bubble shooter should omit the hard-to-read sentence')
+    else assert.ok(pool.some(q => q.goalKey === 'REVIEW_SENTENCE_WEEK_1'), 'Other games retain sentence review')
+    const correctPositions = new Set(), schedules = new Set(), variants = new Set()
     let previous = []
     for (let seed = 1; seed <= 200; seed++) {
       const questions = generateQuestionSet(game, { random: seeded(seed), previousIds: previous.map(q => q.id) })
-      assert.equal(questions.length, 10)
-      assert.equal(new Set(questions.map(q => q.id)).size, 10)
+      assert.equal(questions.length, 25)
+      assert.equal(new Set(questions.map(q => q.id)).size, 25)
       assert.deepEqual(countsOf(questions), DEFAULT_GOAL_COUNTS[game])
       if (previous.length) assert.notDeepEqual(questions.map(q => q.id).sort(), previous.map(q => q.id).sort(), 'Replay must change content, not just order')
       for (const q of questions) {
@@ -41,12 +44,14 @@ async function main() {
         assert.ok(isLearningKeyForLesson(TIENG_VIET_1_BAI_1.lessonId, q.goalKey))
         assert.ok(!isLearningKeyForLesson('toan-1-bai-1', q.goalKey))
         if (game === 'racing') assert.equal(q.options.length, 3)
-        if (q.word) { assert.ok(A_WORDS.includes(q.word)); words.add(q.word) }
-        if (q.textMatch) assert.equal(q.textMatch.before + q.answer + q.textMatch.after, q.word)
-        if (q.inputMode === 'audio') { assert.ok(q.voice.endsWith('/sound-a.mp3')); assert.equal(q.displayText, '🔊'); assert.equal(q.spokenTarget, 'a') }
-        // All incorrect letters are visual distractors, never separate learning goals.
-        if (game === 'gold-mining' && q.goalKey === 'FIND_A_IN_TEXT') assert.equal(q.options.filter(word => /a/i.test(word.normalize('NFD'))).length, 1)
-        else assert.ok(q.options.every(value => ['a', 'o', 'e', 'c', 'd', 'b', 'q', 'g'].includes(value.toLowerCase())))
+        assert.ok([1, 2, 3, 4, 5].includes(q.sourceLesson))
+        if (q.inputMode === 'audio') { assert.ok(q.voice); assert.equal(q.displayText, '🔊') }
+        assert.ok(q.options.length >= 3)
+        if (game === 'drag-drop') assert.equal(q.options.length, 6, 'Drag-drop should show one correct answer plus five distractors')
+        for (const pathName of [q.voice, q.instructionVoice].filter(Boolean)) {
+          assert.ok(fs.existsSync(path.join(root, 'public', pathName.replace(/^\//, ''))), `Missing voice ${pathName}`)
+        }
+        if (!q.voice) assert.equal(q.voiceFallback?.target, undefined, 'Do not synthesize an unrecorded Vietnamese target with a system voice')
         correctPositions.add(q.options.indexOf(q.answer)); variants.add(q.id)
       }
       schedules.add(questions.map(q => q.goalKey).join(','))
@@ -55,12 +60,11 @@ async function main() {
     assert.ok(correctPositions.size >= 3)
     assert.ok(schedules.size > 20)
     assert.ok(variants.size > 20)
-    assert.equal(words.size, A_WORDS.length)
     for (const weak of Object.keys(DEFAULT_GOAL_COUNTS[game])) {
       const adapted = countsOf(generateQuestionSet(game, { random: seeded(42), weakTargets: [weak, 'recognize-number-0'], adaptiveCount: 4 }))
-      assert.equal(Object.values(adapted).reduce((a, b) => a + b, 0), 10)
+      assert.equal(Object.values(adapted).reduce((a, b) => a + b, 0), 25)
       assert.ok(adapted[weak] > DEFAULT_GOAL_COUNTS[game][weak])
-      for (const goal of Object.keys(DEFAULT_GOAL_COUNTS[game])) assert.ok(adapted[goal] >= 1)
+      assert.ok(Object.keys(adapted).length >= 10, 'adaptive weighting must retain broad key coverage')
     }
     const unrelated = generateQuestionSet(game, { random: seeded(10), weakTargets: ['recognize-number-0', 'recognize-ball'], adaptiveCount: 4 })
     assert.deepEqual(countsOf(unrelated), DEFAULT_GOAL_COUNTS[game])
@@ -70,29 +74,31 @@ async function main() {
   for (const config of gameConfigs) {
     const load = config.loadQuestions || config.loadLevels
     const first = await load(), second = await load(first)
-    assert.equal(second.length, 10)
+    assert.equal(second.length, 25)
     assert.notDeepEqual(first.map(q => q.questionId || q.id).sort(), second.map(q => q.questionId || q.id).sort())
     let saved
     const tracker = new GameTracker({ lessonId: config.lessonId || config.tracking.lessonId, gameId: config.gameId || config.tracking.gameId, repository: { saveSession: async value => { saved = value; return { sessionId: value.sessionId } } } })
     const score = new ScoreSystem()
     assert.equal(score.wrong().score, 0)
     for (const q of first) {
+      if (!q.voice) assert.equal(q.voiceFallback, undefined, 'Vietnamese questions must not fall back to the system English voice')
       const goal = q.learningKey || Object.values(q.learningKeys)[0]
+      const sourceLesson = q.sourceLesson || Object.values(q.sourceLessons || {})[0]
       const answer = q.answer ?? q.correctAnswer ?? Object.values(q.answers)[0]
       const choices = q.options || q.choices || q.answerDomain
-      tracker.startQuestion({ learningKey: goal, expectedAnswer: answer })
-      tracker.recordAnswer({ learningKey: goal, expectedAnswer: answer, selectedAnswer: choices.find(value => value !== answer), correct: false })
+      tracker.startQuestion({ learningKey: goal, sourceLesson, expectedAnswer: answer })
+      tracker.recordAnswer({ learningKey: goal, sourceLesson, expectedAnswer: answer, selectedAnswer: choices.find(value => value !== answer), correct: false })
       score.wrong()
-      tracker.recordAnswer({ learningKey: goal, expectedAnswer: answer, selectedAnswer: answer, correct: true })
+      tracker.recordAnswer({ learningKey: goal, sourceLesson, expectedAnswer: answer, selectedAnswer: answer, correct: true })
       score.correct()
     }
     await tracker.finishSession(score.current)
     assert.equal(saved.lessonId, 'tieng-viet-1-bai-1')
-    assert.equal(saved.correctCount, 10); assert.equal(saved.wrongCount, 10); assert.equal(saved.score, 82)
-    assert.ok(saved.results.every(result => isLearningKeyForLesson(saved.lessonId, result.learningKey)))
+    assert.equal(saved.correctCount, 25); assert.equal(saved.wrongCount, 25)
+    assert.ok(saved.results.every(result => isLearningKeyForLesson(saved.lessonId, result.learningKey) && result.week === 1 && [1,2,3,4,5].includes(result.sourceLesson)))
   }
   assert.equal(configs.TIENG_VIET_1_BAI_1_RACING_CONFIG.wolfEnabled, false)
-  console.log('PASS all four adapters: fresh 10 rounds on replay, scoped tracking, +10/-2/min 0')
+  console.log('PASS all four adapters: fresh 25 rounds on replay, scoped learning-key tracking')
 
   const originalGet = tracking.getLearningProgress
   const originalEnabled = adaptive.ADAPTIVE_ENABLED
