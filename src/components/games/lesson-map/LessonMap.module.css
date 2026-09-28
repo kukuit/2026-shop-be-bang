@@ -151,7 +151,6 @@
   background-position: center top, center;
   background-repeat: repeat-y, no-repeat;
 }
-.adventure .hero { min-height: 172px; }
 .adventure .hero h1 { color: #3f3328; }
 .adventure .eyebrow { color: #548a8c; }
 .adventure .tagline { color: #597777; }
@@ -186,9 +185,12 @@
   .adventure .hero { gap: 18px; }
   .adventure .progress { width: 170px; }
 }
+@media (min-width: 641px) {
+  .adventure .hero { min-height: 172px; }
+}
 @media (max-width: 640px) {
   .adventure { background-size: 1000px 625px, 100% 100%; }
-  .adventure .hero { min-height: 210px; gap: 16px; padding: 16px 0 24px; }
+  .adventure .hero { gap: 16px; padding: 16px 0 24px; }
   .adventure .intro { gap: 10px; }
   .adventure .cappy { width: 62px; height: 80px; }
   .adventure .eyebrow { font-size: 10px; letter-spacing: 1.5px; }

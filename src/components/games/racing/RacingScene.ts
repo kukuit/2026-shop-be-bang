@@ -289,7 +289,7 @@ export class RacingScene extends Phaser.Scene {
     }
     const question = this.questions[this.questionIndex]
     const expectedAnswer = this.getExpectedAnswer(question)
-    this.tracker?.startQuestion({ learningKey: question.learningKey, expectedAnswer })
+    this.tracker?.startQuestion({ learningKey: question.learningKey, sourceLesson: question.sourceLesson, expectedAnswer })
     const content = question.type === 'count'
       ? (question.quantity === 0 ? '0' : this.arrangeObjects(question.object, question.quantity))
       : question.type === 'numberToQuantity'
@@ -831,6 +831,7 @@ export class RacingScene extends Phaser.Scene {
     const expectedAnswer = this.getExpectedAnswer(question)
     this.tracker?.recordAnswer({
       learningKey: question.learningKey, expectedAnswer,
+      sourceLesson: question.sourceLesson,
       selectedAnswer, correct: isCorrect, skill: question.learningSkill, inputMode: question.inputMode, answerMode: question.answerMode,
     })
     const event: RacingTrackingEvent = {

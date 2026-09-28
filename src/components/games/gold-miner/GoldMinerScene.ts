@@ -216,7 +216,7 @@ export class GoldMinerScene extends Phaser.Scene {
           if (this.state === GoldMinerState.AIMING) playQuestionVoice(this, this.question)
         })
     }
-    this.tracker?.startQuestion({ learningKey: this.question.learningKey, expectedAnswer: this.question.correctAnswer, skill: this.question.skill, inputMode: this.question.inputMode, answerMode: this.question.answerMode })
+    this.tracker?.startQuestion({ learningKey: this.question.learningKey, sourceLesson: this.question.sourceLesson, expectedAnswer: this.question.correctAnswer, skill: this.question.skill, inputMode: this.question.inputMode, answerMode: this.question.answerMode })
     this.state = GoldMinerState.ROUND_START
     this.wolfAppeared = false
     this.taskItems.setText((this.question.prompt ?? Array.from({ length: this.question.count }, () => TASK_EMOJI[this.question.objectType]).join(' ')).normalize('NFC'))
@@ -373,6 +373,7 @@ export class GoldMinerScene extends Phaser.Scene {
     this.grabbed = undefined
     this.tracker?.recordAnswer({
       learningKey: this.question.learningKey,
+      sourceLesson: this.question.sourceLesson,
       expectedAnswer: this.question.correctAnswer,
       selectedAnswer: item.value,
       correct: item.value === this.question.correctAnswer,

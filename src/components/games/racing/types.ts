@@ -4,7 +4,7 @@ import type { LearningSkill, QuestionAnswerMode, QuestionInputMode } from '../ge
 
 export type Lane = 0 | 1 | 2
 
-type BaseQuestion = { id: string; learningKey: LearningKey; answer: string | number; learningSkill?: LearningSkill; inputMode?: QuestionInputMode; answerMode?: QuestionAnswerMode; instructionVoice?: string; voice?: string; voiceFallback?: { instruction?: string; target?: string } }
+type BaseQuestion = { id: string; learningKey: LearningKey; sourceLesson?: 1 | 2 | 3 | 4 | 5; answer: string | number; learningSkill?: LearningSkill; inputMode?: QuestionInputMode; answerMode?: QuestionAnswerMode; instructionVoice?: string; voice?: string; voiceFallback?: { instruction?: string; target?: string } }
 export type RacingQuestion = { voiceSequence?: import('../general/composed-voice').VoiceSegment[] } & (
   | BaseQuestion & { type: 'count'; object: string; quantity: number; options: number[]; skill: 'recognize_quantity' | 'recognize_zero' }
   | BaseQuestion & { type: 'numberToQuantity'; number: number; object: string; quantities: number[]; skill: 'number_to_quantity' }

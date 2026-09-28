@@ -399,6 +399,7 @@ export class BubbleMathScene extends Phaser.Scene {
     if (this.currentQuestion.learningKey) {
       this.tracker?.startQuestion({
         learningKey: this.currentQuestion.learningKey,
+        sourceLesson: this.currentQuestion.sourceLesson,
         expectedAnswer: this.currentQuestion.answer,
         skill: this.currentQuestion.skill, inputMode: this.currentQuestion.inputMode, answerMode: this.currentQuestion.answerMode,
       })
@@ -671,22 +672,29 @@ export class BubbleMathScene extends Phaser.Scene {
     const number = presentation.number
     const centerX = 0
     const safeWidth = QUESTION_SAFE_WIDTH
-    const createObjectRow = (quantity: number, y: number) => {
-      // Separate, equally sized cells keep different emoji centered consistently.
-      const spacing = Math.min(68, safeWidth / Math.max(1, quantity))
-      for (let i = 0; i < quantity; i++) {
-        const label = this.add.text(centerX + (i - (quantity - 1) / 2) * spacing, y, presentation.icon ?? '⭐', {
-          fontFamily: 'Arial, sans-serif', fontSize: '46px',
-          padding: { y: 4 },
-        }).setOrigin(0.5).setResolution(2)
-        label.setScale(Math.min(1, (spacing - 8) / label.width, 56 / label.height))
-        this.questionText.add(label)
-      }
-    }
+    // Prefer a wide, compact grid that fits the horizontal question panel.
+    // Up to 10 objects use 4 columns; the final row is centered independently.
+    const columns = Math.min(4, number)
+    const rows = Math.ceil(number / columns)
+    const cellWidth = safeWidth / columns
+    const cellHeight = Math.min(52, 116 / rows)
+    const verticalGap = Math.min(12, Math.max(4, (116 - rows * cellHeight) / Math.max(1, rows - 1)))
+    const rowStep = cellHeight + verticalGap
+    const firstY = -((rows - 1) * rowStep) / 2
 
-    const rows = Math.ceil(number / 3)
-    for (let row = 0; row < rows; row++) {
-      createObjectRow(Math.min(3, number - row * 3), (row - (rows - 1) / 2) * 60)
+    for (let index = 0; index < number; index++) {
+      const row = Math.floor(index / columns)
+      const rowStart = row * columns
+      const quantityInRow = Math.min(columns, number - rowStart)
+      const column = index - rowStart
+      const x = centerX + (column - (quantityInRow - 1) / 2) * cellWidth
+      const y = firstY + row * rowStep
+      const label = this.add.text(x, y, presentation.icon ?? '⭐', {
+        fontFamily: 'Arial, sans-serif', fontSize: '46px',
+        padding: { y: 4 },
+      }).setOrigin(0.5).setResolution(2)
+      label.setScale(Math.min(1, (cellWidth - 8) / label.width, (cellHeight - 4) / label.height))
+      this.questionText.add(label)
     }
     if (showCheck) this.renderQuestionCheck(245)
   }
@@ -805,6 +813,7 @@ export class BubbleMathScene extends Phaser.Scene {
       if (this.currentQuestion.learningKey) {
         this.tracker?.recordAnswer({
           learningKey: this.currentQuestion.learningKey,
+          sourceLesson: this.currentQuestion.sourceLesson,
           correct: false,
           expectedAnswer: this.currentQuestion.answer,
           selectedAnswer: bubble.value,
@@ -840,6 +849,7 @@ export class BubbleMathScene extends Phaser.Scene {
     if (this.currentQuestion.learningKey) {
       this.tracker?.recordAnswer({
         learningKey: this.currentQuestion.learningKey,
+        sourceLesson: this.currentQuestion.sourceLesson,
         correct: true,
         expectedAnswer: this.currentQuestion.answer,
         selectedAnswer: bubble.value,
