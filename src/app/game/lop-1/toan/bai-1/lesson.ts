@@ -14,7 +14,7 @@ export const TOAN_1_BAI_1 = {
   subjectId: 'toan',
   subjectLabel: 'Toán',
   lessonNumber: 1,
-  title: 'Nhận biết số từ 0 đến 5',
+  title: 'Các số từ 0 đến 5',
   learningGoals: [
     { key: TOAN_1_BAI_1_LEARNING_KEYS.RECOGNIZE_NUMBER_0, title: 'Nhận biết số 0' },
     { key: TOAN_1_BAI_1_LEARNING_KEYS.RECOGNIZE_NUMBER_1, title: 'Nhận biết số 1' },

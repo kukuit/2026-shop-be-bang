@@ -6,7 +6,7 @@ export const GAME_LESSON_ROUTES_TRAINING = `
 #Tất cả đường dẫn chơi game chính xác:
 - Hiện có 6 bài học có game: Toán lớp 1 bài 1 và bài 2, Tiếng Việt lớp 1 tuần 1, Tiếng Anh lớp 1 bài 1 và bài 2, Toán lớp 2 bài 1; ngoài ra có luyện tập phép cộng đến 10.
 - Mỗi bài trên có Bắn bóng, Kéo thả, Đào vàng, Đua xe. Riêng Toán lớp 1 bài 2 có thêm Nhặt trứng. Luyện cộng đến 10 dùng game Bắn bóng, không phải một thể loại game riêng.
-- Toán lớp 1, bài 1 “Nhận biết số từ 0 đến 5”, trang chọn trò chơi:
+- Toán lớp 1, bài 1 “Các số từ 0 đến 5”, trang chọn trò chơi:
 /game/lop-1/toan/bai-1
 - Toán lớp 1, bài 1, Đào vàng — luyện nhìn hình và đếm số:
 /game/lop-1/toan/bai-1/gold-mining

@@ -3,7 +3,7 @@
 import { motion } from 'framer-motion'
 import Image from 'next/image'
 import { Play, Pointer } from 'lucide-react'
-import { KeyboardEvent, PointerEvent, useRef, useState } from 'react'
+import { KeyboardEvent, PointerEvent, useEffect, useRef, useState } from 'react'
 
 type GameLoadingScreenProps = {
   progress?: number
@@ -21,7 +21,20 @@ export default function GameLoadingScreen({
   const startingRef = useRef(false)
   const [exiting, setExiting] = useState(false)
   const [finished, setFinished] = useState(false)
-  const percentage = progress === undefined ? undefined : Math.round(progress)
+  const [displayProgress, setDisplayProgress] = useState(progress)
+
+  useEffect(() => {
+    if (progress !== 5 || ready) {
+      setDisplayProgress(progress)
+      return
+    }
+    const timer = window.setInterval(() => {
+      setDisplayProgress(current => Math.min(14, (current ?? 5) + 1))
+    }, 400)
+    return () => window.clearInterval(timer)
+  }, [progress, ready])
+
+  const percentage = displayProgress === undefined ? undefined : Math.round(displayProgress)
 
   if (finished) return null
 

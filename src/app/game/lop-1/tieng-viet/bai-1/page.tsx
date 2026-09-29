@@ -18,7 +18,6 @@ export default function Page() {
   return <><GameAuthHeader /><main className="min-h-[calc(100dvh-4rem)] bg-gradient-to-b from-sky-50 to-pink-50 py-7 md:py-10"><section className="game-container">
     <nav className="flex flex-wrap items-center gap-1 text-sm font-bold text-slate-500"><Link href="/game" className="text-blue-700">Game</Link><ChevronRight size={15} /><Link href="/game/lop-1" className="text-blue-700">Lớp 1</Link><ChevronRight size={15} /><Link href="/game/lop-1/tieng-viet" className="text-blue-700">Tiếng Việt</Link><ChevronRight size={15} /><span>Tuần 1</span></nav>
     <h1 className="mt-5 text-2xl font-black text-slate-800 md:text-4xl">Tuần 1: A, B, C, E, Ê</h1>
-    <p className="mt-2 text-slate-600">Ôn chữ hoa, chữ thường, dấu thanh và ghép tiếng ba, bà, ca, cà, cá, bè, bé, bế qua 4 trò chơi.</p>
     <LessonGameGrid lessonId={TIENG_VIET_1_BAI_1.lessonId} games={games} subtitle="Tiếng Việt lớp 1" />
   </section></main></>
 }

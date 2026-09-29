@@ -91,7 +91,7 @@ export class BubbleMathScene extends Phaser.Scene {
     this.load.image('cannon-base', '/games/bubble-shooter/images/optimize/cannon-base.png')
     this.load.image('cannon-barrel', '/games/bubble-shooter/images/optimize/cannon-barrel.png')
     this.load.image('question-panel', '/games/bubble-shooter/images/optimize/question-panel-shared.png')
-    this.load.image('panel-voice-speaker', '/games/bubble-shooter/images/voice-speaker-shared.png')
+    this.load.image('panel-voice-speaker', '/games/bubble-shooter/images/optimize/voice-speaker-shared.png')
     this.load.image('balloon', '/games/bubble-shooter/images/optimize/balloon.png')
     this.load.image('cappy', '/games/bubble-shooter/images/optimize/cappy.png')
     this.load.spritesheet('ammo', '/games/bubble-shooter/images/optimize/ammo.png', {
