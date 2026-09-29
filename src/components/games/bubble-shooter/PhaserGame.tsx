@@ -6,6 +6,7 @@ import { GameLoadingScreen, GameShell, unlockGameAudio } from '../general'
 import BubbleCompletion from './BubbleCompletion'
 import type { BubbleShooterGameConfig } from './types/game'
 import { resolveIntroVoice } from '../general/intro-voice'
+import GameRewardToast from '../general/GameRewardToast'
 
 export default function PhaserGame({ config }: { config: BubbleShooterGameConfig }) {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -66,7 +67,7 @@ export default function PhaserGame({ config }: { config: BubbleShooterGameConfig
         }
       })
       gameRef.current.events.on('game-ui:lives', setLives)
-      gameRef.current.events.on('game-ui:reward', (amount: number) => { setReward(amount); window.setTimeout(() => setReward(0), 1800) })
+      gameRef.current.events.on('game-ui:reward', (amount: number) => { setReward(amount); window.setTimeout(() => setReward(0), 1200) })
       gameRef.current.events.on('game-ui:complete', (finalScore: number, task?: Promise<void>, completed = false) => {
         setScore(finalScore)
         setTrackingTask(task)
@@ -126,7 +127,7 @@ export default function PhaserGame({ config }: { config: BubbleShooterGameConfig
         aria-label="Game bắn bong bóng toán học"
         aria-hidden={!isReady}
       />
-      {reward > 0 && !gameCompleted && <div className="pointer-events-none absolute left-1/2 top-1/3 z-50 -translate-x-1/2 rounded-2xl bg-amber-300 px-6 py-3 text-3xl font-black text-amber-950 shadow-xl">🪙 +{Math.round(reward * (playCount === 0 ? 1 : Math.max(.25, 1 - playCount * .25)))}</div>}
+      {reward > 0 && !gameCompleted && <GameRewardToast amount={Math.round(reward * (playCount === 0 ? 1 : Math.max(.25, 1 - playCount * .25)))} />}
       {recordNotice && !gameCompleted && <div className="pointer-events-none absolute left-1/2 top-[42%] z-50 -translate-x-1/2 rounded-2xl bg-yellow-200 px-5 py-2 text-2xl font-black text-amber-900 shadow-xl">🏆 KỶ LỤC MỚI!</div>}
       {gameCompleted && <BubbleCompletion score={score} level={currentRound} victory={victory} bestLevel={bestLevel} playCount={playCount} trackingTask={trackingTask} onRestart={restart} />}
     </GameShell>
