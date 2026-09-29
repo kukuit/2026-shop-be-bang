@@ -21,7 +21,7 @@ export default function LessonOnePage() {
           <Link href="/game/lop-1/toan" className="text-blue-700 hover:text-blue-800">Toán</Link><ChevronRight size={15} />
           <span className="text-slate-800" aria-current="page">Bài 1</span>
         </nav>
-        <div className="mt-5 md:mt-7"><h1 className="text-2xl font-black text-slate-800 md:text-4xl">Toán lớp 1 - Bài 1</h1></div>
+        <div className="mt-5 md:mt-7"><h1 className="text-2xl font-black text-slate-800 md:text-4xl">Các số từ 0 đến 5</h1></div>
         <LessonGameGrid lessonId={LESSON_IDS.TOAN_1_BAI_1} games={games} subtitle="Các số từ 0 đến 5" />
       </section>
     </main></>

@@ -22,9 +22,11 @@ export default async function GameMeLayout({ children }: { children: React.React
   return (
     <div className="min-h-screen bg-gray-50">
       <GameAuthHeader />
-      <MeNavigation />
-      <main className="py-7">
-        <div className="game-container">{children}</div>
+      <main className="py-5 sm:py-7">
+        <div className="game-container grid gap-4 lg:grid-cols-[248px_minmax(0,1fr)] lg:items-start lg:gap-6">
+          <MeNavigation />
+          <div className="min-w-0">{children}</div>
+        </div>
       </main>
     </div>
   )

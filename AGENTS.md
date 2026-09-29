@@ -106,6 +106,8 @@ Người dùng đã duyệt engine tại `/game/lop-1/tieng-anh/bai-2/racing`, g
 
 ## Khi thêm bài học mới trong `/game`
 
+- Tiêu đề bài học phải thống nhất giữa bản đồ/danh sách bài và trang bên trong bài. Dùng cùng một tên chuẩn từ định nghĩa bài học; không để map và trang bài hiển thị hai tiêu đề khác nhau. Ví dụ Toán 1 bài 1 dùng “Các số từ 0 đến 5” ở cả hai nơi.
+
 ### Voice tiếng Anh dùng lại kỹ thuật của Tiếng Anh 1 bài 2
 
 - Chuẩn tạo voice tiếng Anh: giọng tổng hợp **Microsoft Zira Desktop (en-US)** trên Windows, **Rate = -2**, xuất sẵn thành file **WAV**. Tham chiếu `docs/tieng-anh-1-bai-2.md`; máy hiện tại đã kiểm tra có giọng này. Đây là TTS tạo tài nguyên trước khi chơi, không phải bản thu người thật hay gọi dịch vụ tạo voice lúc chơi.
