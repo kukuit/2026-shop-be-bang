@@ -6,8 +6,8 @@ import { GameLoadingScreen, GameShell, unlockGameAudio } from '../general'
 import type { RacingGameConfig } from './types'
 import { resolveIntroVoice } from '../general/intro-voice'
 import RacingCompletion from './RacingCompletion'
+import GameRewardToast from '../general/GameRewardToast'
 import { survivalBaseCoinEarned, survivalRewardMultiplier } from '../general/survival-rewards'
-import Image from 'next/image'
 
 export default function RacingGame({ config }: { config: RacingGameConfig }) {
   const host = useRef<HTMLDivElement>(null)
@@ -59,7 +59,7 @@ export default function RacingGame({ config }: { config: RacingGameConfig }) {
         const amount = Math.round(survivalBaseCoinEarned(completedLevel) * multiplier)
           - Math.round(survivalBaseCoinEarned(completedLevel - 1) * multiplier)
         setRewardToast(amount)
-        window.setTimeout(() => setRewardToast(0), 1800)
+        window.setTimeout(() => setRewardToast(0), 1200)
       })
       game.current.events.on('game-ui:session-saved', (task?: Promise<unknown>) => {
         void task?.then(() => fetch(`/api/game-tracking/racing-survival?lessonId=${encodeURIComponent(config.lessonId)}`))
@@ -92,7 +92,7 @@ export default function RacingGame({ config }: { config: RacingGameConfig }) {
     <GameLoadingScreen progress={loadProgress} ready={ready} unlockAudio={() => unlockGameAudio(game.current)} onStart={() => { emit('game-ui:start') }} />
     <div ref={host} className={`h-full w-full touch-none [&_canvas]:block ${ready ? 'opacity-100' : 'opacity-0'}`}
       role="application" aria-label="Trò chơi đua xe nhận biết số từ 0 đến 5" aria-hidden={!ready} />
-    {rewardToast > 0 && !complete && <div className="pointer-events-none absolute left-1/2 top-1/3 z-50 flex -translate-x-1/2 items-center gap-2 rounded-2xl bg-amber-300 px-6 py-3 text-3xl font-black text-amber-950 shadow-xl"><span>+{rewardToast}</span><Image src="/games/general/images/optimize/xu_icon.png" alt="xu" width={30} height={30} className="h-[30px] w-[30px] object-contain" /></div>}
+    {rewardToast > 0 && !complete && <GameRewardToast amount={rewardToast} />}
     {complete && <RacingCompletion score={score} levelsCompleted={levelsCompleted} victory={victory} bestLevel={bestLevel} playCount={playCount} trackingTask={trackingTask} onRestart={restart} />}
   </GameShell>
 }

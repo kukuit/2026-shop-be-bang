@@ -70,7 +70,7 @@ export default function LessonGameGrid({ lessonId, games }: {
       {games.map(game => {
         const gameId = game.href.split('/').filter(Boolean).pop() ?? ''
         const completed = Boolean(currentGames[gameId]?.completedAt)
-        return <Link key={game.href} href={game.href} aria-label={`${completed ? 'Chơi lại' : 'Chơi'} ${game.title}${completed ? ' — Đã hoàn thành' : ''}`} className="group relative aspect-square overflow-hidden rounded-2xl border-[3px] border-white bg-white shadow-xl focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-sky-400 md:rounded-[2rem]">
+        return <Link key={game.href} href={game.href} scroll={false} aria-label={`${completed ? 'Chơi lại' : 'Chơi'} ${game.title}${completed ? ' — Đã hoàn thành' : ''}`} className="group relative aspect-square overflow-hidden rounded-2xl border-[3px] border-white bg-white shadow-xl focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-sky-400 md:rounded-[2rem]">
           <Image src={game.image} alt={`Ảnh game ${game.title}`} fill sizes="(min-width: 1024px) 270px, 48vw" className="object-cover transition duration-500 group-hover:scale-105" style={{ objectPosition: game.position }} />
           {completed && <span aria-hidden="true" className="absolute right-2 top-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-emerald-600 text-white shadow-sm md:right-3 md:top-3">
             <Check size={16} strokeWidth={3} />

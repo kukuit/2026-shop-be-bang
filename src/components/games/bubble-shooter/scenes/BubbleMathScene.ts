@@ -671,15 +671,13 @@ export class BubbleMathScene extends Phaser.Scene {
     if (!presentation || presentation.type !== 'recognizeNumber') return
     const number = presentation.number
     const centerX = 0
-    const safeWidth = QUESTION_SAFE_WIDTH
-    // Prefer a wide, compact grid that fits the horizontal question panel.
-    // Up to 10 objects use 4 columns; the final row is centered independently.
-    const columns = Math.min(4, number)
+    // Keep the objects in a compact, centered cluster so the quantity is easy to count.
+    // Three columns gives each icon breathing room without spreading across the panel.
+    const columns = Math.min(3, number)
     const rows = Math.ceil(number / columns)
-    const cellWidth = safeWidth / columns
-    const cellHeight = Math.min(52, 116 / rows)
-    const verticalGap = Math.min(12, Math.max(4, (116 - rows * cellHeight) / Math.max(1, rows - 1)))
-    const rowStep = cellHeight + verticalGap
+    const cellWidth = 72
+    const cellHeight = Math.min(54, 124 / rows)
+    const rowStep = Math.min(61, 142 / rows)
     const firstY = -((rows - 1) * rowStep) / 2
 
     for (let index = 0; index < number; index++) {
@@ -693,7 +691,7 @@ export class BubbleMathScene extends Phaser.Scene {
         fontFamily: 'Arial, sans-serif', fontSize: '46px',
         padding: { y: 4 },
       }).setOrigin(0.5).setResolution(2)
-      label.setScale(Math.min(1, (cellWidth - 8) / label.width, (cellHeight - 4) / label.height))
+      label.setScale(Math.min(1, (cellWidth - 6) / label.width, (cellHeight - 4) / label.height))
       this.questionText.add(label)
     }
     if (showCheck) this.renderQuestionCheck(245)

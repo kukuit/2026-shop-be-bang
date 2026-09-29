@@ -17,8 +17,8 @@ import WolfCompanion from './WolfCompanion'
 import FittedTileContent from './FittedTileContent'
 import { resolveIntroVoice } from '../general/intro-voice'
 import DragDropCompletion from './DragDropCompletion'
+import GameRewardToast from '../general/GameRewardToast'
 import { MAX_SURVIVAL_LEVEL, MAX_SURVIVAL_LIVES, MAX_SURVIVAL_LIFE_RECOVERIES, survivalBaseCoinEarned, survivalRewardMultiplier } from '../general/survival-rewards'
-import Image from 'next/image'
 
 type DragState = { value: DragAnswerValue; x: number; y: number; pointerId: number } | null
 type FloatingScore = { id: number; x: number; y: number; value: '+10' | '-2' | '0'; correct: boolean } | null
@@ -357,7 +357,7 @@ function ReadyDragDropGame({ config }: { config: DragDropGameConfig }) {
       if (completedLevel % 5 === 0) {
         const milestoneReward = survivalBaseCoinEarned(completedLevel) - survivalBaseCoinEarned(completedLevel - 1)
         setRewardToast(Math.round(milestoneReward * survivalRewardMultiplier(playCount + 1)))
-        window.setTimeout(() => setRewardToast(0), 1800)
+        window.setTimeout(() => setRewardToast(0), 1200)
       }
       if (completedLevel === MAX_SURVIVAL_LEVEL) {
         setGameVictory(true)
@@ -441,7 +441,7 @@ function ReadyDragDropGame({ config }: { config: DragDropGameConfig }) {
         {drag && <div data-drag-answer className="pointer-events-none fixed z-[100] grid h-14 w-14 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-2xl border-[3px] border-white text-3xl font-black text-white shadow-2xl" style={{ left: drag.x, top: drag.y, backgroundColor: colorFor(drag.value), transform: 'translate(-50%, -50%) scale(1.08)' }}><FittedTileContent><GameImageValue value={drag.value} /></FittedTileContent></div>}
         {floatingScore && <div key={floatingScore.id} className={`pointer-events-none fixed z-[110] text-xl font-black ${styles.floatingScore} ${floatingScore.correct ? 'text-emerald-600' : 'text-red-500'}`} style={{ left: floatingScore.x, top: floatingScore.y, textShadow: '0 2px 0 white, 0 -2px 0 white, 2px 0 0 white, -2px 0 0 white' }}>{floatingScore.value}</div>}
         {isTransitioning && !gameCompleted && <div className="pointer-events-none absolute inset-0 z-30" aria-hidden="true"><div className={styles.fireworks}>{Array.from({ length: 12 }, (_, index) => <span key={index} className={styles.fireworkParticle} />)}</div></div>}
-        {rewardToast > 0 && !gameCompleted && <div className="pointer-events-none absolute left-1/2 top-1/3 z-50 flex -translate-x-1/2 items-center gap-2 rounded-2xl bg-amber-300 px-6 py-3 text-3xl font-black text-amber-950 shadow-xl"><span>+{rewardToast}</span><Image src="/games/general/images/optimize/xu_icon.png" alt="xu" width={30} height={30} className="h-[30px] w-[30px] object-contain" /></div>}
+        {rewardToast > 0 && !gameCompleted && <GameRewardToast amount={rewardToast} />}
         {gameCompleted && trackingTask && <DragDropCompletion score={score} level={currentLevel + 1} victory={gameVictory} bestLevel={bestLevel} playCount={playCount} trackingTask={trackingTask} onRestart={restart} />}
       </div>
     </GameShell>

@@ -1,0 +1,15 @@
+.toast {
+  transform-origin: center;
+  animation: reward-pop 1200ms cubic-bezier(0.2, 0.75, 0.25, 1) both;
+}
+
+@keyframes reward-pop {
+  0% { opacity: 0; scale: 0.45; }
+  18% { opacity: 1; scale: 1.12; }
+  72% { opacity: 1; scale: 1; }
+  100% { opacity: 0; scale: 0.45; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast { animation-duration: 800ms; }
+}
