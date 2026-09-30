@@ -2,6 +2,9 @@ import Link from 'next/link'
 import { History } from 'lucide-react'
 import { SUBJECTS } from '@/lib/game-progress/config'
 import SubjectOverviewCard from '@/components/game/me/SubjectOverviewCard'
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = { title: 'Tiến trình học của bé' }
 
 export default function GameMePage() {
   return <div className="space-y-6">

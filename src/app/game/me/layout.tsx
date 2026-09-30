@@ -7,7 +7,10 @@ import { cookies } from 'next/headers'
 import { REFRESH_COOKIE } from '@/lib/auth/config'
 
 export const metadata: Metadata = {
-  title: 'Tiến trình học của tôi',
+  title: {
+    default: 'Khu phụ huynh',
+    template: '%s | Khu phụ huynh',
+  },
   robots: { index: false, follow: false },
 }
 export const dynamic = 'force-dynamic'

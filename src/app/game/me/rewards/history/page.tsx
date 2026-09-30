@@ -3,6 +3,10 @@
 import Image from 'next/image'
 import { useCallback, useEffect, useState } from 'react'
 import { RefreshCw } from 'lucide-react'
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = { title: 'Lịch sử đổi quà' }
+
 type Redemption = { id: string; rewardName: string; rewardImageUrl: string | null; coinCost: number; status: 'pending' | 'received' | 'cancelled'; redeemedAt: string; receivedAt: string | null }
 const formatDate = (date: string) => new Intl.DateTimeFormat('vi-VN', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Bangkok' }).format(new Date(date))
 export default function RewardHistoryPage() {
