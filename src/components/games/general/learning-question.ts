@@ -22,4 +22,21 @@ export type LearningQuestion = {
   scene?: string
   answer: string
   options?: string[]
+  /** Optional engine-neutral presentation hints for content that uses more than plain text. */
+  media?: { image?: string; scene?: string; imageByValue?: Record<string, string> }
+  /** Preserve structured exercise data (for example a sequence or multiple targets) until a game adapter consumes it. */
+  data?: Record<string, unknown>
+}
+
+/**
+ * Lesson-owned content contract. A lesson supplies one randomized question
+ * stream and its media; game adapters translate this stream to engine shapes.
+ */
+export type LessonQuestion = LearningQuestion
+export type LessonQuestionSource = {
+  lessonId: import('./tracking').LessonId
+  title: string
+  questions: () => LessonQuestion[] | Promise<LessonQuestion[]>
+  images?: import('./game-image').GameImages
+  introVoice?: string
 }
