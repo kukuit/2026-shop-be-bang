@@ -1,8 +1,5 @@
 import LessonGameGrid from '@/components/games/general/LessonGameGrid'
 import { LESSON_IDS } from '@/components/games/general/tracking/lesson-catalog'
-import Link from 'next/link'
-import { ChevronRight } from 'lucide-react'
-import GameAuthHeader from '@/components/auth/GameAuthHeader'
 
 const games = [
   { title: 'Bắn bóng', href: '/game/lop-1/tieng-anh/bai-2/bubble-shooter', image: '/games/bubble-shooter/images/optimize/thumbnail/thumbnail.png', color: 'from-sky-500 to-blue-700' },
@@ -12,9 +9,9 @@ const games = [
 ] as const
 
 export default function Page() {
-  return <><GameAuthHeader /><main className="min-h-[calc(100dvh-4rem)] bg-gradient-to-b from-sky-50 to-pink-50 py-7 md:py-10"><section className="game-container">
-    <nav className="flex items-center gap-1 text-sm font-bold text-slate-500"><Link href="/game" className="text-blue-700">Game</Link><ChevronRight size={15}/><Link href="/game/lop-1" className="text-blue-700">Lớp 1</Link><ChevronRight size={15}/><Link href="/game/lop-1/tieng-anh" className="text-blue-700">Tiếng Anh</Link><ChevronRight size={15}/><span>Bài 2</span></nav>
-    <h1 className="mt-5 text-2xl font-black text-slate-800 md:text-4xl">In the dining room</h1>
+  return <><main className="min-h-[calc(100dvh-58px)] px-0 py-5 sm:py-8"><section className="mx-auto w-full max-w-6xl px-4 sm:px-6">
+
+    <h1 className="rounded-[28px] border-2 border-white/80 bg-sky-950/30 px-5 py-4 text-2xl font-black text-white shadow-[0_7px_0_#164e6380] backdrop-blur-sm sm:px-7 md:text-4xl">In the dining room</h1>
     <LessonGameGrid lessonId={LESSON_IDS.TIENG_ANH_1_BAI_2} games={games} subtitle="Tiếng Anh lớp 1" />
   </section></main></>
 }

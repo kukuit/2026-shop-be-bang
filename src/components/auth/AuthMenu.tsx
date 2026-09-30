@@ -5,7 +5,7 @@ import { LogIn, LogOut, Menu, UserRound } from 'lucide-react'
 import { useAuth } from './AuthProvider'
 import LoginModal from './LoginModal'
 
-export default function AuthMenu({ game = false, children }: { game?: boolean; children?: ReactNode }) {
+export default function AuthMenu({ game = false, children, trigger, triggerClassName, menuAlign = 'right', gamePopup = false }: { game?: boolean; children?: ReactNode; trigger?: ReactNode; triggerClassName?: string; menuAlign?: 'left' | 'right'; gamePopup?: boolean }) {
   const { user, loading, logout } = useAuth()
   const [loginOpen, setLoginOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
@@ -31,7 +31,9 @@ export default function AuthMenu({ game = false, children }: { game?: boolean; c
   }, [menuOpen])
   if (loading)
     return (
-      <span
+      trigger ? <span role="status" aria-label="Đang tải tài khoản" aria-disabled="true" className={`${triggerClassName ?? ''} pointer-events-none`}>
+        <span className="inline-flex animate-spin" aria-hidden="true">{trigger}</span>
+      </span> : <span
         className="flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-2.5 text-sm font-semibold text-slate-500"
         aria-label="Đang tải tài khoản"
       >
@@ -65,36 +67,39 @@ export default function AuthMenu({ game = false, children }: { game?: boolean; c
         onClick={() => setMenuOpen((v) => !v)}
         aria-label="Menu tài khoản và chọn lớp"
         aria-expanded={menuOpen}
-        className={`flex h-11 w-11 items-center justify-center gap-2 rounded-full border border-slate-200 bg-white p-0 text-sm font-bold ${user ? 'sm:h-auto sm:w-auto sm:justify-start sm:px-3 sm:py-2' : ''}`}
+        className={triggerClassName ?? `flex h-11 w-11 items-center justify-center gap-2 rounded-full border border-slate-200 bg-white p-0 text-sm font-bold ${user ? 'sm:h-auto sm:w-auto sm:justify-start sm:px-3 sm:py-2' : ''}`}
       >
-        <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-blue-100 text-xs font-black uppercase text-blue-700">
-          {user?.displayName.trim().charAt(0) || <Menu size={18} />}
-        </span>
-        {user && <span className="hidden max-w-32 truncate sm:inline" title={user.displayName}>{headerName}</span>}
+        {trigger ?? <>
+          <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-blue-100 text-xs font-black uppercase text-blue-700">
+            {user?.displayName.trim().charAt(0) || <Menu size={18} />}
+          </span>
+          {user && <span className="hidden max-w-32 truncate sm:inline" title={user.displayName}>{headerName}</span>}
+        </>}
       </button>
       {menuOpen && (
-        <div className="absolute right-0 z-50 mt-2 max-h-[calc(100dvh-5rem)] w-64 max-w-[calc(100vw-2rem)] overflow-y-auto rounded-2xl border border-slate-200 bg-white py-1 text-slate-800 shadow-xl">
-          <div className="flex items-center gap-2 border-b border-slate-100 px-4 py-2.5 sm:hidden">
-            <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-blue-100 text-xs font-black uppercase text-blue-700">
+        <div className={gamePopup ? 'fixed left-3 right-3 top-[58px] z-[60] max-h-[calc(100dvh-5rem)] w-auto overflow-y-auto rounded-[26px] border-[3px] border-white bg-[#fffaf0] py-2 text-sky-950 shadow-[0_7px_0_#164e6380,0_18px_36px_#082f4960] sm:absolute sm:left-auto sm:right-0 sm:top-full sm:mt-3 sm:w-[min(20rem,calc(100vw-1.5rem))]' : `absolute ${menuAlign === 'left' ? 'left-0' : 'right-0'} z-50 mt-3 max-h-[calc(100dvh-5rem)] w-[min(20rem,calc(100vw-1.5rem))] overflow-y-auto rounded-2xl border border-slate-200 bg-white py-1 text-slate-800 shadow-xl`}>
+          <div className={`flex items-center gap-2 px-4 py-3 ${gamePopup ? 'border-b-2 border-sky-100' : 'border-b border-slate-100 sm:hidden'}`}>
+            <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-full text-xs font-black uppercase ${gamePopup ? 'bg-sky-100 text-sky-800' : 'bg-blue-100 text-blue-700'}`}>
               {user?.displayName.trim().charAt(0) || <UserRound size={16} />}
             </span>
-            <span className="min-w-0 truncate text-sm font-bold text-slate-800">{user?.displayName || 'Bé chơi game'}</span>
+            <span className={`min-w-0 truncate text-sm font-black ${gamePopup ? 'text-sky-950' : 'text-slate-800'}`}>{user?.displayName || 'Bé chơi game'}</span>
           </div>
           {children}
           {game && user?.activeGame && (
-            <Link href="/game/me" className="block px-4 py-2 text-sm hover:bg-slate-50">
+            <Link href="/game/me" className={`block px-4 py-2 text-sm ${gamePopup ? 'font-bold hover:bg-amber-50' : 'hover:bg-slate-50'}`}>
               Tiến trình học
             </Link>
           )}
+          {gamePopup && <Link href="/game/me/rewards/list" className="block px-4 py-2 text-sm font-bold hover:bg-amber-50">Đổi quà</Link>}
           {user?.role === 'admin' && (
-            <Link href="/admin/users" className="block px-4 py-2 text-sm hover:bg-slate-50">
+            <Link href="/admin/users" className={`block px-4 py-2 text-sm ${gamePopup ? 'font-bold hover:bg-amber-50' : 'hover:bg-slate-50'}`}>
               Quản trị user
             </Link>
           )}
           <button
             type="button"
             onClick={() => { setMenuOpen(false); if (user) void logout(); else setLoginOpen(true) }}
-            className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50"
+            className={`flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 ${gamePopup ? 'font-bold' : ''}`}
           >
             {user ? <LogOut size={15} /> : <LogIn size={15} />}
             {user ? 'Đăng xuất' : 'Đăng nhập'}

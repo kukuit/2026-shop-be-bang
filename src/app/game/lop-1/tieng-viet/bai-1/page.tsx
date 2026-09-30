@@ -1,7 +1,4 @@
 import type { Metadata } from 'next'
-import Link from 'next/link'
-import { ChevronRight } from 'lucide-react'
-import GameAuthHeader from '@/components/auth/GameAuthHeader'
 import LessonGameGrid from '@/components/games/general/LessonGameGrid'
 import { TIENG_VIET_1_BAI_1 } from './lesson'
 
@@ -15,9 +12,9 @@ const games = [
 ] as const
 
 export default function Page() {
-  return <><GameAuthHeader /><main className="min-h-[calc(100dvh-4rem)] bg-gradient-to-b from-sky-50 to-pink-50 py-7 md:py-10"><section className="game-container">
-    <nav className="flex flex-wrap items-center gap-1 text-sm font-bold text-slate-500"><Link href="/game" className="text-blue-700">Game</Link><ChevronRight size={15} /><Link href="/game/lop-1" className="text-blue-700">Lớp 1</Link><ChevronRight size={15} /><Link href="/game/lop-1/tieng-viet" className="text-blue-700">Tiếng Việt</Link><ChevronRight size={15} /><span>Tuần 1</span></nav>
-    <h1 className="mt-5 text-2xl font-black text-slate-800 md:text-4xl">Tuần 1: A, B, C, E, Ê</h1>
+  return <><main className="min-h-[calc(100dvh-58px)] px-0 py-5 sm:py-8"><section className="mx-auto w-full max-w-6xl px-4 sm:px-6">
+
+    <h1 className="rounded-[28px] border-2 border-white/80 bg-sky-950/30 px-5 py-4 text-2xl font-black text-white shadow-[0_7px_0_#164e6380] backdrop-blur-sm sm:px-7 md:text-4xl">Tuần 1: A, B, C, E, Ê</h1>
     <LessonGameGrid lessonId={TIENG_VIET_1_BAI_1.lessonId} games={games} subtitle="Tiếng Việt lớp 1" />
   </section></main></>
 }

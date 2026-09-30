@@ -23,14 +23,14 @@ export function RouteGradeSync() {
   }, [pathname, user?.id, isLoading, activeGrade, saving, setActiveGrade])
   return null
 }
-export function GradeSwitcher() {
+export function GradeSwitcher({ gameStyle = false }: { gameStyle?: boolean }) {
   const { user } = useAuth()
   const { activeGrade, isLoading, saving, error, retry, setActiveGrade } = useGameProfile()
   const router = useRouter()
-  return <div className="border-b border-slate-100 p-3 text-sm text-slate-700">
-      <label htmlFor="game-menu-grade" className="mb-2 block font-bold">Chọn lớp chơi game</label>
+  return <div className={gameStyle ? 'text-sm text-sky-950' : 'border-b border-slate-100 p-3 text-sm text-slate-700'}>
+      <label htmlFor="game-menu-grade" className={`mb-2 block font-black ${gameStyle ? 'text-sky-950' : ''}`}>Chọn lớp chơi game</label>
       <div>
-        <select id="game-menu-grade" value={activeGrade ?? ''} disabled={isLoading || saving} className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:opacity-50" onChange={async event => {
+        <select id="game-menu-grade" value={activeGrade ?? ''} disabled={isLoading || saving} className={`w-full rounded-xl border-2 px-3 py-2.5 text-sm font-black focus:outline-none focus:ring-2 disabled:opacity-50 ${gameStyle ? 'border-sky-200 bg-sky-50 text-sky-900 focus:ring-amber-400' : 'border-slate-200 bg-slate-50 font-semibold focus:ring-blue-400'}`} onChange={async event => {
           const grade = Number(event.target.value)
           try { await setActiveGrade(grade); router.push(`/game/lop-${grade}`) } catch {}
         }}>

@@ -1,8 +1,5 @@
 import LessonGameGrid from '@/components/games/general/LessonGameGrid'
 import { LESSON_IDS } from '@/components/games/general/tracking/lesson-catalog'
-import Link from 'next/link'
-import { ChevronRight } from 'lucide-react'
-import GameAuthHeader from '@/components/auth/GameAuthHeader'
 
 const games = [
   { title: 'Bắn bóng', subtitle: 'Các số từ 0 đến 5', href: '/game/lop-1/toan/bai-1/bubble-shooter', image: '/games/bubble-shooter/images/optimize/thumbnail/thumbnail.png', position: 'center 38%', color: 'from-sky-500 to-blue-700' },
@@ -13,15 +10,9 @@ const games = [
 
 export default function LessonOnePage() {
   return (
-    <><GameAuthHeader /><main className="min-h-[calc(100dvh-4rem)] bg-gradient-to-b from-sky-50 to-pink-50 py-7 md:py-10">
-      <section className="game-container">
-        <nav aria-label="Điều hướng bài học" className="flex items-center gap-1 overflow-x-auto whitespace-nowrap text-sm font-bold text-slate-500">
-          <Link href="/game" className="text-blue-700 hover:text-blue-800">Game</Link><ChevronRight size={15} />
-          <Link href="/game/lop-1" className="text-blue-700 hover:text-blue-800">Lớp 1</Link><ChevronRight size={15} />
-          <Link href="/game/lop-1/toan" className="text-blue-700 hover:text-blue-800">Toán</Link><ChevronRight size={15} />
-          <span className="text-slate-800" aria-current="page">Bài 1</span>
-        </nav>
-        <div className="mt-5 md:mt-7"><h1 className="text-2xl font-black text-slate-800 md:text-4xl">Các số từ 0 đến 5</h1></div>
+    <><main className="min-h-[calc(100dvh-58px)] px-0 py-5 sm:py-8">
+      <section className="mx-auto w-full max-w-6xl px-4 sm:px-6">
+        <h1 className="rounded-[28px] border-2 border-white/80 bg-sky-950/30 px-5 py-4 text-2xl font-black text-white shadow-[0_7px_0_#164e6380] backdrop-blur-sm sm:px-7 md:text-4xl">Các số từ 0 đến 5</h1>
         <LessonGameGrid lessonId={LESSON_IDS.TOAN_1_BAI_1} games={games} subtitle="Các số từ 0 đến 5" />
       </section>
     </main></>

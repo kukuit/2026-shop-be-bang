@@ -1,5 +1,5 @@
 .ocean {
-  min-height: calc(100dvh - 4rem);
+  min-height: calc(100dvh - 58px);
   overflow: hidden;
   color: #214b64;
   background-image:
@@ -9,7 +9,7 @@
   background-size: 100% 100%, 1440px 600px, 100% 100%;
   background-position: center top;
   background-repeat: no-repeat, repeat, no-repeat;
-  padding: 28px 0 48px;
+  padding: 8px 0 40px;
 }
 .hero { display: flex; align-items: center; justify-content: space-between; gap: 28px; min-height: 132px; }
 .intro { display: flex; align-items: center; gap: 15px; }
@@ -57,7 +57,7 @@
   .hero { gap: 16px; }
 }
 @media (max-width: 640px) {
-  .ocean { padding-top: 22px; }
+  .ocean { padding-top: 4px; }
   .hero { flex-direction: column; align-items: stretch; justify-content: center; min-height: 110px; gap: 12px; padding: 15px 0; }
   .intro { gap: 8px; }
   .cappy { width: 59px; height: 75px; }

@@ -7,13 +7,13 @@ import ChatWidget from '@/components/ChatWidget'
 export default function SiteShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   if (pathname === '/demo/aqua' || pathname.startsWith('/demo/aqua/') || pathname === '/demo/ai-task' || pathname.startsWith('/demo/ai-task/')) return <>{children}</>
-  // Hiện chatbot ở mọi trang game, trừ màn chơi minigame toàn màn hình.
+  // Giữ chat ở landing/chọn lớp và khu phụ huynh; ẩn trên world, map, mission và gameplay.
   const isGameRoute = pathname === '/game' || pathname.startsWith('/game/')
   const isGameplayRoute = isGameRoute && (
     /\/(bubble-shooter|drag-drop|gold-mining|racing|egg-hunt)(\/|$)/.test(pathname) ||
     /^\/game\/lop-1\/toan\/luyen-tap\/cong-den-10\/?$/.test(pathname)
   )
-  const hasGameChat = isGameRoute && !isGameplayRoute
+  const hasGameChat = isGameRoute && !isGameplayRoute && !pathname.startsWith('/game/lop-')
   const isAdminRoute = pathname.startsWith('/admin/')
 
   if (hasGameChat)

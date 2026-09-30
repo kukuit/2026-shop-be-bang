@@ -1,7 +1,5 @@
 'use client'
 
-import Link from 'next/link'
-import { ChevronRight } from 'lucide-react'
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { getMapPosition, getMapRegion, type LessonMapItem } from './data'
 import { getSpaceRegion } from './englishData'
@@ -71,7 +69,7 @@ export type LessonJourneyMapProps = {
   autoScroll?: boolean
   guest?: boolean
 }
-export default function LessonJourneyMap({ theme, items: lessons, gradeLabel, gradeHref, subjectLabel, title, tagline, showOverview = true, autoScroll = false, guest = false }: LessonJourneyMapProps) {
+export default function LessonJourneyMap({ theme, items: lessons, gradeLabel, subjectLabel, title, tagline, showOverview = true, autoScroll = false, guest = false }: LessonJourneyMapProps) {
   const isSpace = theme === 'space'
   const isAdventure = theme === 'adventure'
   const gridRef = useRef<HTMLOListElement>(null)
@@ -108,10 +106,7 @@ export default function LessonJourneyMap({ theme, items: lessons, gradeLabel, gr
   }, [notice])
 
   return <main className={`${styles.ocean} ${isSpace ? styles.space : isAdventure ? styles.adventure : ''} ${guest ? styles.guest : ''}`}>
-    <div className="game-container">
-      <nav aria-label="Điều hướng trò chơi" className="flex flex-wrap items-center gap-x-2 gap-y-1 text-base font-bold text-slate-600">
-        <Link href="/game" className="text-blue-700 hover:text-blue-800">Game</Link><ChevronRight size={18} aria-hidden="true" /><Link href={gradeHref} className="text-blue-700 hover:text-blue-800">{gradeLabel}</Link><ChevronRight size={18} aria-hidden="true" /><span className="text-slate-800" aria-current="page">{subjectLabel}</span>
-      </nav>
+    <div className="mx-auto w-full max-w-6xl px-4 md:px-6">
       <header className={styles.hero}>
         <div className={styles.intro}>{isSpace ? <CappyAstronaut /> : isAdventure ? <CappyExplorer /> : <CappyPlaceholder />}<div>{showOverview && theme !== 'ocean' && <p className={styles.eyebrow}>{subjectLabel} {gradeLabel}</p>}<h1>{title}</h1>{tagline && <p className={styles.tagline}>{tagline}</p>}</div></div>
         {showOverview && theme !== 'ocean' && <ClassProgress completed={lessons.filter(item => item.status === 'completed').length} total={lessons.length} label={`Tiến độ ${gradeLabel.toLowerCase()}`} unitLabel={isSpace ? 'Unit' : 'bài'} />}
