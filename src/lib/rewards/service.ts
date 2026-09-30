@@ -9,8 +9,12 @@ const rewards = (userId: string) => root().collection('user_rewards').doc(userId
 const redemptions = (userId: string) => root().collection('user_reward_redemptions').doc(userId).collection('items')
 const wallet = (userId: string) => root().collection('coin_wallets').doc(userId)
 const dateString = (value: unknown) => value instanceof Timestamp ? value.toDate().toISOString() : null
-const mapReward = (id: string, data: FirebaseFirestore.DocumentData): Reward => ({ id, name: data.name, coinCost: data.coinCost, imageUrl: data.imageUrl ?? null, isActive: data.isActive === true, order: data.order ?? 0 })
-const mapRedemption = (id: string, data: FirebaseFirestore.DocumentData): Redemption => ({ id, rewardName: data.rewardName, rewardImageUrl: data.rewardImageUrl ?? null, coinCost: data.coinCost, status: data.status === 'received' || data.status === 'cancelled' ? data.status : 'pending', redeemedAt: dateString(data.redeemedAt) ?? new Date().toISOString(), receivedAt: dateString(data.receivedAt), cancelledAt: dateString(data.cancelledAt) })
+const currentGiftImageUrl = (value: unknown): string | null => {
+  if (typeof value !== 'string') return null
+  return value.replace(/^(\/games\/general\/images\/gifts\/[a-z0-9-]+)\.webp$/i, '$1.png')
+}
+const mapReward = (id: string, data: FirebaseFirestore.DocumentData): Reward => ({ id, name: data.name, coinCost: data.coinCost, imageUrl: currentGiftImageUrl(data.imageUrl), isActive: data.isActive === true, order: data.order ?? 0 })
+const mapRedemption = (id: string, data: FirebaseFirestore.DocumentData): Redemption => ({ id, rewardName: data.rewardName, rewardImageUrl: currentGiftImageUrl(data.rewardImageUrl), coinCost: data.coinCost, status: data.status === 'received' || data.status === 'cancelled' ? data.status : 'pending', redeemedAt: dateString(data.redeemedAt) ?? new Date().toISOString(), receivedAt: dateString(data.receivedAt), cancelledAt: dateString(data.cancelledAt) })
 
 export async function listRewards(userId: string) {
   const [items, balance] = await Promise.all([rewards(userId).orderBy('order').get(), wallet(userId).get()])
@@ -43,9 +47,9 @@ export async function redeemReward(userId: string, rewardId: string) {
     if (!Number.isSafeInteger(cost) || cost < 1 || !Number.isSafeInteger(balance) || balance < cost) throw new Error(`INSUFFICIENT_BALANCE:${Number.isSafeInteger(balance) ? balance : 0}`)
     const after = balance - cost
     transaction.set(walletRef, { balance: after, updatedAt: FieldValue.serverTimestamp() }, { merge: true })
-    transaction.create(redemptionRef, { userId, childId: userId, rewardId, rewardName: reward.name, rewardImageUrl: reward.imageUrl ?? null, coinCost: cost, status: 'pending', redeemedAt: FieldValue.serverTimestamp(), receivedAt: null, cancelledAt: null })
+    transaction.create(redemptionRef, { userId, childId: userId, rewardId, rewardName: reward.name, rewardImageUrl: currentGiftImageUrl(reward.imageUrl), coinCost: cost, status: 'pending', redeemedAt: FieldValue.serverTimestamp(), receivedAt: null, cancelledAt: null })
     transaction.create(transactionRef, { userId, childId: userId, type: 'reward_redeem', amount: -cost, balanceBefore: balance, balanceAfter: after, referenceId: redemptionRef.id, description: `Đổi quà ${reward.name}`, createdAt: FieldValue.serverTimestamp() })
-    return { id: redemptionRef.id, rewardName: reward.name, rewardImageUrl: reward.imageUrl ?? null, coinCost: cost, coinBalance: after }
+    return { id: redemptionRef.id, rewardName: reward.name, rewardImageUrl: currentGiftImageUrl(reward.imageUrl), coinCost: cost, coinBalance: after }
   })
 }
 export async function markReceived(userId: string, redemptionId: string) {

@@ -6,7 +6,7 @@ import { Gift, Pencil, Plus, RefreshCw, X } from 'lucide-react'
 
 type Reward = { id: string; name: string; coinCost: number; imageUrl: string | null; isActive: boolean; order: number }
 const assets = [
-  ['/games/general/images/gifts/thach-zai-zai.webp', 'Thạch Zai Zai'], ['/games/general/images/gifts/rong-bien.webp', 'Rong biển'], ['/games/general/images/gifts/sua-fristi.webp', 'Sữa Fristi'], ['/games/general/images/gifts/snack.webp', 'Snack'], ['/games/general/images/gifts/keo-deo.webp', 'Kẹo dẻo'], ['/games/general/images/gifts/banh-trang-tron.webp', 'Bánh tráng trộn'], ['/games/general/images/gifts/xuc-xich.webp', 'Xúc xích'],
+  ['/games/general/images/gifts/thach-zai-zai.png', 'Thạch Zai Zai'], ['/games/general/images/gifts/rong-bien.png', 'Rong biển'], ['/games/general/images/gifts/sua-fristi.png', 'Sữa Fristi'], ['/games/general/images/gifts/snack.png', 'Snack'], ['/games/general/images/gifts/keo-deo.png', 'Kẹo dẻo'], ['/games/general/images/gifts/banh-trang-tron.png', 'Bánh tráng trộn'], ['/games/general/images/gifts/xuc-xich.png', 'Xúc xích'], ['/games/general/images/gifts/xuc-xich-cay.png', 'Xúc xích cây'],
 ]
 
 export default function RewardsPage() {
