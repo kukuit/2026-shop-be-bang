@@ -2,17 +2,21 @@
 
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
-import { ArrowLeft, Gamepad2, Play, RotateCcw, Store, Volume2, VolumeX, X } from 'lucide-react'
-import { ReactNode, useState } from 'react'
+import { ArrowLeft, Gamepad2, Play, RotateCcw, Store, UserRound, Volume2, VolumeX, X } from 'lucide-react'
+import { ReactNode, useEffect, useState } from 'react'
 import StarIcon from './StarIcon'
 import GameProgress from './GameProgress'
 import { useAuth } from '@/components/auth/AuthProvider'
+import RewardShopModal from './RewardShopModal'
 
 type GameShellProps = {
   children: ReactNode
   score: number
   currentRound: number
   totalRounds?: number
+  lives?: number
+  levelOnly?: boolean
+  coinBalance?: number
   playerName?: string
   muted: boolean
   onMutedChange: (muted: boolean) => void
@@ -26,6 +30,9 @@ export default function GameShell({
   score,
   currentRound,
   totalRounds = 10,
+  lives,
+  levelOnly = false,
+  coinBalance,
   playerName,
   muted,
   onMutedChange,
@@ -37,8 +44,26 @@ export default function GameShell({
   const lessonPath = pathname.replace(/\/+$/, '').replace(/\/(?:luyen-tap\/)?[^/]+$/, '') || '/game'
   const [showExit, setShowExit] = useState(false)
   const [showRewards, setShowRewards] = useState(false)
+  const [fetchedCoinBalance, setFetchedCoinBalance] = useState(0)
+  const [redeemedBalance, setRedeemedBalance] = useState<number | null>(null)
+  const [redeemedGift, setRedeemedGift] = useState<{ name: string; imageUrl: string | null } | null>(null)
+  useEffect(() => {
+    if (!levelOnly || coinBalance !== undefined) return
+    let active = true
+    // The existing survival read returns the shared wallet balance for the current player.
+    fetch('/api/game-tracking/bubble-survival?lessonId=toan-1-bai-1')
+      .then(response => response.ok ? response.json() : null)
+      .then(data => { if (active && data) setFetchedCoinBalance(data.coinBalance ?? 0) })
+      .catch(() => {})
+    return () => { active = false }
+  }, [levelOnly, coinBalance])
+  const displayedCoinBalance = redeemedBalance ?? coinBalance ?? fetchedCoinBalance
   const { user, loading: authLoading } = useAuth()
+  const [avatarFailed, setAvatarFailed] = useState(false)
+  const avatarUrl = user?.avatar?.trim() || null
+  useEffect(() => { setAvatarFailed(false) }, [avatarUrl])
   const displayName = playerName ?? user?.displayName ?? (authLoading ? '...' : 'Khách')
+  const avatarInitial = Array.from(user?.displayName.trim().normalize('NFC') ?? '')[0]?.toLocaleUpperCase('vi-VN') || '?'
   const displayNameCharacters = Array.from(displayName)
   const shortDisplayName = displayNameCharacters.length > 8
     ? `${displayNameCharacters.slice(0, 8).join('')}...`
@@ -51,7 +76,7 @@ export default function GameShell({
 
   const setRewardsOpen = (open: boolean) => {
     setShowRewards(open)
-    onPauseChange?.(open)
+    if (levelOnly) onPauseChange?.(open)
   }
 
   const restart = () => {
@@ -64,15 +89,17 @@ export default function GameShell({
       {children}
       <div className="pointer-events-none absolute inset-x-0 top-0 z-40 flex items-start justify-between p-[1.7%]">
         <div className="flex h-10 min-w-0 max-w-[42%] items-center gap-1.5 rounded-2xl border-2 border-white/80 bg-blue-600/90 py-0.5 pl-0.5 pr-3 text-white shadow-lg">
-          <Image
-            src="/games/general/images/optimize/player-avatar.png"
-            alt="Ảnh đại diện người chơi"
-            width={52}
-            height={52}
-            className="h-[34px] w-[34px] rounded-[0.8rem] object-cover"
-            priority
-          />
-          <span className="min-w-0 flex-1 truncate text-xs font-black drop-shadow" title={displayName}>{shortDisplayName}</span>
+          <span className="grid h-[30px] w-[30px] shrink-0 place-items-center overflow-hidden rounded-full bg-slate-200 text-slate-600" aria-label={user ? `Ảnh đại diện ${user.displayName}` : 'Ảnh đại diện khách'}>
+            {!user ? <UserRound size={21} strokeWidth={2.5} aria-hidden="true" /> : avatarUrl && !avatarFailed ?
+              // Avatar URLs may be hosted outside Next.js configured image domains.
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={avatarUrl} alt="" className="h-full w-full object-cover" onError={() => setAvatarFailed(true)} /> :
+              <span className="text-base font-black leading-none" aria-hidden="true">{avatarInitial}</span>}
+          </span>
+          {lives === undefined ? <span className="min-w-0 flex-1 truncate text-xs font-black drop-shadow" title={displayName}>{shortDisplayName}</span> :
+            <span className="flex gap-0.5 text-lg" aria-label={`${lives} trên 3 tim`}>
+              {Array.from({ length: 3 }, (_, index) => <span key={index} aria-hidden="true">{index < lives ? '❤️' : '🖤'}</span>)}
+            </span>}
         </div>
 
         <div className="pointer-events-auto flex gap-1.5">
@@ -109,37 +136,26 @@ export default function GameShell({
         aria-haspopup="dialog"
       >
         <span className="text-[clamp(20px,5.8cqw,25px)] leading-none" aria-hidden="true">🎁</span>
-        <span className="flex items-center gap-[1.2cqw] text-[clamp(12px,3.4cqw,15px)] leading-none" aria-hidden="true">
+        {levelOnly ? <span className="flex min-w-0 items-center gap-[1cqw] text-[clamp(14px,4.2cqw,19px)] font-black leading-none text-amber-300">
+          <span>{displayedCoinBalance}</span>
+          <Image src="/games/general/images/optimize/xu_icon.png" alt="xu" width={22} height={22} className="h-[5cqw] w-[5cqw] shrink-0 object-contain" />
+        </span> : <span className="flex items-center gap-[1.2cqw] text-[clamp(12px,3.4cqw,15px)] leading-none" aria-hidden="true">
           <span className="text-amber-300">●</span><span className="text-white">○</span><span className="text-white">○</span>
-        </span>
+        </span>}
       </button>
 
-      <GameProgress currentRound={currentRound} totalRounds={totalRounds} />
+      <GameProgress currentRound={currentRound} totalRounds={totalRounds} levelOnly={levelOnly} />
 
-      {showRewards && (
-        <div className="absolute inset-0 z-50 grid place-items-center bg-slate-950/70 p-6" role="dialog" aria-modal="true" aria-labelledby="reward-popup-title">
-          <div className="relative w-full max-w-sm rounded-[2rem] border-4 border-amber-300 bg-white p-7 text-center shadow-2xl">
-            <button type="button" onClick={() => setRewardsOpen(false)} className="absolute right-4 top-4 rounded-full p-2 text-slate-500 hover:bg-slate-100" aria-label="Đóng quà của bé">
-              <X />
-            </button>
-            <h2 id="reward-popup-title" className="text-3xl font-black text-blue-600">Quà của bé</h2>
-            <p className="mt-2 flex items-center justify-center gap-1.5 font-black text-amber-500">
-              Hiện có: 0
-              <Image src="/games/general/images/optimize/xu_icon.png" alt="xu" width={24} height={24} className="h-6 w-6 object-contain" />
-            </p>
-            <div className="mt-6 grid gap-3 text-left text-sm font-bold text-slate-700">
-              <div className="flex items-center justify-between rounded-2xl bg-amber-50 px-4 py-3"><span className="flex items-center gap-1">20 <Image src="/games/general/images/optimize/xu_icon.png" alt="xu" width={20} height={20} className="h-5 w-5 object-contain" /></span><span className="flex items-center gap-1 text-lg" aria-label="Phần thưởng bí mật, một hộp quà"><span>?</span><span aria-hidden="true">🎁</span></span></div>
-              <div className="flex items-center justify-between rounded-2xl bg-sky-50 px-4 py-3"><span className="flex items-center gap-1">50 <Image src="/games/general/images/optimize/xu_icon.png" alt="xu" width={20} height={20} className="h-5 w-5 object-contain" /></span><span className="flex items-center gap-1 text-lg" aria-label="Phần thưởng bí mật, hai hộp quà"><span>?</span><span aria-hidden="true">🎁🎁</span></span></div>
-              <div className="flex items-center justify-between rounded-2xl bg-violet-50 px-4 py-3"><span className="flex items-center gap-1">100 <Image src="/games/general/images/optimize/xu_icon.png" alt="xu" width={20} height={20} className="h-5 w-5 object-contain" /></span><span className="flex items-center gap-1 text-lg" aria-label="Phần thưởng bí mật, ba hộp quà"><span>?</span><span aria-hidden="true">🎁🎁🎁</span></span></div>
-            </div>
-            <p className="mt-6 flex flex-wrap items-center justify-center gap-x-1 text-sm font-bold leading-6 text-slate-500">
-              <span>Chơi game để tích</span>
-              <Image src="/games/general/images/optimize/xu_icon.png" alt="xu" width={20} height={20} className="h-5 w-5 object-contain" />
-              <span>và mở quà nhé!</span>
-            </p>
-          </div>
+      <RewardShopModal open={showRewards} onClose={() => setRewardsOpen(false)} coinBalance={displayedCoinBalance} onBalanceChange={balance => { setFetchedCoinBalance(balance); setRedeemedBalance(balance) }} onSuccess={setRedeemedGift} />
+
+      {redeemedGift && <div className="pointer-events-none absolute inset-0 z-[70] grid place-items-center bg-slate-950/20" onAnimationEnd={() => setRedeemedGift(null)}>
+        <div className="reward-gift-pop flex w-[82%] flex-col items-center rounded-[2rem] border-4 border-amber-300 bg-white/95 p-5 text-center shadow-2xl">
+          <span className="text-4xl" aria-hidden="true">🎉</span>
+          {redeemedGift.imageUrl && <Image src={redeemedGift.imageUrl} alt="" width={150} height={150} className="mt-2 h-32 w-32 object-contain" />}
+          <p className="mt-2 text-xl font-black text-blue-700">{redeemedGift.name}</p><p className="font-bold text-emerald-600">Đã đổi quà!</p>
         </div>
-      )}
+        <style jsx>{`@keyframes reward-gift-pop { 0% { opacity: 0; transform: scale(.5) } 16% { opacity: 1; transform: scale(1.12) } 28% { transform: scale(1) } 76% { opacity: 1; transform: scale(1.04) } 100% { opacity: 0; transform: scale(.92) } } .reward-gift-pop { animation: reward-gift-pop 1.8s ease-in-out both }`}</style>
+      </div>}
 
       {showExit && (
         <div className="absolute inset-0 z-50 grid place-items-center bg-slate-950/70 p-6" role="dialog" aria-modal="true" aria-labelledby="game-menu-title">

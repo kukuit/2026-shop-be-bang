@@ -7,6 +7,7 @@ import { TASK_EMOJI } from './levels'
 import { GoldMinerState, WolfState, type GoldMinerGameConfig, type GoldMinerQuestion } from './types'
 import { createGameTracker, type GameTracker } from '../general/tracking'
 import { GameVoiceManager, type VoicePriority } from '../general/GameVoiceManager'
+import { MAX_SURVIVAL_LEVEL, MAX_SURVIVAL_LIVES, MAX_SURVIVAL_LIFE_RECOVERIES } from '../general/survival-rewards'
 
 const W = 720
 const H = 1280
@@ -30,13 +31,14 @@ const GOLD_LAYOUTS: Record<number, Array<{ x: number; y: number }>> = {
   7: [{ x: 105, y: 625 }, { x: 355, y: 670 }, { x: 610, y: 625 }, { x: 175, y: 850 }, { x: 535, y: 850 }, { x: 125, y: 1060 }, { x: 575, y: 1060 }],
 }
 
-type MineItem = Phaser.GameObjects.Container & { value: string | number; radius: number; taken: boolean; rock: boolean }
+type MineItem = Phaser.GameObjects.Container & { value: string | number; radius: number; taken: boolean; rock: boolean; heart: boolean }
 
 export class GoldMinerScene extends Phaser.Scene {
   private state = GoldMinerState.ROUND_START
   private wolfState = WolfState.IDLE
   private question!: GoldMinerQuestion
   private round = 0
+  private levelsCompleted = 0
   private score = 0
   private angle = -50
   private direction = 1
@@ -68,6 +70,11 @@ export class GoldMinerScene extends Phaser.Scene {
   private tracker?: GameTracker
   private questions: GoldMinerQuestion[] = []
   private voiceManager?: GameVoiceManager
+  private lives = MAX_SURVIVAL_LIVES
+  private correctStreak = 0
+  private heartPending = false
+  private heartRecoveries = 0
+  private pendingNextRound = false
 
   constructor(private readonly lesson: GoldMinerGameConfig) { super('GoldMinerScene') }
 
@@ -127,14 +134,17 @@ export class GoldMinerScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.cleanup, this)
     this.music = this.sound.add('gold-background', { loop: true, volume: 0.22 })
     this.game.events.emit('game-ui:score', this.score)
-    void this.loadAdaptiveQuestions().then(() => {
+    this.game.events.emit('game-ui:lives', this.lives)
+    void this.loadAdaptiveQuestions().then((questions) => {
+      this.questions = questions
       this.game.events.emit('gold-miner:ready')
       if (this.game.registry.get('game-ui:started')) this.startGameplay()
-    })
+    }).catch(error => console.error('[GoldMiner] Could not load questions', error))
   }
 
   update(_: number, delta: number) {
     if (!this.gameStarted || this.paused) return
+    if (this.pendingNextRound) { this.pendingNextRound = false; this.advanceRound() }
     const seconds = Math.min(delta, 40) / 1000
     if (this.state === GoldMinerState.AIMING) {
       const speed = this.round < 2 ? 42 : this.round < 8 ? 49 : 55
@@ -206,7 +216,7 @@ export class GoldMinerScene extends Phaser.Scene {
           if (this.state === GoldMinerState.AIMING) playQuestionVoice(this, this.question)
         })
     }
-    this.tracker?.startQuestion({ learningKey: this.question.learningKey, expectedAnswer: this.question.correctAnswer, skill: this.question.skill, inputMode: this.question.inputMode, answerMode: this.question.answerMode })
+    this.tracker?.startQuestion({ learningKey: this.question.learningKey, sourceLesson: this.question.sourceLesson, expectedAnswer: this.question.correctAnswer, skill: this.question.skill, inputMode: this.question.inputMode, answerMode: this.question.answerMode })
     this.state = GoldMinerState.ROUND_START
     this.wolfAppeared = false
     this.taskItems.setText((this.question.prompt ?? Array.from({ length: this.question.count }, () => TASK_EMOJI[this.question.objectType]).join(' ')).normalize('NFC'))
@@ -228,6 +238,7 @@ export class GoldMinerScene extends Phaser.Scene {
     }
     this.taskItems.setVisible(!this.taskImage)
     this.game.events.emit('game-ui:round', this.round + 1)
+    this.spawnRecoveryHeart()
     const positions = Phaser.Utils.Array.Shuffle([...(GOLD_LAYOUTS[this.question.choices.length] ?? GOLD_LAYOUTS[7])])
     this.question.choices.forEach((value, index) => {
       this.mineItems.push(this.createMineItem(positions[index].x, positions[index].y, value, index % 3 === 2))
@@ -262,11 +273,24 @@ export class GoldMinerScene extends Phaser.Scene {
     if (picture) label.destroy()
     else label.setScale(Math.min(1, 90 * sizeScale / label.width, 62 * sizeScale / label.height))
     const item = this.add.container(x, y, [sprite, picture ?? label]).setDepth(10) as MineItem
-    item.value = value; item.radius = 62 * sizeScale; item.taken = false; item.rock = rock
+    item.value = value; item.radius = 62 * sizeScale; item.taken = false; item.rock = rock; item.heart = false
     this.tweens.add({ targets: item, y: y - 7, duration: 1500 + x, yoyo: true, repeat: -1, ease: 'Sine.InOut' })
     return item
   }
 
+  private spawnRecoveryHeart() {
+    if (!this.heartPending || this.lives >= MAX_SURVIVAL_LIVES || this.heartRecoveries >= MAX_SURVIVAL_LIFE_RECOVERIES) return
+    const sizeScale = 0.9
+    const nugget = this.add.image(0, 0, 'gold-nugget').setDisplaySize(145 * sizeScale, 106 * sizeScale)
+    const heart = this.add.text(0, -2, '?', {
+      fontFamily: 'Arial, sans-serif', fontSize: '43px', fontStyle: 'bold', color: '#ef4444',
+      stroke: '#fff4cf', strokeThickness: 4,
+    }).setOrigin(.5)
+    const item = this.add.container(360, 555, [nugget, heart]).setDepth(12) as MineItem
+    item.value = '__heart__'; item.radius = 62 * sizeScale; item.taken = false; item.rock = false; item.heart = true
+    this.mineItems.push(item)
+    this.tweens.add({ targets: item, scale: 1.12, duration: 500, yoyo: true, repeat: -1, ease: 'Sine.InOut' })
+  }
   private positionHook(angle: number, length: number) {
     const rad = Phaser.Math.DegToRad(angle)
     const x = ANCHOR.x + Math.sin(rad) * length
@@ -330,6 +354,18 @@ export class GoldMinerScene extends Phaser.Scene {
       this.state = GoldMinerState.AIMING
       return
     }
+    if (this.grabbed?.heart) {
+      this.grabbed.destroy()
+      this.grabbed = undefined
+      this.lives = Math.min(MAX_SURVIVAL_LIVES, this.lives + 1)
+      this.heartRecoveries += 1
+      this.heartPending = false
+      this.correctStreak = 0
+      this.game.events.emit('game-ui:lives', this.lives)
+      this.feedback.setColor('#ef4444').setText('+1 ❤')
+      this.state = GoldMinerState.AIMING
+      return
+    }
     if (!this.grabbed) { this.feedback.setText(''); this.state = GoldMinerState.AIMING; return }
     stopQuestionVoice(this)
     this.state = GoldMinerState.CHECK_ANSWER
@@ -337,6 +373,7 @@ export class GoldMinerScene extends Phaser.Scene {
     this.grabbed = undefined
     this.tracker?.recordAnswer({
       learningKey: this.question.learningKey,
+      sourceLesson: this.question.sourceLesson,
       expectedAnswer: this.question.correctAnswer,
       selectedAnswer: item.value,
       correct: item.value === this.question.correctAnswer,
@@ -350,7 +387,12 @@ export class GoldMinerScene extends Phaser.Scene {
     this.state = GoldMinerState.ROUND_CLEAR
     this.cancelWolf()
     this.score += 10
+    this.levelsCompleted = this.round + 1
     this.game.events.emit('game-ui:score', this.score)
+    if (this.lives < MAX_SURVIVAL_LIVES && this.heartRecoveries < MAX_SURVIVAL_LIFE_RECOVERIES) {
+      this.correctStreak += 1
+      if (this.correctStreak >= 3) { this.heartPending = true; this.correctStreak = 0 }
+    } else this.correctStreak = 0
     this.feedback.setColor('#fff59d').setText('⭐ +10')
     this.cappyFace.setText('★ᴗ★')
     this.sparkle(ANCHOR.x, ANCHOR.y + 40)
@@ -362,13 +404,47 @@ export class GoldMinerScene extends Phaser.Scene {
     }
     item.destroy()
     this.time.delayedCall(850, () => {
-      if (this.round === this.questions.length - 1) {
-        this.state = GoldMinerState.GAME_COMPLETE
+      const completedRound = this.round + 1
+      if (completedRound % 5 === 0) {
+        this.game.events.emit('game-ui:reward', completedRound)
+      }
+      if (completedRound === MAX_SURVIVAL_LEVEL) {
         this.time.delayedCall(500, () => this.voiceManager?.playOnce('win', 'voice-win', 'win'))
-        const trackingTask = this.tracker?.finishSession(this.score)
-        this.game.events.emit('game-ui:complete', this.score, trackingTask)
-      } else { this.round += 1; this.cappyFace.setText('•ᴗ•'); this.startRound() }
+        this.finishGame(true)
+      } else if (this.round < this.questions.length - 1) this.advanceRound()
+      else {
+        void this.loadAdaptiveQuestions().then(batch => {
+          if (!this.sys.isActive() || this.state !== GoldMinerState.ROUND_CLEAR) return
+          const additions = batch.slice(0, MAX_SURVIVAL_LEVEL - this.questions.length)
+          if (additions.length === 0) { this.finishGame(false); return }
+          this.questions.push(...additions)
+          if (this.paused) this.pendingNextRound = true
+          else this.advanceRound()
+        }).catch(error => {
+          console.error('[GoldMiner] Could not load another question batch', error)
+          this.finishGame(false)
+        })
+      }
     })
+  }
+
+  private advanceRound() {
+    if (this.round >= MAX_SURVIVAL_LEVEL - 1) return this.finishGame(true)
+    this.round += 1
+    this.cappyFace.setText('•ᴗ•')
+    this.startRound()
+  }
+
+  private finishGame(victory: boolean) {
+    if (this.state === GoldMinerState.GAME_COMPLETE) return
+    this.state = GoldMinerState.GAME_COMPLETE
+    this.cancelWolf()
+    const levelReached = Math.min(MAX_SURVIVAL_LEVEL, Math.max(this.round + 1, this.levelsCompleted + 1))
+    const levelsCompleted = victory ? MAX_SURVIVAL_LEVEL : this.levelsCompleted
+    const trackingTask = this.tracker?.finishSession(this.score, undefined, undefined, {
+      levelReached, levelsCompleted, livesRemaining: this.lives,
+    })
+    this.game.events.emit('game-ui:complete', this.score, trackingTask, victory, levelsCompleted)
   }
 
   private wrong(item: MineItem) {
@@ -378,6 +454,18 @@ export class GoldMinerScene extends Phaser.Scene {
     )
     this.score = Math.max(0, this.score - 2)
     this.game.events.emit('game-ui:score', this.score)
+    this.lives = Math.max(0, this.lives - 1)
+    this.correctStreak = 0
+    this.heartPending = false
+    this.mineItems.filter(candidate => candidate.heart).forEach(candidate => candidate.destroy())
+    this.game.events.emit('game-ui:lives', this.lives)
+    if (this.lives === 0) {
+      item.destroy()
+      this.feedback.setColor('#ffb4a8').setText('GAME OVER')
+      this.cappyFace.setText('•︵•')
+      this.finishGame(false)
+      return
+    }
     this.feedback.setColor('#ffb4a8').setText('-2')
     this.cappyFace.setText('•︵•')
     this.tweens.add({ targets: item, x: item.x + 15, duration: 60, yoyo: true, repeat: 3, onComplete: () => item.destroy() })
@@ -396,8 +484,10 @@ export class GoldMinerScene extends Phaser.Scene {
   }
 
   private prepareWolfRounds() {
-    const eligibleRounds = Phaser.Utils.Array.Shuffle([2, 3, 4, 5, 6, 7, 8, 9])
-    this.wolfRounds = new Set(eligibleRounds.slice(0, 4))
+    const eligibleRounds = Phaser.Utils.Array.Shuffle(
+      Array.from({ length: MAX_SURVIVAL_LEVEL - 2 }, (_, index) => index + 2),
+    )
+    this.wolfRounds = new Set(eligibleRounds.slice(0, 8))
   }
 
   private attemptWolfSpawn(scheduledRound: number) {
@@ -411,7 +501,7 @@ export class GoldMinerScene extends Phaser.Scene {
 
   private spawnWolf() {
     if (this.state !== GoldMinerState.AIMING || this.grabbed || this.wolfAppeared) return
-    const targets = this.mineItems.filter((item) => item.active && !item.taken && item.value !== this.question.correctAnswer)
+    const targets = this.mineItems.filter((item) => item.active && !item.taken && !item.heart && item.value !== this.question.correctAnswer)
     if (!targets.length) return
     this.wolfAppeared = true
     this.wolfState = WolfState.PEEK
@@ -447,7 +537,7 @@ export class GoldMinerScene extends Phaser.Scene {
   }
 
   private stealGold(target: MineItem, fromLeft: boolean) {
-    if (!this.wolf?.active || !target.active || target.taken || target.value === this.question.correctAnswer) {
+    if (!this.wolf?.active || !target.active || target.taken || target.heart || target.value === this.question.correctAnswer) {
       this.escapeWolf()
       return
     }
@@ -562,7 +652,7 @@ export class GoldMinerScene extends Phaser.Scene {
   }
   private startMusic() { if (!this.sound.mute && !this.music?.isPlaying) this.music?.play() }
   private async loadAdaptiveQuestions() {
-    this.questions = (await this.lesson.loadQuestions()).slice(0, this.lesson.totalRounds)
+    return (await this.lesson.loadQuestions()).slice(0, MAX_SURVIVAL_LEVEL)
   }
   private startGameplay() {
     if (this.gameStarted) return
@@ -602,10 +692,24 @@ export class GoldMinerScene extends Phaser.Scene {
   private setMuted(value: boolean) { this.sound.mute = value; if (!value && this.gameStarted) this.startMusic() }
   private setPaused(value: boolean) { this.paused = value; value ? this.tweens.pauseAll() : this.tweens.resumeAll() }
   private restart() {
+    if (this.gameStarted && this.state !== GoldMinerState.GAME_COMPLETE) {
+      const trackingTask = this.tracker?.finishSession(this.score, undefined, undefined, {
+        levelReached: Math.min(MAX_SURVIVAL_LEVEL, Math.max(this.round + 1, this.levelsCompleted + 1)),
+        levelsCompleted: this.levelsCompleted,
+        livesRemaining: this.lives,
+      })
+      this.game.events.emit('game-ui:session-saved', trackingTask)
+    }
     this.gameStarted = false
     this.cancelWolf()
     this.round = 0
+    this.levelsCompleted = 0
     this.score = 0
+    this.lives = MAX_SURVIVAL_LIVES
+    this.correctStreak = 0
+    this.heartPending = false
+    this.heartRecoveries = 0
+    this.pendingNextRound = false
     this.wolfCaught = 0
     this.wolfRounds.clear()
     this.state = GoldMinerState.ROUND_START
@@ -619,6 +723,7 @@ export class GoldMinerScene extends Phaser.Scene {
     this.paused = false
     this.game.events.emit('game-ui:score', 0)
     this.game.events.emit('game-ui:round', 1)
+    this.game.events.emit('game-ui:lives', this.lives)
     this.scene.restart()
   }
   private cleanup() {

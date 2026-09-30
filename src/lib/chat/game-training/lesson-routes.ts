@@ -4,9 +4,9 @@ export const GAME_LINK_EXAMPLE = `- Nếu người dùng nói “chơi Đào và
 /** Update when lessons are added or game routes change. */
 export const GAME_LESSON_ROUTES_TRAINING = `
 #Tất cả đường dẫn chơi game chính xác:
-- Hiện có 6 bài học có game: Toán lớp 1 bài 1 và bài 2, Tiếng Việt lớp 1 bài 1, Tiếng Anh lớp 1 bài 1 và bài 2, Toán lớp 2 bài 1; ngoài ra có luyện tập phép cộng đến 10.
+- Hiện có 6 bài học có game: Toán lớp 1 bài 1 và bài 2, Tiếng Việt lớp 1 tuần 1, Tiếng Anh lớp 1 bài 1 và bài 2, Toán lớp 2 bài 1; ngoài ra có luyện tập phép cộng đến 10.
 - Mỗi bài trên có Bắn bóng, Kéo thả, Đào vàng, Đua xe. Riêng Toán lớp 1 bài 2 có thêm Nhặt trứng. Luyện cộng đến 10 dùng game Bắn bóng, không phải một thể loại game riêng.
-- Toán lớp 1, bài 1 “Nhận biết số từ 0 đến 5”, trang chọn trò chơi:
+- Toán lớp 1, bài 1 “Các số từ 0 đến 5”, trang chọn trò chơi:
 /game/lop-1/toan/bai-1
 - Toán lớp 1, bài 1, Đào vàng — luyện nhìn hình và đếm số:
 /game/lop-1/toan/bai-1/gold-mining
@@ -30,15 +30,15 @@ export const GAME_LESSON_ROUTES_TRAINING = `
 /game/lop-1/toan/luyen-tap/cong-den-10
 - Toán lớp 1, bài 2, Nhặt trứng (còn gọi là săn trứng) — lắc xúc xắc và nhặt đủ 6 trứng:
 /game/lop-1/toan/bai-2/egg-hunt
-- Tiếng Việt lớp 1, bài 1 “A a”, trang chọn trò chơi — nhận biết a và A, nghe âm a, tìm chữ a trong từ, ghép và điền chữ a:
+- Tiếng Việt lớp 1, tuần 1 “A, B, C, E, Ê”, trang chọn trò chơi — nội dung tổng hợp Bài 1–5: nhận biết a/b/c/e/ê, hoa/thường, nghe và tìm chữ trong từ; dấu huyền/sắc; ghép và đọc ba/bà/ba ba, ca/cà/cá, bè/bé/bế. Truyện “Búp bê và dế mèn” được lưu metadata, chưa đưa vào câu hỏi:
 /game/lop-1/tieng-viet/bai-1
-- Tiếng Việt lớp 1, bài 1, Bắn bóng:
+- Tiếng Việt lớp 1, tuần 1, Bắn bóng:
 /game/lop-1/tieng-viet/bai-1/bubble-shooter
-- Tiếng Việt lớp 1, bài 1, Kéo thả:
+- Tiếng Việt lớp 1, tuần 1, Kéo thả:
 /game/lop-1/tieng-viet/bai-1/drag-drop
-- Tiếng Việt lớp 1, bài 1, Đào vàng:
+- Tiếng Việt lớp 1, tuần 1, Đào vàng:
 /game/lop-1/tieng-viet/bai-1/gold-mining
-- Tiếng Việt lớp 1, bài 1, Đua xe:
+- Tiếng Việt lớp 1, tuần 1, Đua xe:
 /game/lop-1/tieng-viet/bai-1/racing
 - Toán lớp 2, bài 1 “Ôn tập các số đến 100”, trang chọn trò chơi — nhận biết, đọc viết số đến 100; chục và đơn vị; lập và phân tích số; so sánh, thứ tự số; bảng số 1–100; ước lượng và đếm; lập số có hai chữ số:
 /game/lop-2/toan/bai-1
@@ -80,7 +80,7 @@ export const GAME_LESSON_ROUTES_TRAINING = `
 /game/lop-1/toan
 - Tiếng Anh lớp 1, trang chọn bài học:
 /game/lop-1/tieng-anh
-- Tiếng Việt lớp 1, trang chọn bài học (bài 1 đã có game):
+- Tiếng Việt lớp 1, trang chọn tuần học (tuần 1 đã có game):
 /game/lop-1/tieng-viet
 - Lớp 2, trang chọn môn:
 /game/lop-2
@@ -91,7 +91,7 @@ export const GAME_LESSON_ROUTES_TRAINING = `
 Không giới thiệu các trang dưới đây là game đã chơi được. Nếu người dùng hỏi, nói rõ nội dung đang chuẩn bị; không tự tạo route game con.
 - Toán lớp 1, bài 3:
 /game/lop-1/toan/bai-3
-- Tiếng Việt lớp 1: các bài 2 đến 10 đang chuẩn bị. Tiếng Anh lớp 1: các bài 3 đến 16 đang chuẩn bị, chưa có game con để chơi.
+- Tiếng Việt lớp 1: các tuần 2 đến 17 đang chuẩn bị, chưa có game con để chơi. Tuần 1 có đủ 4 trò chơi và 25 câu mỗi lượt. Tiếng Anh lớp 1: các bài 3 đến 16 đang chuẩn bị, chưa có game con để chơi.
 - Toán lớp 2: các bài 2 đến 10 đang chuẩn bị, chưa có game con để chơi.
 - Toán lớp 2, bài 2:
 /game/lop-2/toan/bai-2

@@ -9,6 +9,7 @@ import { ANSWER_PATH_OFFSETS, BOOST_SPEED, CAR_Y, CHECK_Y, GAME_HEIGHT, GAME_WID
 import { RoadController } from './core/RoadController'
 import { RacingState, type Lane, type RacingGameConfig, type RacingQuestion, type RacingTrackingEvent } from './types'
 import { createGameTracker, type GameTracker } from '../general/tracking'
+import { MAX_SURVIVAL_LEVEL, MAX_SURVIVAL_LIVES, MAX_SURVIVAL_LIFE_RECOVERIES } from '../general/survival-rewards'
 
 type AnswerGate = Phaser.GameObjects.Container & { answer: string | number; lane: Lane }
 type WolfEventPhase = 'IDLE' | 'ENTERING' | 'APPROACHING' | 'PUSHING' | 'LAUGHING' | 'ESCAPING'
@@ -30,7 +31,11 @@ export class RacingScene extends Phaser.Scene {
   private questions: RacingQuestion[] = []
   private questionIndex = 0
   private attemptCount = 1
+  private levelsCompleted = 0
   private score = 0
+  private lives = MAX_SURVIVAL_LIVES
+  private correctStreak = 0
+  private lifeRecoveries = 0
   private currentLane: Lane = LANES.center
   private currentSpeed = NORMAL_SPEED
   private road!: RoadController
@@ -122,6 +127,7 @@ export class RacingScene extends Phaser.Scene {
     this.setupVoice()
     this.game.events.emit('game-ui:score', 0)
     this.game.events.emit('game-ui:round', 1)
+    this.game.events.emit('game-ui:lives', this.lives)
     const loadGeneration = ++this.adaptiveLoadGeneration
     void this.loadAdaptiveQuestions(loadGeneration).then(() => {
       if (loadGeneration !== this.adaptiveLoadGeneration || !this.scene.isActive()) return
@@ -134,9 +140,13 @@ export class RacingScene extends Phaser.Scene {
     this.state = RacingState.RUNNING
     this.questionIndex = 0
     this.attemptCount = 1
+    this.levelsCompleted = 0
     this.score = 0
+    this.lives = MAX_SURVIVAL_LIVES
+    this.correctStreak = 0
+    this.lifeRecoveries = 0
     this.currentLane = LANES.center
-    this.currentSpeed = NORMAL_SPEED
+    this.currentSpeed = this.levelSpeed(this.questionIndex)
     this.gates = []
     this.gateY = HORIZON_Y
     this.hasCheckedCurrentGate = false
@@ -152,7 +162,10 @@ export class RacingScene extends Phaser.Scene {
     this.wolfEventActive = false
     this.wolfImpactActive = false
     this.wolfEventPhase = 'IDLE'
-    this.wolfRounds = this.lesson.wolfEnabled === false ? new Set() : new Set(shuffle([2, 3, 4, 5, 6, 7, 8, 9]).slice(0, 4))
+    const eligibleWolfRounds = Array.from({ length: MAX_SURVIVAL_LEVEL - 2 }, (_, index) => index + 2)
+    this.wolfRounds = this.lesson.wolfEnabled === false
+      ? new Set()
+      : new Set(shuffle(eligibleWolfRounds).slice(0, 8))
     this.wolfTriggeredRounds.clear()
     this.wolfTimers.clear()
   }
@@ -276,7 +289,7 @@ export class RacingScene extends Phaser.Scene {
     }
     const question = this.questions[this.questionIndex]
     const expectedAnswer = this.getExpectedAnswer(question)
-    this.tracker?.startQuestion({ learningKey: question.learningKey, expectedAnswer })
+    this.tracker?.startQuestion({ learningKey: question.learningKey, sourceLesson: question.sourceLesson, expectedAnswer })
     const content = question.type === 'count'
       ? (question.quantity === 0 ? '0' : this.arrangeObjects(question.object, question.quantity))
       : question.type === 'numberToQuantity'
@@ -677,21 +690,34 @@ export class RacingScene extends Phaser.Scene {
       this.playRandomVoice(['voice-true-1', 'voice-true-2', 'voice-true-3', 'voice-true-4', 'voice-true-5'], 'true')
     }
     this.score += 10
-    this.currentSpeed = BOOST_SPEED
+    this.levelsCompleted = this.questionIndex + 1
+    if (this.lives < MAX_SURVIVAL_LIVES && this.lifeRecoveries < MAX_SURVIVAL_LIFE_RECOVERIES) {
+      this.correctStreak += 1
+      if (this.correctStreak >= 3) {
+        this.lives = Math.min(MAX_SURVIVAL_LIVES, this.lives + 1)
+        this.lifeRecoveries += 1
+        this.correctStreak = 0
+        this.game.events.emit('game-ui:lives', this.lives)
+        this.floatScore('+1 ❤️', '#ff6680')
+      }
+    } else this.correctStreak = 0
+    if (this.levelsCompleted % 5 === 0) this.game.events.emit('game-ui:reward', this.levelsCompleted)
+    this.currentSpeed = this.levelSpeed(this.questionIndex) * BOOST_SPEED
     this.game.events.emit('game-ui:score', this.score)
     this.floatScore('+10', '#fff176')
     this.sparkles(this.car.x, this.car.y - 80, 14)
     this.gates.forEach((gate) => this.tweens.add({ targets: gate, y: GAME_HEIGHT + 130, alpha: 0, duration: 430, onComplete: () => gate.destroy() }))
     this.gates = []
-    if (this.questionIndex === this.questions.length - 1) {
+    if (this.questionIndex === MAX_SURVIVAL_LEVEL - 1) {
       this.time.delayedCall(850, () => this.startFinishSequence())
       return
     }
     this.questionIndex += 1
     this.attemptCount = 1
     this.game.events.emit('game-ui:round', this.questionIndex + 1)
+    this.currentSpeed = this.levelSpeed(this.questionIndex)
     this.time.delayedCall(500, () => this.renderQuestion())
-    this.time.delayedCall(900, () => { this.currentSpeed = NORMAL_SPEED; this.spawnGates() })
+    this.time.delayedCall(900, () => { this.currentSpeed = this.levelSpeed(this.questionIndex); this.spawnGates() })
   }
 
   private handleWrong() {
@@ -699,6 +725,9 @@ export class RacingScene extends Phaser.Scene {
     this.wrongSfx?.play()
     this.playRandomVoice(['voice-false-1', 'voice-false-2', 'voice-false-3', 'voice-false-4', 'voice-false-5'], 'false')
     this.score = Math.max(0, this.score - 2)
+    this.lives = Math.max(0, this.lives - 1)
+    this.correctStreak = 0
+    this.game.events.emit('game-ui:lives', this.lives)
     this.attemptCount += 1
     this.currentSpeed = HIT_SPEED
     this.game.events.emit('game-ui:score', this.score)
@@ -713,7 +742,11 @@ export class RacingScene extends Phaser.Scene {
     this.tweens.add({ targets: impact, scale: 1.45, alpha: 0, duration: 480, onComplete: () => impact.destroy() })
     this.gates.forEach((gate) => this.tweens.add({ targets: gate, alpha: 0, y: GAME_HEIGHT + 100, duration: 400, onComplete: () => gate.destroy() }))
     this.gates = []
-    this.time.delayedCall(650, () => { this.currentSpeed = NORMAL_SPEED })
+    if (this.lives === 0) {
+      this.time.delayedCall(600, () => this.finishGame(false))
+      return
+    }
+    this.time.delayedCall(650, () => { this.currentSpeed = this.levelSpeed(this.questionIndex) })
     this.time.delayedCall(850, () => this.spawnGates())
   }
 
@@ -739,8 +772,7 @@ export class RacingScene extends Phaser.Scene {
         this.sparkles(GAME_WIDTH / 2, 650, 32)
         this.voiceManager?.playOnce('win', 'voice-win', 'win')
         this.time.delayedCall(1200, () => {
-          const trackingTask = this.tracker?.finishSession(this.score)
-          this.game.events.emit('game-ui:complete', this.score, trackingTask)
+          this.finishGame(true)
         })
       } })
     }
@@ -799,6 +831,7 @@ export class RacingScene extends Phaser.Scene {
     const expectedAnswer = this.getExpectedAnswer(question)
     this.tracker?.recordAnswer({
       learningKey: question.learningKey, expectedAnswer,
+      sourceLesson: question.sourceLesson,
       selectedAnswer, correct: isCorrect, skill: question.learningSkill, inputMode: question.inputMode, answerMode: question.answerMode,
     })
     const event: RacingTrackingEvent = {
@@ -830,8 +863,29 @@ export class RacingScene extends Phaser.Scene {
     this.voiceManager?.play(Phaser.Utils.Array.GetRandom(keys), priority)
   }
   private async loadAdaptiveQuestions(loadGeneration: number) {
-    const questions = (await this.lesson.loadQuestions()).slice(0, this.lesson.totalRounds)
+    const questions: RacingQuestion[] = []
+    for (let batchIndex = 0; questions.length < MAX_SURVIVAL_LEVEL && batchIndex < 5; batchIndex += 1) {
+      const batch = await this.lesson.loadQuestions()
+      if (!batch.length) break
+      questions.push(...batch.slice(0, MAX_SURVIVAL_LEVEL - questions.length))
+    }
     if (loadGeneration === this.adaptiveLoadGeneration) this.questions = questions
+  }
+  private levelSpeed(questionIndex: number) {
+    const group = Math.floor(questionIndex / 5)
+    return NORMAL_SPEED * (1 + group * .08)
+  }
+  private finishGame(victory: boolean) {
+    if (this.state === RacingState.FINISHED && !victory) return
+    this.state = RacingState.FINISHED
+    this.currentSpeed = 0
+    this.clearWolfEvent()
+    const levelsCompleted = victory ? MAX_SURVIVAL_LEVEL : this.levelsCompleted
+    const levelReached = Math.min(MAX_SURVIVAL_LEVEL, levelsCompleted + 1)
+    const trackingTask = this.tracker?.finishSession(this.score, undefined, undefined, undefined, {
+      levelReached, levelsCompleted, livesRemaining: this.lives,
+    })
+    this.game.events.emit('game-ui:complete', this.score, trackingTask, victory, levelsCompleted)
   }
   private startGameplay() {
     if (this.gameStarted) return
@@ -866,7 +920,17 @@ export class RacingScene extends Phaser.Scene {
     this.wolfTimers.forEach((timer) => { timer.paused = value })
     value ? this.tweens.pauseAll() : this.tweens.resumeAll()
   }
-  private restart() { this.gameStarted = false; this.paused = false; this.scene.restart() }
+  private restart() {
+    if (this.gameStarted && this.state !== RacingState.FINISHED) {
+      const trackingTask = this.tracker?.finishSession(this.score, undefined, undefined, undefined, {
+        levelReached: Math.min(MAX_SURVIVAL_LEVEL, this.levelsCompleted + 1),
+        levelsCompleted: this.levelsCompleted,
+        livesRemaining: this.lives,
+      })
+      this.game.events.emit('game-ui:session-saved', trackingTask)
+    }
+    this.gameStarted = false; this.paused = false; this.scene.restart()
+  }
   private cleanup() {
     this.clearWolfEvent()
     this.adaptiveLoadGeneration += 1

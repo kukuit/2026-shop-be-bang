@@ -17,6 +17,8 @@ import { PROGRESS_SUBJECTS, progressSubjectFromText, type ProgressSubject } from
 type ChatMessage = { role: 'user' | 'assistant'; content: string; privateProgress?: boolean }
 
 const ASK_TAG = '[ASK_CONTACT_INFO]'
+// Tạm ẩn nhân vật Cappy nổi cạnh chatbot; đổi thành true để bật lại sau này.
+const ENABLE_CAPPY_CHAT_PROMPT = false
 
 function thumbnailFromGamePath(gamePath: string) {
   const slug = gamePath.split('/').filter(Boolean).at(-1)
@@ -165,7 +167,7 @@ export default function ChatWidget() {
       cappyPromptPath.current = pathname
       cappyPromptSeen.current = false
     }
-    if (context !== 'game') return
+    if (context !== 'game' || !ENABLE_CAPPY_CHAT_PROMPT) return
     const markSeen = () => {
       cappyPromptSeen.current = true
     }
@@ -303,7 +305,7 @@ export default function ChatWidget() {
         <MessageCircle className="h-7 w-7" />
       </button>
 
-      {context === 'game' && showCappyPrompt && !isOpen && <CappyChatPrompt onClick={() => { setShowCappyPrompt(false); setIsOpen(true) }} />}
+      {ENABLE_CAPPY_CHAT_PROMPT && context === 'game' && showCappyPrompt && !isOpen && <CappyChatPrompt onClick={() => { setShowCappyPrompt(false); setIsOpen(true) }} />}
 
       <AnimatePresence>
         {isOpen && (
