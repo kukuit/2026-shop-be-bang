@@ -6,6 +6,7 @@ export type SafeAuthUser = GameProfile & {
   id: string
   username: string
   displayName: string
+  avatar: string | null
   role: AuthRole
   status: AuthStatus
   activeGame: boolean

@@ -9,6 +9,8 @@ export type AnswerValue = string | number
 
 export interface GameQuestionResult {
   learningKey: LearningKey
+  week?: number
+  sourceLesson?: 1 | 2 | 3 | 4 | 5
   correct: boolean
   expectedAnswer?: AnswerValue
   selectedAnswer?: AnswerValue
@@ -30,6 +32,10 @@ export interface CompletedGameSession {
   duration: number
   startedAt: number
   results: GameQuestionResult[]
+  bubbleSurvival?: { levelReached: number; levelsCompleted: number; livesRemaining: number }
+  dragDropSurvival?: { levelReached: number; levelsCompleted: number; livesRemaining: number }
+  goldMinerSurvival?: { levelReached: number; levelsCompleted: number; livesRemaining: number }
+  racingSurvival?: { levelReached: number; levelsCompleted: number; livesRemaining: number }
 }
 
 export type LearningKeyProgress = {
