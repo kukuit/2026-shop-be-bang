@@ -23,6 +23,9 @@ function WorldContents({ move, jumpVersion, soundOn, onPortalChange }: Props) {
   const player = useRef<RapierRigidBody>(null)
   const keys = useRef(new Set<string>())
   const cameraYaw = useRef(0)
+  const pendingJump = useRef(false)
+  const canJump = useRef(true)
+  const handledJumpVersion = useRef(jumpVersion)
   const [cameraDrag, setCameraDrag] = useState(false)
   const lastPortal = useRef<string | null>(null)
   const { camera, gl } = useThree()
@@ -54,9 +57,10 @@ function WorldContents({ move, jumpVersion, soundOn, onPortalChange }: Props) {
   }, [gl])
 
   useEffect(() => {
-    if (!jumpVersion || !player.current) return
-    const velocity = player.current.linvel()
-    if (Math.abs(velocity.y) < 0.12) player.current.applyImpulse({ x: 0, y: 5.7, z: 0 }, true)
+    if (jumpVersion !== handledJumpVersion.current) {
+      handledJumpVersion.current = jumpVersion
+      pendingJump.current = true
+    }
   }, [jumpVersion])
 
   const spawn = useMemo(() => ({ x: 0, z: 8 }), [])
@@ -67,7 +71,19 @@ function WorldContents({ move, jumpVersion, soundOn, onPortalChange }: Props) {
     const right = Number(keys.current.has('d') || keys.current.has('arrowright')) - Number(keys.current.has('a') || keys.current.has('arrowleft')) + move.x
     const input = new THREE.Vector2(right, forward).clampLength(0, 1)
     const direction = new THREE.Vector3(input.x, 0, -input.y).applyAxisAngle(new THREE.Vector3(0, 1, 0), cameraYaw.current)
-    const velocity = body.linvel()
+    let velocity = body.linvel()
+    if (!canJump.current && body.translation().y <= 1.08 && velocity.y <= 0.15) {
+      canJump.current = true
+    }
+    if (pendingJump.current) {
+      pendingJump.current = false
+      if (canJump.current) {
+        body.applyImpulse({ x: 0, y: 4.8, z: 0 }, true)
+        canJump.current = false
+        // Refresh after the impulse so the movement update below preserves the jump velocity.
+        velocity = body.linvel()
+      }
+    }
     const smoothing = 1 - Math.exp(-12 * Math.min(delta, 0.05))
     body.setLinvel({ x: THREE.MathUtils.lerp(velocity.x, direction.x * 5.6, smoothing), y: velocity.y, z: THREE.MathUtils.lerp(velocity.z, direction.z * 5.6, smoothing) }, true)
     const position = body.translation()
@@ -97,7 +113,6 @@ function WorldContents({ move, jumpVersion, soundOn, onPortalChange }: Props) {
       <Portal id="english" position={[0, 0, -10]} />
       <Portal id="home" position={[0, 0, 15]} />
     </Physics>
-    <Html fullscreen><div className={styles.aimReticle} aria-hidden="true" /></Html>
     {soundOn && <AmbientSfx />}
   </>
 }
