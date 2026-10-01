@@ -70,16 +70,16 @@ export default function LessonGameGrid({ lessonId, games }: {
       {games.map(game => {
         const gameId = game.href.split('/').filter(Boolean).pop() ?? ''
         const completed = Boolean(currentGames[gameId]?.completedAt)
-        return <Link key={game.href} href={game.href} scroll={false} aria-label={`${completed ? 'Chơi lại' : 'Chơi'} ${game.title}${completed ? ' — Đã hoàn thành' : ''}`} className="group relative aspect-square overflow-hidden rounded-2xl border-[3px] border-white bg-white shadow-xl focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-sky-400 md:rounded-[2rem]">
+        return <Link key={game.href} href={game.href} scroll={false} aria-label={`${completed ? 'Chơi lại' : 'Chơi'} ${game.title}${completed ? ' — Đã hoàn thành' : ''}`} className="group relative aspect-[1.08/1] overflow-hidden rounded-[26px] border-[3px] border-white bg-sky-900 shadow-[0_7px_0_#164e6380,0_14px_24px_#164e6330] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-amber-300 sm:aspect-square md:rounded-[30px]">
           <Image src={game.image} alt={`Ảnh game ${game.title}`} fill sizes="(min-width: 1024px) 270px, 48vw" className="object-cover transition duration-500 group-hover:scale-105" style={{ objectPosition: game.position }} />
           {completed && <span aria-hidden="true" className="absolute right-2 top-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-emerald-600 text-white shadow-sm md:right-3 md:top-3">
             <Check size={16} strokeWidth={3} />
           </span>}
-          <div className="absolute inset-x-0 bottom-0 flex h-[22%] min-h-[52px] items-center justify-between gap-2 px-[18px] text-white md:px-5">
-            <span className={`absolute inset-0 bg-gradient-to-t ${game.color} opacity-90`} />
-            <p className="relative min-w-0 truncate text-sm font-black sm:text-base xl:text-xl">{game.title}</p>
-            <span aria-hidden="true" className="relative inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-sky-700 md:h-11 md:w-11">
-              {completed ? <RotateCcw size={20} /> : <Play size={20} className="ml-0.5 fill-current" />}
+          <div className="absolute inset-x-0 bottom-0 flex min-h-[84px] items-center justify-between gap-2 px-4 py-3 text-white sm:min-h-[100px] sm:px-5">
+            <span className={`absolute inset-0 bg-gradient-to-t ${game.color} opacity-95`} />
+            <div className="relative min-w-0"><p className="text-[10px] font-black uppercase tracking-[.18em] text-white/80 sm:text-xs">Nhiệm vụ {games.indexOf(game) + 1}</p><p className="mt-0.5 truncate text-base font-black sm:text-xl xl:text-2xl">{game.title}</p></div>
+            <span aria-hidden="true" className="relative inline-flex h-11 shrink-0 items-center justify-center gap-1.5 rounded-full border-2 border-white bg-amber-400 px-4 text-sm font-black text-amber-950 shadow-[0_3px_0_#a16207] sm:h-12 sm:px-5">
+              {completed ? <><RotateCcw size={17} /> Chơi lại</> : <><Play size={17} className="fill-current" /> Chơi</>}
             </span>
           </div>
         </Link>

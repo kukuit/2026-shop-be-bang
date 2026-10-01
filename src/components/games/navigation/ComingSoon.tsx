@@ -1,17 +1,15 @@
 import Link from 'next/link'
 import { ChevronLeft } from 'lucide-react'
-import GameAuthHeader from '@/components/auth/GameAuthHeader'
 
 export default function ComingSoon({ title, backHref }: { title: string; backHref: string }) {
   return (
     <>
-      <GameAuthHeader />
-      <main className="grid min-h-[calc(100dvh-4rem)] place-items-center bg-gradient-to-b from-sky-50 to-pink-50 px-4 text-center">
-        <div>
+      <main className="grid min-h-[calc(100dvh-58px)] place-items-center px-4 text-center">
+        <div className="max-w-lg rounded-[30px] border-2 border-white/80 bg-sky-950/30 p-7 text-white shadow-[0_7px_0_#164e6380] backdrop-blur-sm sm:p-10">
           <p className="text-5xl" aria-hidden="true">🚧</p>
-          <h1 className="mt-4 text-3xl font-black text-slate-800">{title}</h1>
-          <p className="mt-2 font-semibold text-slate-500">Nội dung đang được cập nhật.</p>
-          <Link href={backHref} className="mt-6 inline-flex items-center gap-1 rounded-full bg-blue-600 px-5 py-3 font-black text-white shadow-lg hover:bg-blue-700">
+          <h1 className="mt-4 text-3xl font-black">{title}</h1>
+          <p className="mt-2 font-semibold text-sky-50">Nội dung đang được cập nhật.</p>
+          <Link href={backHref} className="mt-6 inline-flex min-h-12 items-center gap-1 rounded-full border-2 border-white bg-amber-400 px-5 py-3 font-black text-amber-950 shadow-[0_3px_0_#a16207] active:translate-y-0.5 active:shadow-none">
             <ChevronLeft size={18} aria-hidden="true" /> Quay lại
           </Link>
         </div>

@@ -19,26 +19,13 @@ export function GameProfileProvider({ children }: { children: React.ReactNode })
   const retry = useCallback(() => setRevision(value => value + 1), [])
   useEffect(() => {
     if (loading) return
-    let cancelled = false
-    setState(null)
     setError(null)
     if (!user) {
       setState({ owner, profile: getGuestGameProfile() })
       return
     }
-    // Read the database again on mount: AuthProvider may hold a profile from before a previous edit.
-    void (async () => {
-      try {
-        const response = await fetchWithAuthRetry('/api/auth/me', { cache: 'no-store' })
-        if (!response.ok) throw new Error('PROFILE_LOAD_FAILED')
-        const body = await response.json()
-        if (!body.authenticated || body.user?.id !== owner) throw new Error('IDENTITY_CHANGED')
-        if (!cancelled) setState({ owner, profile: normalizeGameProfile(body.user) })
-      } catch {
-        if (!cancelled) setError('Chưa tải được hồ sơ. Bé thử lại nhé.')
-      }
-    })()
-    return () => { cancelled = true }
+    // AuthProvider already loaded these grade fields from /api/auth/me; reuse them instead of issuing a second GET.
+    setState({ owner, profile: normalizeGameProfile(user) })
   }, [loading, owner, user, revision])
   useEffect(() => {
     if (user || loading) return

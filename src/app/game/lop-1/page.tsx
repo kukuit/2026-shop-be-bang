@@ -1,4 +1,3 @@
-import GameAuthHeader from '@/components/auth/GameAuthHeader'
 import GameNavigationGrid from '@/components/games/navigation/GameNavigationGrid'
 import { getSubjectItems } from '@/components/games/navigation/catalog'
 
@@ -6,7 +5,8 @@ export default function GradeOnePage() {
   const images = ['toan-square.png', 'tieng-viet-square.png', 'tieng-anh-square.png']
   const items = getSubjectItems('lop-1').map((item, index) => ({
     ...item,
+    title: ['Quần đảo Toán học', 'Vùng đất Tiếng Việt', 'Vũ trụ Tiếng Anh'][index] ?? item.title,
     imageSrc: `/games/lessons/lop-1/images/optimize/${images[index]}`,
   }))
-  return <><GameAuthHeader /><GameNavigationGrid breadcrumbs={[{ label: 'Game', href: '/game' }, { label: 'Lớp 1' }]} items={items} /></>
+  return <GameNavigationGrid title="CHỌN THẾ GIỚI" description="Cùng Cappy khám phá nhé!" breadcrumbs={[]} items={items} />
 }

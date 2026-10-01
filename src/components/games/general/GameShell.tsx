@@ -2,7 +2,7 @@
 
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
-import { ArrowLeft, Gamepad2, Play, RotateCcw, Store, UserRound, Volume2, VolumeX, X } from 'lucide-react'
+import { ArrowLeft, Gamepad2, Play, RotateCcw, Settings, Store, UserRound, Volume2, VolumeX, X } from 'lucide-react'
 import { ReactNode, useEffect, useState } from 'react'
 import StarIcon from './StarIcon'
 import GameProgress from './GameProgress'
@@ -87,8 +87,17 @@ export default function GameShell({
   return (
     <section className={`relative aspect-[9/16] max-h-dvh w-full max-w-[calc(100dvh*0.5625)] overflow-hidden bg-sky-200 [container-type:inline-size] ${className}`}>
       {children}
-      <div className="pointer-events-none absolute inset-x-0 top-0 z-40 flex items-start justify-between p-[1.7%]">
-        <div className="flex h-10 min-w-0 max-w-[42%] items-center gap-1.5 rounded-2xl border-2 border-white/80 bg-blue-600/90 py-0.5 pl-0.5 pr-3 text-white shadow-lg">
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-40 grid grid-cols-[1fr_auto_1fr] items-start p-[1.7%]">
+        <button
+          type="button"
+          onClick={() => setExitOpen(true)}
+          className="pointer-events-auto grid h-10 w-10 place-items-center rounded-2xl border-2 border-white bg-blue-600 text-white shadow-lg transition active:scale-90 [&_svg]:h-5 [&_svg]:w-5"
+          aria-label="Cài đặt"
+        >
+          <Settings />
+        </button>
+
+        <div className="flex h-10 min-w-max items-center justify-self-center gap-1.5 rounded-2xl border-2 border-white/80 bg-blue-600/90 py-0.5 pl-0.5 pr-2 text-white shadow-lg">
           <span className="grid h-[30px] w-[30px] shrink-0 place-items-center overflow-hidden rounded-full bg-slate-200 text-slate-600" aria-label={user ? `Ảnh đại diện ${user.displayName}` : 'Ảnh đại diện khách'}>
             {!user ? <UserRound size={21} strokeWidth={2.5} aria-hidden="true" /> : avatarUrl && !avatarFailed ?
               // Avatar URLs may be hosted outside Next.js configured image domains.
@@ -97,12 +106,12 @@ export default function GameShell({
               <span className="text-base font-black leading-none" aria-hidden="true">{avatarInitial}</span>}
           </span>
           {lives === undefined ? <span className="min-w-0 flex-1 truncate text-xs font-black drop-shadow" title={displayName}>{shortDisplayName}</span> :
-            <span className="flex gap-0.5 text-lg" aria-label={`${lives} trên 3 tim`}>
+            <span className="flex shrink-0 gap-0.5 whitespace-nowrap text-lg" aria-label={`${lives} trên 3 tim`}>
               {Array.from({ length: 3 }, (_, index) => <span key={index} aria-hidden="true">{index < lives ? '❤️' : '🖤'}</span>)}
             </span>}
         </div>
 
-        <div className="pointer-events-auto flex gap-1.5">
+        <div className="pointer-events-auto flex justify-self-end">
           <button
             type="button"
             onClick={() => onMutedChange(!muted)}
@@ -110,14 +119,6 @@ export default function GameShell({
             aria-label={muted ? 'Bật âm thanh' : 'Tắt âm thanh'}
           >
             {muted ? <VolumeX /> : <Volume2 />}
-          </button>
-          <button
-            type="button"
-            onClick={() => setExitOpen(true)}
-            className="grid h-10 w-10 place-items-center rounded-2xl border-2 border-white bg-blue-600 text-white shadow-lg transition active:scale-90 [&_svg]:h-5 [&_svg]:w-5"
-            aria-label="Quay lại"
-          >
-            <ArrowLeft />
           </button>
         </div>
       </div>
