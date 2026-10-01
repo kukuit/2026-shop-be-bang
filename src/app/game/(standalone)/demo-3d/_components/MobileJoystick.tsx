@@ -17,9 +17,9 @@ export default function MobileJoystick({ onMove, onJump }: { onMove: (move: Move
   }
   const end = () => { pointerId.current = null; setKnob({ x: 0, y: 0 }); onMove({ x: 0, z: 0 }) }
   return <div className={styles.mobileControls}>
-    <div className={styles.joystick} onPointerDown={(event) => { pointerId.current = event.pointerId; event.currentTarget.setPointerCapture(event.pointerId); update(event) }} onPointerMove={(event) => { if (pointerId.current === event.pointerId) update(event) }} onPointerUp={end} onPointerCancel={end} aria-label="Cần điều khiển di chuyển">
+    <div className={styles.joystick} onPointerDown={(event) => { event.preventDefault(); pointerId.current = event.pointerId; event.currentTarget.setPointerCapture(event.pointerId); update(event) }} onPointerMove={(event) => { if (pointerId.current === event.pointerId) update(event) }} onPointerUp={end} onPointerCancel={end} onLostPointerCapture={end} aria-label="Cần điều khiển di chuyển">
       <span className={styles.joystickRing} /><span className={styles.joystickKnob} style={{ transform: `translate(${knob.x}px, ${knob.y}px)` }}>✦</span>
     </div>
-    <button type="button" className={styles.jumpButton} onPointerDown={(event) => event.preventDefault()} onClick={onJump}><span>↑</span>JUMP</button>
+    <button type="button" className={styles.jumpButton} onPointerDown={(event) => { event.preventDefault(); onJump() }}><span>↑</span>JUMP</button>
   </div>
 }
