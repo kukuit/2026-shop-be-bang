@@ -1,7 +1,7 @@
 export const WORLD_CONFIG = {
   center: { x: 0, z: 2.5 },
   hub: { radiusX: 20.8, radiusZ: 22.8 },
-  fence: { radiusX: 21, radiusZ: 23, colliderHalfDepth: 0.48, colliderHeight: 1.5, postSpacing: 1.25 },
+  fence: { radiusX: 21, radiusZ: 23, colliderHalfDepth: 0.48, colliderHeight: 1.5, postSpacing: 2.1 },
   buffer: { radiusX: 24.5, radiusZ: 26.5 },
   river: { innerRadiusX: 24.5, innerRadiusZ: 26.5, outerRadiusX: 30, outerRadiusZ: 32 },
   farBank: { innerRadiusX: 31.8, innerRadiusZ: 33.8, outerRadiusX: 48, outerRadiusZ: 50 },
@@ -10,9 +10,13 @@ export const WORLD_CONFIG = {
 
 export function getOrganicOutlineScale(angle: number) {
   return 1
-    + Math.sin(angle * 3 + 0.4) * 0.045
-    + Math.sin(angle * 5 + 1.2) * 0.02
-    + Math.sin(angle * 8 + 0.7) * 0.008
+    + Math.sin(angle * 2 + 0.4) * 0.055
+    + Math.sin(angle * 3 - 0.8) * 0.035
+    + Math.sin(angle * 5 + 1.2) * 0.012
+}
+
+export function getFenceOutlineScale(angle: number) {
+  return getOrganicOutlineScale(angle) - 0.025 + Math.sin(angle * 2 - 0.65) * 0.018
 }
 
 // Match the 3.1-wide Math Dock, with a small clearance at each fence end.
@@ -37,7 +41,7 @@ export type ExpansionPoint = {
 }
 
 function expansionPoint(angle: number, id: string, targetZone: ExpansionPoint['targetZone'], fenceSegmentId: string): ExpansionPoint {
-  const scale = getOrganicOutlineScale(angle)
+  const scale = getFenceOutlineScale(angle)
   const position = [
     WORLD_CONFIG.center.x + Math.cos(angle) * WORLD_CONFIG.fence.radiusX * scale,
     0,

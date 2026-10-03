@@ -12,15 +12,21 @@ import PlayerController from './PlayerController'
 import { DEFAULT_PLAYER_SLOT, resolveCharacterSlot } from './character/slots'
 import type { MoveInput } from './types'
 import type { PortalInfo } from './types'
+import type { LessonMapItem } from '@/components/games/lesson-map/data'
 
 type EnvironmentProps = {
   playerRef: MutableRefObject<RapierRigidBody | null>
   onHousePorchChange: (inside: boolean) => void
   onMathDockChange?: (inside: boolean) => void
+  onEnglishRocketChange?: (inside: boolean) => void
+  onPlanetApproachChange?: (id: number | null) => void
+  onVietnameseLessonApproachChange?: (id: number | null) => void
+  onReturnRocketChange?: (inside: boolean) => void
+  planetItems?: LessonMapItem[]
 }
 const NOOP_HOUSE_CHANGE = () => undefined
 
-export default function GameScene({ world, Environment, onPortalChange, onHousePorchChange, onMathDockChange, move: moveOverride, jumpVersion: jumpVersionOverride, soundOn: soundOnOverride, cameraMode: cameraModeOverride }: { world: DemoWorldId; Environment: ComponentType<EnvironmentProps>; onPortalChange?: (portal: PortalInfo | null) => void; onHousePorchChange?: (inside: boolean) => void; onMathDockChange?: (inside: boolean) => void; move?: MoveInput; jumpVersion?: number; soundOn?: boolean; cameraMode?: CameraMode }) {
+export default function GameScene({ world, Environment, onPortalChange, onHousePorchChange, onMathDockChange, onEnglishRocketChange, onPlanetApproachChange, onVietnameseLessonApproachChange, onReturnRocketChange, planetItems, move: moveOverride, jumpVersion: jumpVersionOverride, soundOn: soundOnOverride, cameraMode: cameraModeOverride }: { world: DemoWorldId; Environment: ComponentType<EnvironmentProps>; onPortalChange?: (portal: PortalInfo | null) => void; onHousePorchChange?: (inside: boolean) => void; onMathDockChange?: (inside: boolean) => void; onEnglishRocketChange?: (inside: boolean) => void; onPlanetApproachChange?: (id: number | null) => void; onVietnameseLessonApproachChange?: (id: number | null) => void; onReturnRocketChange?: (inside: boolean) => void; planetItems?: LessonMapItem[]; move?: MoveInput; jumpVersion?: number; soundOn?: boolean; cameraMode?: CameraMode }) {
   const game = useDemo3DGame()
   const spawn = game.resolveSpawn(world)
   const [mobile, setMobile] = useState(false)
@@ -31,19 +37,19 @@ export default function GameScene({ world, Environment, onPortalChange, onHouseP
     query.addEventListener('change', update)
     return () => query.removeEventListener('change', update)
   }, [])
-  return <Canvas shadows={!mobile} camera={{ position: [0, 6, 10], fov: 55 }} dpr={mobile ? [1, 1.2] : [1, 1.5]} gl={{ antialias: false, powerPreference: 'high-performance' }}>
-    <color attach="background" args={[world === 'village' ? '#b7e8ff' : '#a8d6b7']} />
-    <fog attach="fog" args={[world === 'village' ? '#c6edff' : '#cde4d0', 45, 112]} />
-    <hemisphereLight args={['#e7f8ff', '#8cae77', 1.25]} />
-    <ambientLight intensity={0.75} />
-    <directionalLight position={[8, 18, 5]} intensity={1.8} castShadow={!mobile} shadow-mapSize={[mobile ? 512 : 1024, mobile ? 512 : 1024]} shadow-camera-far={50} />
+  return <Canvas shadows={!mobile && world !== 'tieng-anh'} camera={{ position: [0, 6, 10], fov: 55 }} dpr={mobile ? [1, 1.2] : [1, 1.5]} gl={{ antialias: false, powerPreference: 'high-performance' }}>
+    <color attach="background" args={[world === 'tieng-anh' ? '#160b4d' : world === 'village' ? '#b7e8ff' : '#a8d6b7']} />
+    <fog attach="fog" args={[world === 'tieng-anh' ? '#160b4d' : world === 'village' ? '#c6edff' : '#cde4d0', world === 'tieng-anh' ? 38 : 45, world === 'tieng-anh' ? 145 : 112]} />
+    {world !== 'tieng-anh' && <hemisphereLight args={['#e7f8ff', '#8cae77', 1.25]} />}
+    <ambientLight intensity={world === 'tieng-anh' ? 0.8 : 0.75} />
+    <directionalLight position={world === 'tieng-anh' ? [10, 15, 8] : [8, 18, 5]} intensity={world === 'tieng-anh' ? 1.4 : 1.8} castShadow={!mobile && world !== 'tieng-anh'} shadow-mapSize={[mobile ? 512 : 1024, mobile ? 512 : 1024]} shadow-camera-far={50} />
     <Suspense fallback={null}>
-      <SceneContents world={world} Environment={Environment} move={moveOverride ?? game.move} jumpVersion={jumpVersionOverride ?? game.jumpVersion} soundOn={soundOnOverride ?? game.soundOn} cameraMode={cameraModeOverride ?? game.cameraMode} transition={game.transition} mathDepartureStage={game.mathDepartureStage} spawn={spawn} cameraDistance={game.cameraDistance} cameraYaw={game.cameraYaw} cameraPitch={game.cameraPitch} manualOrbitVersion={game.manualOrbitVersion} beginBridgeTransition={game.beginBridgeTransition} sceneReady={game.sceneReady} onPortalChange={onPortalChange} onHousePorchChange={onHousePorchChange} onMathDockChange={onMathDockChange} />
+      <SceneContents world={world} Environment={Environment} move={moveOverride ?? game.move} jumpVersion={jumpVersionOverride ?? game.jumpVersion} soundOn={soundOnOverride ?? game.soundOn} cameraMode={cameraModeOverride ?? game.cameraMode} transition={game.transition} mathDepartureStage={game.mathDepartureStage} englishLaunchStage={game.englishLaunchStage} spawn={spawn} cameraDistance={game.cameraDistance} cameraYaw={game.cameraYaw} cameraPitch={game.cameraPitch} manualOrbitVersion={game.manualOrbitVersion} beginBridgeTransition={game.beginBridgeTransition} sceneReady={game.sceneReady} onPortalChange={onPortalChange} onHousePorchChange={onHousePorchChange} onMathDockChange={onMathDockChange} onEnglishRocketChange={onEnglishRocketChange} onPlanetApproachChange={onPlanetApproachChange} onVietnameseLessonApproachChange={onVietnameseLessonApproachChange} onReturnRocketChange={onReturnRocketChange} planetItems={planetItems} />
     </Suspense>
   </Canvas>
 }
 
-function SceneContents({ world, Environment, move, jumpVersion, soundOn, cameraMode, transition, mathDepartureStage, spawn, cameraDistance, cameraYaw, cameraPitch, manualOrbitVersion, beginBridgeTransition, sceneReady, onPortalChange, onHousePorchChange, onMathDockChange }: {
+function SceneContents({ world, Environment, move, jumpVersion, soundOn, cameraMode, transition, mathDepartureStage, englishLaunchStage, spawn, cameraDistance, cameraYaw, cameraPitch, manualOrbitVersion, beginBridgeTransition, sceneReady, onPortalChange, onHousePorchChange, onMathDockChange, onEnglishRocketChange, onPlanetApproachChange, onVietnameseLessonApproachChange, onReturnRocketChange, planetItems }: {
   world: DemoWorldId
   Environment: ComponentType<EnvironmentProps>
   move: MoveInput
@@ -52,6 +58,7 @@ function SceneContents({ world, Environment, move, jumpVersion, soundOn, cameraM
   cameraMode: CameraMode
   transition: ReturnType<typeof useDemo3DGame>['transition']
   mathDepartureStage: ReturnType<typeof useDemo3DGame>['mathDepartureStage']
+  englishLaunchStage: ReturnType<typeof useDemo3DGame>['englishLaunchStage']
   spawn: { position: [number, number, number]; yaw: number }
   cameraDistance: MutableRefObject<number>
   cameraYaw: MutableRefObject<number>
@@ -62,12 +69,17 @@ function SceneContents({ world, Environment, move, jumpVersion, soundOn, cameraM
   onPortalChange?: (portal: PortalInfo | null) => void
   onHousePorchChange?: (inside: boolean) => void
   onMathDockChange?: (inside: boolean) => void
+  onEnglishRocketChange?: (inside: boolean) => void
+  onPlanetApproachChange?: (id: number | null) => void
+  onVietnameseLessonApproachChange?: (id: number | null) => void
+  onReturnRocketChange?: (inside: boolean) => void
+  planetItems?: LessonMapItem[]
 }) {
   const player = useRef<RapierRigidBody>(null)
   const { character } = resolveCharacterSlot(DEFAULT_PLAYER_SLOT)
   return <>
     <Physics gravity={[0, -9.81, 0]} timeStep={1 / 60}>
-      <Environment playerRef={player} onHousePorchChange={onHousePorchChange ?? NOOP_HOUSE_CHANGE} onMathDockChange={onMathDockChange} />
+      <Environment playerRef={player} onHousePorchChange={onHousePorchChange ?? NOOP_HOUSE_CHANGE} onMathDockChange={onMathDockChange} onEnglishRocketChange={onEnglishRocketChange} onPlanetApproachChange={onPlanetApproachChange} onVietnameseLessonApproachChange={onVietnameseLessonApproachChange} onReturnRocketChange={onReturnRocketChange} planetItems={planetItems} />
       <PlayerController
         playerRef={player}
         move={move}
@@ -75,16 +87,18 @@ function SceneContents({ world, Environment, move, jumpVersion, soundOn, cameraM
         cameraMode={cameraMode}
         cameraDistance={cameraDistance}
         cameraYaw={cameraYaw}
+        cameraPitch={cameraPitch}
         manualOrbitVersion={manualOrbitVersion}
         transitionPhase={transition?.phase ?? null}
         mathDepartureStage={mathDepartureStage}
+        englishLaunchStage={englishLaunchStage}
         transitionDirectionZ={transition?.runDirectionZ ?? 0}
         spawn={spawn}
         world={world}
         onBridgeReach={beginBridgeTransition}
         onPortalChange={onPortalChange ?? (() => undefined)}
       />
-      <ThirdPersonCameraController target={player} yaw={cameraYaw} manualOrbitVersion={manualOrbitVersion} mode={cameraMode} cameraDistance={cameraDistance} cameraPitch={cameraPitch} characterCamera={character.camera} />
+      <ThirdPersonCameraController target={player} yaw={cameraYaw} manualOrbitVersion={manualOrbitVersion} mode={cameraMode} cameraDistance={cameraDistance} cameraPitch={cameraPitch} characterCamera={character.camera} rocketFlight={englishLaunchStage === 'rocket-flight'} />
     </Physics>
     {soundOn && <AmbientSfx />}
     <SceneReady world={world} onReady={sceneReady} />

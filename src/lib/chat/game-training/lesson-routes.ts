@@ -4,6 +4,7 @@ export const GAME_LINK_EXAMPLE = `- Nếu người dùng nói “chơi Đào và
 /** Update when lessons are added or game routes change. */
 export const GAME_LESSON_ROUTES_TRAINING = `
 #Tất cả đường dẫn chơi game chính xác:
+- Demo Cappy World 3D: /game/demo-3d. Từ Home World, bé qua cầu đến vùng Tiếng Việt (/game/demo-3d/tieng-viet), xuống thuyền ra đảo Toán (/game/demo-3d/toan), hoặc nhảy lên đài phóng và xác nhận bay đến Vũ trụ Tiếng Anh 3D (/game/demo-3d/tieng-anh). Tại Vũ trụ Tiếng Anh, hành tinh bài 1 và 2 dẫn đến trang bài tương ứng; các hành tinh khóa chưa chơi được.
 - Hiện có 6 bài học có game: Toán lớp 1 bài 1 và bài 2, Tiếng Việt lớp 1 tuần 1, Tiếng Anh lớp 1 bài 1 và bài 2, Toán lớp 2 bài 1; ngoài ra có luyện tập phép cộng đến 10.
 - Mỗi bài trên có Bắn bóng, Kéo thả, Đào vàng, Đua xe. Riêng Toán lớp 1 bài 2 có thêm Nhặt trứng. Luyện cộng đến 10 dùng game Bắn bóng, không phải một thể loại game riêng.
 - Toán lớp 1, bài 1 “Các số từ 0 đến 5”, trang chọn trò chơi:

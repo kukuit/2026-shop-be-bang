@@ -3,31 +3,26 @@
 import { Text } from '@react-three/drei'
 import { useFrame } from '@react-three/fiber'
 import { CuboidCollider, RigidBody, type RapierRigidBody } from '@react-three/rapier'
-import { useLayoutEffect, useMemo, useRef } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { MutableRefObject } from 'react'
 import * as THREE from 'three'
 import { useDemo3DGame } from '../GameShell'
 import BoatModel from '../boat/BoatModel'
+import { boatFitsWater } from './water-boundaries'
 
 const DOCK_Z = 2.5
 const BOAT_START = { x: 29.6, y: 0.035, z: 5.05 }
 const BOARDING_EDGE = { x: 27.45, y: 1.16, z: 4.35 }
 const SEAT_ROOT_Y = 1.76
 const BOARDING_SECONDS = 1.35
-const DEPARTURE_SECONDS = 6.5
-const SEA_EXIT_ZONE = { x: 54.5, z: 2.5, radius: 1.8 }
-const DEPARTURE_PATH = new THREE.CatmullRomCurve3([
-  new THREE.Vector3(BOAT_START.x, 0, BOAT_START.z),
-  new THREE.Vector3(37.2, 0, 5.05),
-  new THREE.Vector3(45.5, 0, DOCK_Z),
-  new THREE.Vector3(SEA_EXIT_ZONE.x, 0, SEA_EXIT_ZONE.z),
-], false, 'centripetal')
+const SEA_EXIT_X = 39
+const BOAT_SPEED = 3.2
 
 export default function MathDock({ playerRef, onInteractionChange }: {
   playerRef: MutableRefObject<RapierRigidBody | null>
   onInteractionChange?: (inside: boolean) => void
 }) {
-  const { mathDepartureStage, beginMathSeaExit } = useDemo3DGame()
+  const { mathDepartureStage, beginMathSeaExit, move, cameraYaw } = useDemo3DGame()
   const boat = useRef<THREE.Group>(null)
   const planks = useRef<THREE.InstancedMesh>(null)
   const posts = useRef<THREE.InstancedMesh>(null)
@@ -41,7 +36,24 @@ export default function MathDock({ playerRef, onInteractionChange }: {
   const boardingStartRotation = useRef(new THREE.Quaternion())
   const wasInZone = useRef(false)
   const exitTriggered = useRef(false)
+  const keys = useRef(new Set<string>())
+  const boatPosition = useRef({ x: BOAT_START.x, z: BOAT_START.z })
+  const heading = useRef(0)
+  const [rowing, setRowing] = useState(false)
+  const rowingRef = useRef(false)
   const geometryCount = 14
+
+  useEffect(() => {
+    const down = (event: KeyboardEvent) => keys.current.add(event.key.toLowerCase())
+    const up = (event: KeyboardEvent) => keys.current.delete(event.key.toLowerCase())
+    window.addEventListener('keydown', down)
+    window.addEventListener('keyup', up)
+    return () => {
+      window.removeEventListener('keydown', down)
+      window.removeEventListener('keyup', up)
+      keys.current.clear()
+    }
+  }, [])
 
   useLayoutEffect(() => {
     const object = new THREE.Object3D()
@@ -63,7 +75,7 @@ export default function MathDock({ playerRef, onInteractionChange }: {
     if (posts.current) posts.current.instanceMatrix.needsUpdate = true
   }, [geometryCount])
 
-  useFrame((state) => {
+  useFrame((state, delta) => {
     const time = state.clock.elapsedTime
     const body = playerRef.current
     if (mathDepartureStage !== observedStage.current) {
@@ -74,28 +86,37 @@ export default function MathDock({ playerRef, onInteractionChange }: {
         const rotation = body.rotation()
         boardingStart.current.set(position.x, position.y, position.z)
         boardingStartRotation.current.set(rotation.x, rotation.y, rotation.z, rotation.w)
+        boatPosition.current = { x: BOAT_START.x, z: BOAT_START.z }
+        heading.current = 0
         exitTriggered.current = false
       }
     }
 
-    let boatX = BOAT_START.x + Math.sin(time * 1.45) * 0.015
-    let boatZ = BOAT_START.z + Math.sin(time * 1.2) * 0.015
-    let boatYaw = -Math.PI / 2
-    if (mathDepartureStage === 'departing' || mathDepartureStage === 'transitioning') {
-      const progress = mathDepartureStage === 'transitioning'
-        ? 1
-        : THREE.MathUtils.smoothstep((time - stageStartTime.current) / DEPARTURE_SECONDS, 0, 1)
-      const point = DEPARTURE_PATH.getPointAt(progress)
-      const tangent = DEPARTURE_PATH.getTangentAt(progress)
-      boatX = point.x
-      boatZ = point.z
-      boatYaw = Math.atan2(-tangent.x, -tangent.z)
-      const enteredSeaExitZone = Math.hypot(boatX - SEA_EXIT_ZONE.x, boatZ - SEA_EXIT_ZONE.z) < SEA_EXIT_ZONE.radius
-      if (enteredSeaExitZone && !exitTriggered.current) {
+    let moved = false
+    if (mathDepartureStage === 'sailing') {
+      const steer = THREE.MathUtils.clamp(Number(keys.current.has('d') || keys.current.has('arrowright')) - Number(keys.current.has('a') || keys.current.has('arrowleft')) + move.x, -1, 1)
+      const throttle = THREE.MathUtils.clamp(Number(keys.current.has('w') || keys.current.has('arrowup')) - Number(keys.current.has('s') || keys.current.has('arrowdown')) + move.z, -1, 1)
+      const nextHeading = heading.current + steer * Math.min(delta, 0.05) * 1.45
+      if (boatFitsWater(boatPosition.current.x, boatPosition.current.z, nextHeading)) heading.current = nextHeading
+      const nextX = boatPosition.current.x + Math.cos(heading.current) * throttle * BOAT_SPEED * Math.min(delta, 0.05)
+      const nextZ = boatPosition.current.z + Math.sin(heading.current) * throttle * BOAT_SPEED * Math.min(delta, 0.05)
+      if (Math.abs(throttle) > 0.04 && boatFitsWater(nextX, nextZ, heading.current)) {
+        boatPosition.current = { x: nextX, z: nextZ }
+        moved = true
+      }
+      cameraYaw.current = -Math.PI / 2 - heading.current
+      if (boatPosition.current.x >= SEA_EXIT_X && Math.abs(boatPosition.current.z - DOCK_Z) < 4.8 && !exitTriggered.current) {
         exitTriggered.current = true
         beginMathSeaExit()
       }
     }
+    if (moved !== rowingRef.current) {
+      rowingRef.current = moved
+      setRowing(moved)
+    }
+    const boatX = boatPosition.current.x + (mathDepartureStage ? 0 : Math.sin(time * 1.45) * 0.015)
+    const boatZ = boatPosition.current.z + (mathDepartureStage ? 0 : Math.sin(time * 1.2) * 0.015)
+    const boatYaw = -Math.PI / 2 - heading.current
     if (boat.current) {
       boat.current.position.set(boatX, BOAT_START.y + Math.sin(time * 1.45) * 0.02, boatZ)
       boat.current.rotation.set(Math.sin(time * 1.2) * 0.008, boatYaw, Math.cos(time * 1.1) * 0.006)
@@ -121,7 +142,7 @@ export default function MathDock({ playerRef, onInteractionChange }: {
       }
       body.setTranslation(position, true)
       body.setRotation({ x: 0, y: -Math.SQRT1_2, z: 0, w: Math.SQRT1_2 }, true)
-    } else if (body && (mathDepartureStage === 'seated' || mathDepartureStage === 'departing' || mathDepartureStage === 'transitioning')) {
+    } else if (body && (mathDepartureStage === 'seated' || mathDepartureStage === 'sailing' || mathDepartureStage === 'transitioning')) {
       body.setTranslation({ x: boatX, y: SEAT_ROOT_Y, z: boatZ }, true)
       const targetRotation = new THREE.Quaternion().setFromAxisAngle(THREE.Object3D.DEFAULT_UP, Math.PI / 2)
       const turn = THREE.MathUtils.smoothstep((time - stageStartTime.current) / 0.18, 0, 1)
@@ -163,11 +184,11 @@ export default function MathDock({ playerRef, onInteractionChange }: {
       <mesh position={[0, -1.65, 0]} castShadow><boxGeometry args={[0.2, 2.25, 0.2]} /><meshStandardMaterial color="#865b3d" roughness={0.96} /></mesh>
     </group>
     <group ref={boat} position={[BOAT_START.x, BOAT_START.y, BOAT_START.z]} rotation={[0, -Math.PI / 2, 0]}>
-      <BoatModel seatedCappy={mathDepartureStage === 'seated' || mathDepartureStage === 'departing' || mathDepartureStage === 'transitioning'} showWake={mathDepartureStage === 'departing' || mathDepartureStage === 'transitioning'} />
+      <BoatModel seatedCappy={mathDepartureStage === 'seated' || mathDepartureStage === 'sailing' || mathDepartureStage === 'transitioning'} showWake={rowing} />
     </group>
-    {Array.from({ length: 9 }, (_, index) => {
-      const point = DEPARTURE_PATH.getPointAt((index + 0.5) / 10)
-      return <mesh key={index} position={[point.x, 0.025, point.z]} rotation={[-Math.PI / 2, 0, 0]}>
+    {Array.from({ length: 5 }, (_, index) => {
+      const x = 33 + index * 1.2
+      return <mesh key={index} position={[x, 0.025, DOCK_Z + 1]} rotation={[-Math.PI / 2, 0, 0]}>
         <ringGeometry args={[0.35, 0.47, 24]} />
         <meshBasicMaterial color="#d9faff" transparent opacity={0.34} side={THREE.DoubleSide} depthWrite={false} />
       </mesh>
