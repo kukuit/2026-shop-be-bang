@@ -1,0 +1,20 @@
+export const BOAT_CONFIG = {
+  length: 4.2,
+  width: 1.85,
+  hullHeight: 0.75,
+  cruiseSpeed: 1.8,
+  acceleration: 1.8,
+  bobAmplitude: 0.025,
+  bobSpeed: 1.4,
+  rowingMinFrequency: 2.8,
+  rowingMaxFrequency: 4.8,
+  colors: {
+    hull: '#197ba5',
+    trim: '#f4e6c8',
+    wood: '#b8793e',
+    woodLight: '#c99155',
+    woodPale: '#d7a66a',
+    sail: '#f5ead7',
+    rope: '#c69a63',
+  },
+} as const
