@@ -5,7 +5,7 @@ import { CuboidCollider, RigidBody } from '@react-three/rapier'
 import { useFrame } from '@react-three/fiber'
 import { memo, useLayoutEffect, useMemo, useRef } from 'react'
 import * as THREE from 'three'
-import { EXPANSION_POINTS, FENCE_SEGMENTS, getOrganicOutlineScale, WORLD_CONFIG } from './worldConfig'
+import { EXPANSION_POINTS, FENCE_SEGMENTS, getFenceOutlineScale, getOrganicOutlineScale, WORLD_CONFIG } from './worldConfig'
 import type { RapierRigidBody } from '@react-three/rapier'
 import type { MutableRefObject } from 'react'
 import CappyHouse from './CappyHouse'
@@ -77,6 +77,7 @@ function Paths() {
   return <>
     <PathRibbon points={[[0, 4], [0.3, 2], [0, -1], [0.1, -5], [0, -10]]} />
     <PathRibbon points={[[0, 5], [-2, 4.4], [-4, 3], [-6, 1.5], [-8, 0]]} />
+    <PathRibbon points={[[0, 4], [-2, 2], [-4, -1], [-6, -3.4]]} width={1.6} />
     <PathRibbon points={[[0, 5], [2, 4.5], [4, 3.1], [6.5, 1.2], [8, 0], [11, 0.7], [14, 2.2], [17, 2.5]]} />
     <PathRibbon points={[[0, 7], [-0.8, 8.5], [0.5, 10.5], [0.1, 12.5], [0, 15]]} width={1.45} />
     <PathRibbon points={[[0, -33], [0.3, -38], [4, -43], [8, -47]]} width={1.8} />
@@ -142,7 +143,7 @@ function makeFenceTransforms(startAngle: number, endAngle: number) {
   const perimeter = ((WORLD_CONFIG.fence.radiusX + WORLD_CONFIG.fence.radiusZ) / 2) * Math.abs(endAngle - startAngle)
   const count = Math.max(2, Math.ceil(perimeter / WORLD_CONFIG.fence.postSpacing) + 1)
   const posts = Array.from({ length: count }, (_, index) => {
-    const angle = THREE.MathUtils.lerp(startAngle, endAngle, index / (count - 1)), outline = getOrganicOutlineScale(angle)
+    const angle = THREE.MathUtils.lerp(startAngle, endAngle, index / (count - 1)), outline = getFenceOutlineScale(angle)
     return { x: WORLD_CONFIG.center.x + Math.cos(angle) * WORLD_CONFIG.fence.radiusX * outline, z: WORLD_CONFIG.center.z + Math.sin(angle) * WORLD_CONFIG.fence.radiusZ * outline }
   })
   const rails = posts.slice(0, -1).map((point, index) => {
@@ -164,7 +165,7 @@ function TreeCluster() {
   </>
 }
 
-const PROTECTED_POINTS: [number, number][] = [[8, 0], [-8, 0], [0, -10], [0, 15], [0, 8], [0, 0]]
+const PROTECTED_POINTS: [number, number][] = [[8, 0], [-8, 0], [0, -10], [0, 15], [0, 8], [0, 0], [-18, -4]]
 const CAPPY_HOUSE_TREE_CLEARANCE = { x: 0, z: 18, radius: 7 }
 const PROTECTED_PATHS: [number, number][][] = [
   [[0, 4], [0.3, 2], [0, -1], [0.1, -5], [0, -10]],
@@ -173,39 +174,57 @@ const PROTECTED_PATHS: [number, number][][] = [
   [[0, 5], [2, 4.5], [4, 3.1], [6.5, 1.2], [8, 0]],
   [[8, 0], [11, 0.7], [14, 2.2], [17, 2.5]],
   [[0, 7], [-0.8, 8.5], [0.5, 10.5], [0.1, 12.5], [0, 15]],
+  [[-4, -4], [-8, -4], [-12, -4], [-16, -4], [-19, -4]],
 ]
+
+// Fixed seeds keep the same landscape after route changes and page reloads.
+function seededRandom(seed: number) {
+  let value = seed
+  return () => {
+    value = (value + 0x6d2b79f5) | 0
+    let result = Math.imul(value ^ (value >>> 15), 1 | value)
+    result ^= result + Math.imul(result ^ (result >>> 7), 61 | result)
+    return ((result ^ (result >>> 14)) >>> 0) / 4294967296
+  }
+}
 
 function makeHubTrees(): TreeTransform[] {
   const trees: TreeTransform[] = []
+  const random = seededRandom(20261003)
   for (let attempt = 0; attempt < 500 && trees.length < 22; attempt++) {
-    const angle = Math.random() * Math.PI * 2
-    const radial = 0.69 + Math.random() * 0.16
+    const angle = random() * Math.PI * 2
+    const radial = 0.69 + random() * 0.16
     const outline = getOrganicOutlineScale(angle)
     const x = WORLD_CONFIG.center.x + Math.cos(angle) * WORLD_CONFIG.hub.radiusX * radial * outline
     const z = WORLD_CONFIG.center.z + Math.sin(angle) * WORLD_CONFIG.hub.radiusZ * radial * outline
     if (Math.hypot(x - CAPPY_HOUSE_TREE_CLEARANCE.x, z - CAPPY_HOUSE_TREE_CLEARANCE.z) < CAPPY_HOUSE_TREE_CLEARANCE.radius) continue
+    if (Math.hypot(x + 18, z + 4) < 6) continue
     if (PROTECTED_POINTS.some(([px, pz]) => Math.hypot(x - px, z - pz) < 4.8)) continue
     if (PROTECTED_PATHS.some((path) => path.some((point, index) => index < path.length - 1 && distanceToSegment(x, z, point, path[index + 1]) < 2.6))) continue
     if (trees.some(({ position: [px, , pz] }) => Math.hypot(x - px, z - pz) < 4.2)) continue
-    trees.push({ position: [x, 0, z], scale: 0.68 + Math.random() * 0.5, yaw: Math.random() * Math.PI * 2 })
+    trees.push({ position: [x, 0, z], scale: 0.68 + random() * 0.5, yaw: random() * Math.PI * 2 })
   }
   return trees
 }
 
 function makeOuterTrees(): TreeTransform[] {
   const trees: TreeTransform[] = []
+  const random = seededRandom(20261004)
   for (let attempt = 0; attempt < 800 && trees.length < 30; attempt++) {
     // The far-bank ring has an east-facing opening for the boat route. Never
     // place trees in that water gap; generate them on the surrounding land.
-    const angle = (Math.random() * 2 - 1) * Math.PI
-    if (Math.abs(angle) < 0.3) continue
-    const radial = 0.73 + Math.random() * 0.19
+    const angle = (random() * 2 - 1) * Math.PI
+    // Leave room for the whole crown at the shore and beside the boat opening.
+    if (Math.abs(angle) < 0.42) continue
+    const radial = 0.77 + random() * 0.11
     const outline = getOrganicOutlineScale(angle)
     const x = WORLD_CONFIG.center.x + Math.cos(angle) * WORLD_CONFIG.farBank.outerRadiusX * radial * outline
     const z = WORLD_CONFIG.center.z + Math.sin(angle) * WORLD_CONFIG.farBank.outerRadiusZ * radial * outline
+    // The sea plane begins here beside the Math dock. Keep this view clear.
+    if (x >= 28) continue
     if (isInMathBoatChannel(x, z)) continue
     if (trees.some(({ position: [px, , pz] }) => Math.hypot(x - px, z - pz) < 5)) continue
-    trees.push({ position: [x, 0, z], scale: 0.48 + Math.random() * 0.42, yaw: Math.random() * Math.PI * 2 })
+    trees.push({ position: [x, 0, z], scale: 0.48 + random() * 0.42, yaw: random() * Math.PI * 2 })
   }
   return trees
 }

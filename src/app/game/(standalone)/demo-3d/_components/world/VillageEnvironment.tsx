@@ -6,11 +6,11 @@ import { RigidBody, CuboidCollider, type RapierRigidBody } from '@react-three/ra
 import WorldEnvironment from './WorldEnvironment'
 import IslandBoundary from './IslandBoundary'
 import VietnameseBridge from './VietnameseBridge'
-import VillagePortals from './VillagePortals'
 import MathDock from './MathDock'
+import EnglishLaunch from './EnglishLaunch'
 import { WORLD_CONFIG } from './worldConfig'
 
-function VillageEnvironment({ playerRef, onHousePorchChange, onMathDockChange }: { playerRef: MutableRefObject<RapierRigidBody | null>; onHousePorchChange: (inside: boolean) => void; onMathDockChange?: (inside: boolean) => void }) {
+function VillageEnvironment({ playerRef, onHousePorchChange, onMathDockChange, onEnglishRocketChange }: { playerRef: MutableRefObject<RapierRigidBody | null>; onHousePorchChange: (inside: boolean) => void; onMathDockChange?: (inside: boolean) => void; onEnglishRocketChange?: (inside: boolean) => void }) {
   return <>
     <WorldEnvironment playerRef={playerRef} onHousePorchChange={onHousePorchChange} />
     <RigidBody type="fixed" colliders={false}>
@@ -19,7 +19,7 @@ function VillageEnvironment({ playerRef, onHousePorchChange, onMathDockChange }:
     </RigidBody>
     <VietnameseBridge showSign />
     <MathDock playerRef={playerRef} onInteractionChange={onMathDockChange} />
-    <VillagePortals />
+    <EnglishLaunch playerRef={playerRef} onInteractionChange={onEnglishRocketChange} />
   </>
 }
 

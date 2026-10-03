@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react'
 import { CuboidCollider } from '@react-three/rapier'
-import { EXPANSION_POINTS, FENCE_SEGMENTS, getOrganicOutlineScale, WORLD_CONFIG } from './worldConfig'
+import { EXPANSION_POINTS, FENCE_SEGMENTS, getFenceOutlineScale, WORLD_CONFIG } from './worldConfig'
 
 export default function IslandBoundary() {
   const sections = useMemo(() => FENCE_SEGMENTS.map((segment) => {
@@ -12,7 +12,7 @@ export default function IslandBoundary() {
     const colliders = Array.from({ length: count }, (_, index) => {
       const a = segment.startAngle + (index / count) * (segment.endAngle - segment.startAngle)
       const b = segment.startAngle + ((index + 1) / count) * (segment.endAngle - segment.startAngle)
-      const scaleA = getOrganicOutlineScale(a), scaleB = getOrganicOutlineScale(b)
+      const scaleA = getFenceOutlineScale(a), scaleB = getFenceOutlineScale(b)
       const ax = Math.cos(a) * WORLD_CONFIG.fence.radiusX * scaleA, az = Math.sin(a) * WORLD_CONFIG.fence.radiusZ * scaleA
       const bx = Math.cos(b) * WORLD_CONFIG.fence.radiusX * scaleB, bz = Math.sin(b) * WORLD_CONFIG.fence.radiusZ * scaleB
       const x = WORLD_CONFIG.center.x + (ax + bx) / 2

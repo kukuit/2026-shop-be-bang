@@ -8,16 +8,25 @@ import type { MutableRefObject } from 'react'
 import type { CameraMode } from './camera-config'
 import type { MoveInput, PortalInfo } from './types'
 import { PORTALS } from './types'
-import type { DemoWorldId, BridgeTransition, MathDepartureStage } from './GameShell'
+import type { DemoWorldId, BridgeTransition, MathDepartureStage, EnglishLaunchStage } from './GameShell'
 import CharacterRenderer from './character/CharacterRenderer'
 import { DEFAULT_PLAYER_SLOT, resolveCharacterSlot } from './character/slots'
 import type { CharacterMotionRef } from './character/types'
 import { CAMERA_CONFIG } from './camera-config'
+import { isVillageWalkable, isVietnameseWalkable } from './world/water-boundaries'
+import { ENGLISH_STEPS, ENGLISH_WORLD_CONFIG } from './world/english-world.config'
+import { useRocketFlight } from './useRocketFlight'
 
 const PORTAL_POSITIONS: Record<PortalInfo['id'], [number, number, number]> = {
   english: [0, 0, -10],
 }
 const MATH_DOCK_WALKWAY = { startX: 20, endX: 27.25, centerZ: 2.5, halfWidth: 1.15 }
+const ENGLISH_ROCKET_STAND_TOP = ENGLISH_WORLD_CONFIG.launch.top + 0.43
+const ENGLISH_GROUND_STEPS = [
+  ...ENGLISH_STEPS.map((step) => ({ ...step, radius: 1.25 })),
+  { x: ENGLISH_WORLD_CONFIG.launch.x, z: ENGLISH_WORLD_CONFIG.launch.z, top: ENGLISH_WORLD_CONFIG.launch.top, radius: 4.1 },
+  { x: ENGLISH_WORLD_CONFIG.launch.x - 1.4, z: ENGLISH_WORLD_CONFIG.launch.z, top: ENGLISH_ROCKET_STAND_TOP, radius: 1.85 },
+]
 
 type Props = {
   playerRef: MutableRefObject<RapierRigidBody | null>
@@ -26,9 +35,11 @@ type Props = {
   cameraMode: CameraMode
   cameraDistance: MutableRefObject<number>
   cameraYaw: MutableRefObject<number>
+  cameraPitch: MutableRefObject<number>
   manualOrbitVersion: MutableRefObject<number>
   transitionPhase: BridgeTransition['phase'] | null
   mathDepartureStage: MathDepartureStage
+  englishLaunchStage: EnglishLaunchStage
   transitionDirectionZ: number
   spawn: { position: [number, number, number]; yaw: number }
   world: DemoWorldId
@@ -37,7 +48,8 @@ type Props = {
 }
 
 /** Owns the physics root and input-driven movement; its visual is a swappable character renderer. */
-export default function PlayerController({ playerRef, move, jumpVersion, cameraMode, cameraDistance, cameraYaw, manualOrbitVersion, transitionPhase, mathDepartureStage, transitionDirectionZ, spawn, world, onBridgeReach, onPortalChange }: Props) {
+export default function PlayerController({ playerRef, move, jumpVersion, cameraMode, cameraDistance, cameraYaw, cameraPitch, manualOrbitVersion, transitionPhase, mathDepartureStage, englishLaunchStage, transitionDirectionZ, spawn, world, onBridgeReach, onPortalChange }: Props) {
+  const [spawnX, , spawnZ] = spawn.position
   const { character, skin } = resolveCharacterSlot(DEFAULT_PLAYER_SLOT)
   const keys = useRef(new Set<string>())
   const playerYaw = useRef(spawn.yaw)
@@ -51,19 +63,27 @@ export default function PlayerController({ playerRef, move, jumpVersion, cameraM
   const direction = useRef(new THREE.Vector3()).current
   const cameraForward = useRef(new THREE.Vector3()).current
   const cameraRight = useRef(new THREE.Vector3()).current
+  const flightMode = useRef(false)
   const movementBasisYaw = useRef(cameraYaw.current)
   const movementBasisActive = useRef(false)
   const observedOrbitVersion = useRef(manualOrbitVersion.current)
   const bridgeTriggered = useRef(false)
+  const lastDryPosition = useRef({ x: spawnX, z: spawnZ })
   const motion: CharacterMotionRef = useRef({ speed: 0, verticalVelocity: 0, grounded: true, jumpStarted: false, justLanded: false })
+  flightMode.current = englishLaunchStage === 'rocket-flight'
+  useRocketFlight({ active: flightMode.current, playerRef, keys, move, cameraYaw, cameraPitch, motion })
 
   useEffect(() => {
     bridgeTriggered.current = false
     playerYaw.current = spawn.yaw
-  }, [world, spawn.yaw])
+    lastDryPosition.current = { x: spawnX, z: spawnZ }
+  }, [world, spawn.yaw, spawnX, spawnZ])
 
   useEffect(() => {
-    const down = (event: KeyboardEvent) => keys.current.add(event.key.toLowerCase())
+    const down = (event: KeyboardEvent) => {
+      keys.current.add(event.key.toLowerCase())
+      if (flightMode.current && (event.code === 'Space' || event.key.startsWith('Arrow'))) event.preventDefault()
+    }
     const up = (event: KeyboardEvent) => keys.current.delete(event.key.toLowerCase())
     window.addEventListener('keydown', down)
     window.addEventListener('keyup', up)
@@ -81,15 +101,19 @@ export default function PlayerController({ playerRef, move, jumpVersion, cameraM
     const body = playerRef.current
     if (!body) return
 
-    if (mathDepartureStage) {
+    if ((mathDepartureStage || englishLaunchStage) && englishLaunchStage !== 'rocket-flight') {
       body.setLinvel({ x: 0, y: 0, z: 0 }, true)
       pendingJump.current = false
-      motion.current.speed = mathDepartureStage === 'boarding' ? 3.8 : 0
+      motion.current.speed = mathDepartureStage === 'boarding' || englishLaunchStage === 'boarding' ? 3.8 : 0
       motion.current.grounded = true
       return
     }
 
     const dt = Math.min(delta, 0.05)
+    if (englishLaunchStage === 'rocket-flight') {
+      pendingJump.current = false
+      return
+    }
     let forwardInput = THREE.MathUtils.clamp(
       Number(keys.current.has('w') || keys.current.has('arrowup')) - Number(keys.current.has('s') || keys.current.has('arrowdown')) + move.z,
       -1, 1,
@@ -121,6 +145,16 @@ export default function PlayerController({ playerRef, move, jumpVersion, cameraM
     else if (transitionLocked || isTurnOnly) direction.set(0, 0, 0)
     else direction.copy(cameraForward).multiplyScalar(forwardInput).addScaledVector(cameraRight, rightInput)
     const position = body.translation()
+    const walkable = world === 'village' ? isVillageWalkable(position.x, position.z)
+      : world === 'tieng-anh' ? Math.hypot(position.x, position.z) <= 6.4
+        : world === 'tieng-viet' ? isVietnameseWalkable(position.x, position.z) : true
+    if (!walkable) {
+      body.setTranslation({ x: lastDryPosition.current.x, y: position.y, z: lastDryPosition.current.z }, true)
+      body.setLinvel({ x: 0, y: 0, z: 0 }, true)
+      direction.set(0, 0, 0)
+    } else if (world === 'village' || world === 'tieng-anh' || world === 'tieng-viet') {
+      lastDryPosition.current = { x: position.x, z: position.z }
+    }
     let blockedX = false
     let blockedZ = false
     if (world === 'village' && !mathDepartureStage) {
@@ -144,6 +178,21 @@ export default function PlayerController({ playerRef, move, jumpVersion, cameraM
         direction.x = 0
         blockedX = true
       }
+      if (!isVillageWalkable(nextX, nextZ)) {
+        direction.set(0, 0, 0)
+        blockedX = true
+        blockedZ = true
+      }
+    }
+    if (world === 'tieng-anh' && Math.hypot(position.x + direction.x * dt * 11.2, position.z + direction.z * dt * 11.2) > 6.4) {
+      direction.set(0, 0, 0)
+      blockedX = true
+      blockedZ = true
+    }
+    if (world === 'tieng-viet' && !isVietnameseWalkable(position.x + direction.x * dt * 11.2, position.z + direction.z * dt * 11.2)) {
+      direction.set(0, 0, 0)
+      blockedX = true
+      blockedZ = true
     }
     const inputStrength = transitionRun ? 1 : Math.min(direction.length(), 1)
     if (inputStrength > 0) direction.normalize()
@@ -171,7 +220,10 @@ export default function PlayerController({ playerRef, move, jumpVersion, cameraM
     let velocity = body.linvel()
     if (blockedX) velocity = { ...velocity, x: 0 }
     if (blockedZ) velocity = { ...velocity, z: 0 }
-    const grounded = body.translation().y <= 1.25 && velocity.y <= 0.15
+    const onEnglishStep = world === 'village' && ENGLISH_GROUND_STEPS.some((step) =>
+      Math.hypot(position.x - step.x, position.z - step.z) < step.radius
+      && Math.abs(position.y - (step.top + 1.22)) < 0.18)
+    const grounded = (body.translation().y <= 1.25 || onEnglishStep) && velocity.y <= 0.15
     if (!canJump.current && grounded) canJump.current = true
     const previousGrounded = wasGrounded.current
     motion.current.jumpStarted = false
@@ -203,7 +255,7 @@ export default function PlayerController({ playerRef, move, jumpVersion, cameraM
     const nextRotation = currentRotation.current
     body.setRotation({ x: nextRotation.x, y: nextRotation.y, z: nextRotation.z, w: nextRotation.w }, true)
 
-    if (!transitionPhase && !bridgeTriggered.current && Math.abs(position.x) < 1.05) {
+    if (!transitionPhase && !bridgeTriggered.current && Math.abs(position.x) < 1.05 && world !== 'tieng-anh') {
       const reachedBridgeTrigger = world === 'village' ? position.z < -32.4 : position.z > -24.5
       if (reachedBridgeTrigger) {
         bridgeTriggered.current = true
@@ -221,8 +273,8 @@ export default function PlayerController({ playerRef, move, jumpVersion, cameraM
     }
   })
 
-  return <RigidBody ref={playerRef} colliders={false} position={spawn.position} rotation={[0, spawn.yaw, 0]} enabledRotations={[false, false, false]} linearDamping={0.8}>
+  return <RigidBody ref={playerRef} colliders={false} position={spawn.position} rotation={[0, spawn.yaw, 0]} enabledRotations={[false, false, false]} gravityScale={englishLaunchStage === 'rocket-flight' ? 0 : 1} linearDamping={englishLaunchStage === 'rocket-flight' ? 0 : 0.8}>
     <CapsuleCollider args={[character.collider.halfHeight, character.collider.radius]} friction={0} />
-    <CharacterRenderer character={character} skin={skin} motion={motion} hidden={cameraMode === 'firstPerson' || mathDepartureStage === 'seated' || mathDepartureStage === 'departing' || mathDepartureStage === 'transitioning'} cameraDistance={cameraDistance} />
+    <CharacterRenderer character={character} skin={skin} motion={motion} hidden={cameraMode === 'firstPerson' || mathDepartureStage === 'seated' || mathDepartureStage === 'sailing' || mathDepartureStage === 'transitioning' || englishLaunchStage === 'seated' || englishLaunchStage === 'launching' || englishLaunchStage === 'transitioning' || englishLaunchStage === 'landing' || englishLaunchStage === 'returning' || englishLaunchStage === 'rocket-flight'} cameraDistance={cameraDistance} />
   </RigidBody>
 }

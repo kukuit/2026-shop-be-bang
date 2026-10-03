@@ -2,7 +2,6 @@
 
 import dynamic from 'next/dynamic'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { PortalInfo } from './types'
 import { useDemo3DGame } from './GameShell'
 import VillageEnvironment from './world/VillageEnvironment'
 import styles from './demo.module.css'
@@ -11,56 +10,36 @@ const GameScene = dynamic(() => import('./GameScene'), { ssr: false })
 
 export default function Demo3DClient() {
   const game = useDemo3DGame()
-  const [nearPortal, setNearPortal] = useState<PortalInfo | null>(null)
+  const { jumpVersion, mathDepartureStage, beginMathDeparture } = game
   const [showMathDockPrompt, setShowMathDockPrompt] = useState(false)
+  const [showEnglishRocketPrompt, setShowEnglishRocketPrompt] = useState(false)
   const [showHousePrompt, setShowHousePrompt] = useState(false)
-  const [toast, setToast] = useState('')
-  const enterPortalRef = useRef<(portal: PortalInfo) => void>(() => undefined)
-  const handledJumpVersion = useRef(game.jumpVersion)
+  const handledJumpVersion = useRef(jumpVersion)
 
   useEffect(() => {
-    const keyDown = (event: KeyboardEvent) => {
-      if (event.key.toLowerCase() !== 'e') return
-      if (nearPortal) enterPortalRef.current(nearPortal)
-    }
-    window.addEventListener('keydown', keyDown)
-    return () => window.removeEventListener('keydown', keyDown)
-  }, [nearPortal, showMathDockPrompt, game])
+    if (jumpVersion === handledJumpVersion.current) return
+    handledJumpVersion.current = jumpVersion
+    if (showMathDockPrompt && !mathDepartureStage) beginMathDeparture()
+  }, [jumpVersion, showMathDockPrompt, mathDepartureStage, beginMathDeparture])
 
-  useEffect(() => {
-    if (game.jumpVersion === handledJumpVersion.current) return
-    handledJumpVersion.current = game.jumpVersion
-    if (showMathDockPrompt && !game.mathDepartureStage) game.beginMathDeparture()
-  }, [game.jumpVersion, showMathDockPrompt, game.mathDepartureStage, game.beginMathDeparture])
-
-  useEffect(() => {
-    if (!toast) return
-    const timer = window.setTimeout(() => setToast(''), 2500)
-    return () => window.clearTimeout(timer)
-  }, [toast])
-
-  const enterPortal = useCallback((portal: PortalInfo) => {
-    console.log(`ENTER_${portal.id.toUpperCase()}_WORLD`)
-    setToast(`Sắp vào ${portal.title}!`)
-  }, [])
-  enterPortalRef.current = enterPortal
   const handleHousePorchChange = useCallback((inside: boolean) => setShowHousePrompt(inside), [])
   const handleEnterCappyHouse = useCallback(() => setShowHousePrompt(false), [])
   const handleMathDockChange = useCallback((inside: boolean) => setShowMathDockPrompt(inside), [])
+  const handleEnglishRocketChange = useCallback((inside: boolean) => setShowEnglishRocketPrompt(inside), [])
 
   return <>
-    <GameScene world="village" Environment={VillageEnvironment} onPortalChange={setNearPortal} onHousePorchChange={handleHousePorchChange} onMathDockChange={handleMathDockChange} />
-    {nearPortal && <section className={styles.portalCard} aria-live="polite" data-camera-ignore>
-      <div className={styles.portalEyebrow}>ĐIỂM ĐẾN ĐANG Ở GẦN</div>
-      <h1>{nearPortal.title}</h1><p>{nearPortal.description}</p>
-      <button type="button" onClick={() => enterPortal(nearPortal)}>VÀO CHƠI <span>→</span></button>
-      <small>Nhấn E hoặc chạm để khám phá</small>
-    </section>}
-    {showMathDockPrompt && !nearPortal && !game.mathDepartureStage && <section className={`${styles.portalCard} ${styles.mathDockCard}`} aria-live="polite" data-camera-ignore>
+    <GameScene world="village" Environment={VillageEnvironment} onHousePorchChange={handleHousePorchChange} onMathDockChange={handleMathDockChange} onEnglishRocketChange={handleEnglishRocketChange} />
+    {showMathDockPrompt && !game.mathDepartureStage && <section className={`${styles.portalCard} ${styles.mathDockCard}`} aria-live="polite" data-camera-ignore>
       <div className={styles.portalEyebrow}>BẾN TÀU CAPPY</div>
       <h1>Quần đảo Toán</h1>
       <p>Ra khơi cùng Cappy để khám phá các đảo Toán học nhé!</p>
       <small>Đi đến cuối cầu rồi nhấn NHẢY để xuống thuyền</small>
+    </section>}
+    {showEnglishRocketPrompt && !game.englishLaunchStage && <section className={`${styles.portalCard} ${styles.englishRocketCard}`} aria-live="polite" data-camera-ignore>
+      <div className={styles.portalEyebrow}>🚀 VŨ TRỤ TIẾNG ANH</div>
+      <h1>Bay vào Vũ trụ Tiếng Anh?</h1>
+      <button type="button" onClick={game.beginEnglishLaunch}>BAY THÔI <span>↑</span></button>
+      <button type="button" className={styles.mathDockLater} onClick={() => setShowEnglishRocketPrompt(false)}>Để sau</button>
     </section>}
     {showHousePrompt && <section className={`${styles.portalCard} ${styles.housePrompt}`} aria-live="polite" data-camera-ignore>
       <button type="button" className={styles.housePromptClose} aria-label="Đóng bảng Nhà Cappy" onClick={() => setShowHousePrompt(false)}>×</button>
@@ -69,6 +48,5 @@ export default function Demo3DClient() {
       <p>Cappy muốn vào nhà chơi không?</p>
       <button type="button" onClick={handleEnterCappyHouse}>VÀO NHÀ <span>→</span></button>
     </section>}
-    {toast && <div className={styles.toast} role="status">✨ {toast}</div>}
   </>
 }

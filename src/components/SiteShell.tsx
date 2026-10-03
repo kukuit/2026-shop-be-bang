@@ -16,7 +16,7 @@ export default function SiteShell({ children }: { children: React.ReactNode }) {
   const hasGameChat = isGameRoute && !isGameplayRoute && !pathname.startsWith('/game/lop-')
   const isAdminRoute = pathname.startsWith('/admin/')
 
-  if (pathname === '/game/demo-3d') return <>{children}</>
+  if (pathname === '/game/demo-3d' || pathname.startsWith('/game/demo-3d/')) return <>{children}</>
 
   if (hasGameChat)
     return (
