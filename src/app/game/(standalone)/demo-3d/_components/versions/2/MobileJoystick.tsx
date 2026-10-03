@@ -5,7 +5,7 @@ import type { PointerEvent as ReactPointerEvent } from 'react'
 import type { MoveInput } from './types'
 import styles from './demo.module.css'
 
-export default function MobileJoystick({ onMove, onJump, disabled = false, showJump = true }: { onMove: (move: MoveInput) => void; onJump: () => void; disabled?: boolean; showJump?: boolean }) {
+export default function MobileJoystick({ onMove, onJump }: { onMove: (move: MoveInput) => void; onJump: () => void }) {
   const [knob, setKnob] = useState({ x: 0, y: 0 })
   const pointerId = useRef<number | null>(null)
   const update = (event: ReactPointerEvent<HTMLDivElement>) => {
@@ -16,10 +16,10 @@ export default function MobileJoystick({ onMove, onJump, disabled = false, showJ
     setKnob({ x: dx * scale, y: dy * scale }); onMove({ x, z: -y })
   }
   const end = () => { pointerId.current = null; setKnob({ x: 0, y: 0 }); onMove({ x: 0, z: 0 }) }
-  return <div className={styles.mobileControls} data-camera-ignore style={disabled ? { pointerEvents: 'none' } : undefined}>
+  return <div className={styles.mobileControls} data-camera-ignore>
     <div className={styles.joystick} onPointerDown={(event) => { event.preventDefault(); pointerId.current = event.pointerId; event.currentTarget.setPointerCapture(event.pointerId); update(event) }} onPointerMove={(event) => { if (pointerId.current === event.pointerId) update(event) }} onPointerUp={end} onPointerCancel={end} onLostPointerCapture={end} aria-label="Cần điều khiển di chuyển">
       <span className={styles.joystickRing} /><span className={styles.joystickKnob} style={{ transform: `translate(${knob.x}px, ${knob.y}px)` }}>✦</span>
     </div>
-    {showJump && (<button type="button" className={styles.jumpButton} onPointerDown={(event) => { event.preventDefault(); onJump() }}><span>↑</span>JUMP</button>)}
+    <button type="button" className={styles.jumpButton} onPointerDown={(event) => { event.preventDefault(); onJump() }}><span>↑</span>JUMP</button>
   </div>
 }
