@@ -3,7 +3,10 @@ import { TOAN_2_BAI_1 } from '@/app/game/lop-2/toan/bai-1/lesson'
 import { TOAN_1_BAI_1 } from '@/app/game/lop-1/toan/bai-1/lesson'
 import { TOAN_1_BAI_2 } from '@/app/game/lop-1/toan/bai-2/lesson'
 import { TIENG_ANH_1_BAI_1 } from '@/app/game/lop-1/tieng-anh/bai-1/lesson'
-import { TIENG_VIET_1_BAI_1 } from '@/app/game/lop-1/tieng-viet/bai-1/lesson'
+import { TIENG_VIET_1_WEEK_1 } from '@/app/game/lop-1/tieng-viet/tuan-1/lesson'
+import { TIENG_VIET_1_WEEK_2 } from '@/app/game/lop-1/tieng-viet/tuan-2/lesson'
+import { TIENG_VIET_1_WEEK_3 } from '@/app/game/lop-1/tieng-viet/tuan-3/lesson'
+import { TIENG_VIET_1_WEEK_4 } from '@/app/game/lop-1/tieng-viet/tuan-4/lesson'
 
 export const LESSON_CATALOG = {
   [TOAN_2_BAI_1.lessonId]: TOAN_2_BAI_1,
@@ -11,7 +14,10 @@ export const LESSON_CATALOG = {
   [TOAN_1_BAI_2.lessonId]: TOAN_1_BAI_2,
   [TIENG_ANH_1_BAI_1.lessonId]: TIENG_ANH_1_BAI_1,
   [TIENG_ANH_1_BAI_2.lessonId]: TIENG_ANH_1_BAI_2,
-  [TIENG_VIET_1_BAI_1.lessonId]: TIENG_VIET_1_BAI_1,
+  [TIENG_VIET_1_WEEK_1.lessonId]: TIENG_VIET_1_WEEK_1,
+  [TIENG_VIET_1_WEEK_2.lessonId]: TIENG_VIET_1_WEEK_2,
+  [TIENG_VIET_1_WEEK_3.lessonId]: TIENG_VIET_1_WEEK_3,
+  [TIENG_VIET_1_WEEK_4.lessonId]: TIENG_VIET_1_WEEK_4,
 } as const
 
 export const LESSON_IDS = {
@@ -20,7 +26,10 @@ export const LESSON_IDS = {
   TOAN_1_BAI_1: TOAN_1_BAI_1.lessonId,
   TOAN_1_BAI_2: TOAN_1_BAI_2.lessonId,
   TIENG_ANH_1_BAI_1: TIENG_ANH_1_BAI_1.lessonId,
-  TIENG_VIET_1_BAI_1: TIENG_VIET_1_BAI_1.lessonId,
+  TIENG_VIET_1_WEEK_1: TIENG_VIET_1_WEEK_1.lessonId,
+  TIENG_VIET_1_WEEK_2: TIENG_VIET_1_WEEK_2.lessonId,
+  TIENG_VIET_1_WEEK_3: TIENG_VIET_1_WEEK_3.lessonId,
+  TIENG_VIET_1_WEEK_4: TIENG_VIET_1_WEEK_4.lessonId,
 } as const
 
 export type LessonId = keyof typeof LESSON_CATALOG

@@ -11,15 +11,20 @@ import GameGradePopup from './GameGradePopup'
 function routeInfo(pathname: string) {
   const segments = pathname.split('/').filter(Boolean)
   const current = segments.at(-1) ?? 'game'
-  const parent = `/${segments.slice(0, -1).join('/')}`
+  const isTrangNguyenExam = segments[2] === 'tieng-viet' && segments[3] === 'trang-nguyen' && current === 'thi-thu'
+  const parent = isTrangNguyenExam ? '/game/lop-1/tieng-viet' : `/${segments.slice(0, -1).join('/')}`
   const subject = segments[2]
   const grade = segments[1]?.replace('lop-', 'Lớp ')
   const title = current.startsWith('bai-') ? `BÀI ${current.slice(4)} · ${subject === 'toan' ? 'TOÁN' : subject === 'tieng-viet' ? 'TIẾNG VIỆT' : 'TIẾNG ANH'} · ${grade.toUpperCase()}`
     : current === 'toan' ? 'QUẦN ĐẢO TOÁN HỌC'
       : current === 'tieng-viet' ? 'VÙNG ĐẤT TIẾNG VIỆT'
         : current === 'tieng-anh' ? 'VŨ TRỤ TIẾNG ANH'
+          : segments[2] === 'tieng-viet' && segments[3] === 'trang-nguyen' && current === 'thi-thu' ? 'THI THỬ TRẠNG NGUYÊN · TIẾNG VIỆT · LỚP 1'
           : `GAME ${grade.toUpperCase()}`
-  return { parent, title }
+  const displayTitle = segments.length === 4 && segments[1] === 'lop-1' && subject === 'tieng-viet' && current.startsWith('tuan-')
+    ? `Tiếng Việt: Tuần ${current.slice(5)}`
+    : title
+  return { parent, title: displayTitle }
 }
 
 export default function GameRouteShell({ children }: { children: ReactNode }) {
@@ -29,6 +34,9 @@ export default function GameRouteShell({ children }: { children: ReactNode }) {
     && !/\/(bubble-shooter|drag-drop|gold-mining|racing|egg-hunt)(\/|$)/.test(pathname)
     && !pathname.includes('/luyen-tap/')
   if (!active) return <>{children}</>
+  if (pathname === '/game/lop-1/tieng-viet/trang-nguyen/thi-thu') {
+    return <div className="min-h-dvh bg-[#f3f3f3] text-[#333]">{children}</div>
+  }
   const { parent, title } = routeInfo(pathname)
   const isWorldSelect = /^\/game\/lop-\d+\/?$/.test(pathname)
   const accountTrigger = <span className="relative grid h-10 w-10 place-items-center">

@@ -127,7 +127,11 @@ export class ComposedAudioPlayer {
         source.start(when, start, end - start)
         measurements.push({ text: sequence[index].text, durationMs: buffer.duration * 1000,
           trimmedStartMs: start * 1000, trimmedEndMs: (buffer.duration - end) * 1000 })
-        when += duration + (tightAfter ? 0 : gap)
+        const requestedPause = sequence[index].pauseAfterMs
+        const segmentGap = requestedPause === undefined
+          ? tightAfter ? 0 : gap
+          : Math.max(0, Math.min(1000, requestedPause)) / 1000
+        when += duration + segmentGap
       })
     } catch (error) { this.stop(); throw error }
     return measurements

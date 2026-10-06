@@ -6,17 +6,22 @@ export class QuestionVoicePlayer {
   private audio?: HTMLAudioElement
   private activeAudio = new Set<HTMLAudioElement>()
 
-  private queue: Array<{ src?: string; text?: string; playbackRate?: number }> = []
+  private queue: Array<{ src?: string; text?: string; playbackRate?: number; pauseAfterMs?: number }> = []
   private blocked = false
+  private pauseTimer?: ReturnType<typeof setTimeout>
+  private pauseDeadline = 0
+  private pauseRemainingMs = 0
+  private waitingForNext = false
   private utterance?: SpeechSynthesisUtterance
   private speechText?: string
+  private speechPauseAfterMs = 0
   private cancelVoiceWait?: () => void
   private composed?: ComposedAudioPlayer
   private composedActive = false
   private generation = 0
 
   get pending() {
-    return this.composedActive || this.queue.length > 0 || Boolean(this.audio || this.speechText)
+    return this.composedActive || this.waitingForNext || this.queue.length > 0 || Boolean(this.audio || this.speechText)
   }
 
   playComposedSequence(sequence: VoiceSegment[]) {
@@ -53,13 +58,18 @@ export class QuestionVoicePlayer {
     this.blocked = blocked
     this.composed?.setBlocked(blocked)
     if (this.composedActive) return
+    if (blocked) this.pauseGap()
     for (const audio of Array.from(this.activeAudio)) {
       if (blocked) audio.pause()
       else void audio.play().catch(() => undefined)
     }
     if (this.speechText) {
       if (blocked) this.cancelSpeech()
-      else if (!this.utterance) this.speak(this.speechText)
+      else if (!this.utterance) this.speak(this.speechText, this.speechPauseAfterMs)
+      return
+    }
+    if (this.waitingForNext) {
+      if (!blocked) this.resumeGap()
       return
     }
     if (!blocked && !this.audio) this.next()
@@ -67,10 +77,16 @@ export class QuestionVoicePlayer {
 
   stop() {
     this.generation++
+    if (this.pauseTimer) clearTimeout(this.pauseTimer)
+    this.pauseTimer = undefined
+    this.pauseDeadline = 0
+    this.pauseRemainingMs = 0
+    this.waitingForNext = false
     this.composed?.stop()
     this.composedActive = false
     this.queue = []
     this.speechText = undefined
+    this.speechPauseAfterMs = 0
     this.cancelSpeech()
 
     for (const audio of Array.from(this.activeAudio)) {
@@ -94,8 +110,8 @@ export class QuestionVoicePlayer {
     const item = this.queue.shift()
     if (!item) { this.audio = undefined; return }
 
-    const { src, text, playbackRate = 1 } = item
-    if (!src) { if (text) this.speak(text); return }
+    const { src, text, playbackRate = 1, pauseAfterMs = 0 } = item
+    if (!src) { if (text) this.speak(text, pauseAfterMs); else this.advance(pauseAfterMs); return }
     const audio = new Audio(src)
     this.audio = audio
     this.activeAudio.add(audio)
@@ -107,7 +123,7 @@ export class QuestionVoicePlayer {
       audio.onended = audio.onerror = null
       if (this.audio !== audio) return
       this.audio = undefined
-      this.next()
+      this.advance(pauseAfterMs)
     }
     audio.onerror = () => {
       this.activeAudio.delete(audio)
@@ -115,11 +131,11 @@ export class QuestionVoicePlayer {
       audio.pause()
       if (this.audio !== audio) return
   
-      if (!text) { this.next(); return }
+      if (!text) { this.advance(pauseAfterMs); return }
       audio.onended = audio.onerror = null
       audio.pause()
       this.audio = undefined
-      this.speak(text)
+      this.speak(text, pauseAfterMs)
     }
     void audio.play().catch(() => {
       if (!this.blocked && this.audio === audio) audio.onerror?.(new Event('error'))
@@ -135,9 +151,10 @@ export class QuestionVoicePlayer {
     window.speechSynthesis.cancel()
   }
 
-  private speak(text: string) {
-    if (typeof window === 'undefined' || !('speechSynthesis' in window)) { this.next(); return }
+  private speak(text: string, pauseAfterMs = 0) {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) { this.advance(pauseAfterMs); return }
     this.speechText = text
+    this.speechPauseAfterMs = pauseAfterMs
     if (this.blocked) return
     if (this.cancelVoiceWait) return
     const synth = window.speechSynthesis
@@ -147,19 +164,19 @@ export class QuestionVoicePlayer {
         ?? voices.find(candidate => /^vi(?:[-_]|$)/i.test(candidate.lang))
     }
     const voice = findVietnameseVoice()
-    if (voice) { this.speakWithVoice(text, voice); return }
+    if (voice) { this.speakWithVoice(text, voice, pauseAfterMs); return }
 
     // Some browsers populate their voices asynchronously, including remote voices.
     const onVoicesChanged = () => {
       const loadedVoice = findVietnameseVoice()
       if (!loadedVoice) return
       cleanup()
-      this.speakWithVoice(text, loadedVoice)
+      this.speakWithVoice(text, loadedVoice, pauseAfterMs)
     }
     const timer = setTimeout(() => {
       cleanup()
       // Let the engine resolve vi-VN if it does not expose a Vietnamese voice.
-      this.speakWithVoice(text, findVietnameseVoice())
+      this.speakWithVoice(text, findVietnameseVoice(), pauseAfterMs)
     }, 1500)
     const cleanup = () => {
       clearTimeout(timer)
@@ -171,7 +188,7 @@ export class QuestionVoicePlayer {
     onVoicesChanged()
   }
 
-  private speakWithVoice(text: string, voice?: SpeechSynthesisVoice) {
+  private speakWithVoice(text: string, voice: SpeechSynthesisVoice | undefined, pauseAfterMs: number) {
     const utterance = new SpeechSynthesisUtterance(text)
     utterance.lang = 'vi-VN'
     utterance.rate = .85
@@ -181,8 +198,44 @@ export class QuestionVoicePlayer {
       if (this.utterance !== utterance) return
       this.utterance = undefined
       this.speechText = undefined
-      this.next()
+      this.speechPauseAfterMs = 0
+      this.advance(pauseAfterMs)
     }
     window.speechSynthesis.speak(utterance)
+  }
+
+  private advance(pauseAfterMs = 0) {
+    if (!this.queue.length) { this.next(); return }
+    const pause = Math.max(0, Math.min(1000, pauseAfterMs))
+    if (pause === 0) { this.next(); return }
+    this.waitingForNext = true
+    this.pauseRemainingMs = pause
+    this.resumeGap()
+  }
+
+  private pauseGap() {
+    if (!this.pauseTimer) return
+    clearTimeout(this.pauseTimer)
+    this.pauseTimer = undefined
+    this.pauseRemainingMs = Math.max(0, this.pauseDeadline - Date.now())
+    this.pauseDeadline = 0
+  }
+
+  private resumeGap() {
+    if (!this.waitingForNext || this.blocked || this.pauseTimer) return
+    if (this.pauseRemainingMs <= 0) {
+      this.waitingForNext = false
+      this.pauseRemainingMs = 0
+      this.next()
+      return
+    }
+    this.pauseDeadline = Date.now() + this.pauseRemainingMs
+    this.pauseTimer = setTimeout(() => {
+      this.pauseTimer = undefined
+      this.pauseDeadline = 0
+      this.pauseRemainingMs = 0
+      this.waitingForNext = false
+      this.next()
+    }, this.pauseRemainingMs)
   }
 }

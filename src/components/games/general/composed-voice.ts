@@ -1,5 +1,5 @@
 /** A recorded fragment of a sentence. Playback waits for each fragment to end. */
-export type VoiceSegment = { src: string; text: string; playbackRate?: number }
+export type VoiceSegment = { src: string; text: string; playbackRate?: number; pauseAfterMs?: number }
 
 export function normalizeVoiceText(text: string): string {
   return text.normalize('NFC').toLocaleLowerCase('vi').replace(/[.,!?;:“”"']/g, '').replace(/\s+/g, ' ').trim()

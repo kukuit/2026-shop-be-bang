@@ -15,7 +15,7 @@ function withChoices(question: LessonQuestion, count: number): string[] {
 }
 
 function gameQuestion(source: LessonQuestion, options: string[]) {
-  return { id: source.id, learningKey: source.goalKey, sourceLesson: source.data?.sourceLesson as 1 | 2 | 3 | 4 | 5 | undefined,
+  return { id: source.id, learningKey: source.goalKey, sourceLesson: source.data?.sourceLesson as number | undefined,
     skill: source.skill, inputMode: source.inputMode, answerMode: source.answerMode,
     instructionVoice: source.instructionVoice, voice: source.voice, voiceFallback: source.data?.voiceFallback as { instruction?: string; target?: string } | undefined,
     voiceSequence: source.data?.voiceSequence as import('./composed-voice').VoiceSegment[] | undefined,
@@ -51,7 +51,7 @@ export async function toDragDropLevels(source: LessonQuestionSource, count = 6):
       instructionVoice: q.instructionVoice, voice: q.voice,
       groups: [{ id: target, icon: q.media?.image ?? q.prompt ?? '?', count: 1, label: q.prompt ?? '' }],
       answers: { [target]: q.answer }, answerDomain: choices, learningKeys: { [target]: q.goalKey },
-      ...(q.data?.sourceLesson ? { sourceLessons: { [target]: q.data.sourceLesson as 1 | 2 | 3 | 4 | 5 } } : {}),
+      ...(q.data?.sourceLesson ? { sourceLessons: { [target]: q.data.sourceLesson as number } } : {}),
       ...(q.skill ? { skills: { [target]: q.skill } } : {}),
       ...(q.inputMode ? { inputModes: { [target]: q.inputMode } } : {}),
       ...(q.answerMode ? { answerModes: { [target]: q.answerMode === 'select-image' ? 'drag-image' : 'drag-text' } } : {}),

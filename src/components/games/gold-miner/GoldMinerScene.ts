@@ -25,10 +25,22 @@ const GOLD_SIZE_SCALES = [0.8, 0.9, 1, 1.1, 1.2]
 const CLAW_GRIP_CENTER_Y = 68
 const GOLD_LAYOUTS: Record<number, Array<{ x: number; y: number }>> = {
   2: [{ x: 155, y: 735 }, { x: 545, y: 760 }],
+  3: [{ x: 120, y: 720 }, { x: 360, y: 930 }, { x: 600, y: 720 }],
   4: [{ x: 135, y: 680 }, { x: 550, y: 665 }, { x: 245, y: 910 }, { x: 540, y: 950 }],
   5: [{ x: 125, y: 660 }, { x: 360, y: 720 }, { x: 590, y: 650 }, { x: 205, y: 950 }, { x: 520, y: 980 }],
-  6: [{ x: 105, y: 650 }, { x: 355, y: 700 }, { x: 610, y: 650 }, { x: 125, y: 930 }, { x: 365, y: 1015 }, { x: 600, y: 920 }],
-  7: [{ x: 105, y: 625 }, { x: 355, y: 670 }, { x: 610, y: 625 }, { x: 175, y: 850 }, { x: 535, y: 850 }, { x: 125, y: 1060 }, { x: 575, y: 1060 }],
+  6: [{ x: 105, y: 650 }, { x: 355, y: 720 }, { x: 610, y: 650 }, { x: 125, y: 930 }, { x: 365, y: 1015 }, { x: 600, y: 920 }],
+  7: [{ x: 105, y: 625 }, { x: 355, y: 720 }, { x: 610, y: 625 }, { x: 175, y: 850 }, { x: 535, y: 850 }, { x: 125, y: 1060 }, { x: 575, y: 1060 }],
+  8: [{ x: 115, y: 720 }, { x: 360, y: 720 }, { x: 605, y: 720 }, { x: 235, y: 900 }, { x: 485, y: 900 }, { x: 115, y: 1090 }, { x: 360, y: 1090 }, { x: 605, y: 1090 }],
+  9: [{ x: 115, y: 720 }, { x: 360, y: 720 }, { x: 605, y: 720 }, { x: 115, y: 900 }, { x: 360, y: 900 }, { x: 605, y: 900 }, { x: 115, y: 1090 }, { x: 360, y: 1090 }, { x: 605, y: 1090 }],
+  10: [{ x: 95, y: 690 }, { x: 272, y: 690 }, { x: 448, y: 690 }, { x: 625, y: 690 }, { x: 180, y: 895 }, { x: 360, y: 895 }, { x: 540, y: 895 }, { x: 180, y: 1095 }, { x: 360, y: 1095 }, { x: 540, y: 1095 }],
+  11: [{ x: 95, y: 720 }, { x: 272, y: 720 }, { x: 448, y: 720 }, { x: 625, y: 720 }, { x: 95, y: 900 }, { x: 272, y: 900 }, { x: 448, y: 900 }, { x: 625, y: 900 }, { x: 180, y: 1090 }, { x: 360, y: 1090 }, { x: 540, y: 1090 }],
+  12: [{ x: 95, y: 720 }, { x: 272, y: 720 }, { x: 448, y: 720 }, { x: 625, y: 720 }, { x: 95, y: 900 }, { x: 272, y: 900 }, { x: 448, y: 900 }, { x: 625, y: 900 }, { x: 95, y: 1090 }, { x: 272, y: 1090 }, { x: 448, y: 1090 }, { x: 625, y: 1090 }],
+}
+
+function getMineItemCount(level: number, choiceCount: number, goldCount: number) {
+  if (level < 3) return choiceCount
+  const progressiveGoldCount = Math.min(10, 4 + Math.floor((level - 3) / 3))
+  return choiceCount + Math.max(0, progressiveGoldCount - goldCount)
 }
 
 type MineItem = Phaser.GameObjects.Container & { value: string | number; radius: number; taken: boolean; rock: boolean; heart: boolean }
@@ -239,9 +251,18 @@ export class GoldMinerScene extends Phaser.Scene {
     this.taskItems.setVisible(!this.taskImage)
     this.game.events.emit('game-ui:round', this.round + 1)
     this.spawnRecoveryHeart()
-    const positions = Phaser.Utils.Array.Shuffle([...(GOLD_LAYOUTS[this.question.choices.length] ?? GOLD_LAYOUTS[7])])
-    this.question.choices.forEach((value, index) => {
-      this.mineItems.push(this.createMineItem(positions[index].x, positions[index].y, value, index % 3 === 2))
+    const mineOptions = this.question.choices.map((value, index) => ({ value, rock: index % 3 === 2 }))
+    const distractors = mineOptions.filter(option => option.value !== this.question.correctAnswer)
+    const originalGoldCount = mineOptions.filter(option => !option.rock).length
+    const itemCount = getMineItemCount(this.round + 1, mineOptions.length, originalGoldCount)
+    for (let index = mineOptions.length; index < itemCount && distractors.length > 0; index += 1) {
+      const distractor = distractors[(index - this.question.choices.length) % distractors.length]
+      mineOptions.push({ value: distractor.value, rock: false })
+    }
+    const visibleOptions = Phaser.Utils.Array.Shuffle(mineOptions)
+    const positions = Phaser.Utils.Array.Shuffle([...(GOLD_LAYOUTS[visibleOptions.length] ?? GOLD_LAYOUTS[7])])
+    visibleOptions.forEach(({ value, rock }, index) => {
+      this.mineItems.push(this.createMineItem(positions[index].x, positions[index].y, value, rock))
     })
     this.feedback.setText('')
     this.time.delayedCall(650, () => {

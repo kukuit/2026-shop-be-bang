@@ -4,9 +4,11 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { LogIn, LogOut, Menu, UserRound } from 'lucide-react'
 import { useAuth } from './AuthProvider'
 import LoginModal from './LoginModal'
+import { useOptionalGameProfile } from '@/components/games/profile/GameProfileProvider'
 
 export default function AuthMenu({ game = false, children, trigger, triggerClassName, menuAlign = 'right', gamePopup = false }: { game?: boolean; children?: ReactNode; trigger?: ReactNode; triggerClassName?: string; menuAlign?: 'left' | 'right'; gamePopup?: boolean }) {
   const { user, loading, logout } = useAuth()
+  const gameProfile = useOptionalGameProfile()
   const [loginOpen, setLoginOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
@@ -14,6 +16,8 @@ export default function AuthMenu({ game = false, children, trigger, triggerClass
   const headerName = game && nameCharacters.length > 10
     ? `${nameCharacters.slice(0, 10).join('')}...`
     : user?.displayName
+  const selectedGrade = gameProfile?.activeGrade ?? user?.activeGrade
+  const menuDisplayName = `${user?.displayName || 'Bé chơi game'}${gamePopup && selectedGrade ? ` (Lớp ${selectedGrade})` : ''}`
   useEffect(() => {
     if (!menuOpen) return
     const dismiss = (event: PointerEvent) => {
@@ -82,7 +86,7 @@ export default function AuthMenu({ game = false, children, trigger, triggerClass
             <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-full text-xs font-black uppercase ${gamePopup ? 'bg-sky-100 text-sky-800' : 'bg-blue-100 text-blue-700'}`}>
               {user?.displayName.trim().charAt(0) || <UserRound size={16} />}
             </span>
-            <span className={`min-w-0 truncate text-sm font-black ${gamePopup ? 'text-sky-950' : 'text-slate-800'}`}>{user?.displayName || 'Bé chơi game'}</span>
+            <span className={`min-w-0 truncate text-sm font-black ${gamePopup ? 'text-sky-950' : 'text-slate-800'}`}>{menuDisplayName}</span>
           </div>
           {children}
           {game && user?.activeGame && (
@@ -90,7 +94,7 @@ export default function AuthMenu({ game = false, children, trigger, triggerClass
               Tiến trình học
             </Link>
           )}
-          {gamePopup && <Link href="/game/me/rewards/list" className="block px-4 py-2 text-sm font-bold hover:bg-amber-50">Đổi quà</Link>}
+          {gamePopup && user && <Link href="/game/me/rewards/list" className="block px-4 py-2 text-sm font-bold hover:bg-amber-50">Đổi quà</Link>}
           {user?.role === 'admin' && (
             <Link href="/admin/users" className={`block px-4 py-2 text-sm ${gamePopup ? 'font-bold hover:bg-amber-50' : 'hover:bg-slate-50'}`}>
               Quản trị user

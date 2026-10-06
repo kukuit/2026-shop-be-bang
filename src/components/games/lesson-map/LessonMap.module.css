@@ -162,7 +162,7 @@
 .adventure .progress progress::-moz-progress-bar { background: #8fd17a; }
 .adventure .grid { grid-auto-rows: 255px; }
 .adventure .location { display: block; width: 180px; height: 139px; margin-top: -15px; filter: drop-shadow(0 5px 4px #617e3820); }
-.adventure .number { background: #78b87a; border-color: #f6f4df; box-shadow: 0 3px 0 #60744120; }
+.adventure .number { transform: translateY(10px); background: #78b87a; border-color: #f6f4df; box-shadow: 0 3px 0 #60744120; }
 .adventure .completed .number { background: #68b865; }
 .adventure .current .number { background: #2f80ed; box-shadow: 0 0 0 5px #faf2c375, 0 0 22px #b6c77580; }
 .adventure .locked .number { background: #8e9980; border-color: #e7eadc; }
@@ -179,7 +179,8 @@
 .adventure .finish { color: #64774f; }
 .adventure .toast { color: #4c623d; border-color: #c3d0ad; background: #fffcef; }
 .adventure .decoration { color: #7b945c; font-size: 38px; opacity: .3; }
-.explorerCompanion { position: absolute; right: -3px; top: 58px; width: 42px; height: 47px; pointer-events: none; }
+.explorerCompanion { position: absolute; z-index: 3; right: -3px; top: 58px; width: 42px; height: 47px; pointer-events: none; filter: drop-shadow(0 3px 3px #3f332833); animation: cappyHop 1.4s ease-in-out infinite; }
+@keyframes cappyHop { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
 @keyframes adventureFloat { 50% { translate: 0 -5px; } }
 @media (min-width: 641px) and (max-width: 1023px) {
   .adventure .hero { gap: 18px; }
@@ -201,7 +202,7 @@
   .adventure .location { width: 160px; height: 124px; }
   .adventure .explorerCompanion { right: -2px; top: 54px; width: 38px; height: 43px; }
 }
-@media (prefers-reduced-motion: reduce) { .adventure .current .location { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .adventure .current .location { animation: none; } .explorerCompanion { animation: none; } }
 
 .adventure .node { width: 190px; top: 0; }
 .adventure .grid { padding-top: 18px; }
