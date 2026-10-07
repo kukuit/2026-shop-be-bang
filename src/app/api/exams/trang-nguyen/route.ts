@@ -8,7 +8,7 @@ import {
   startTrangNguyenAttempt,
   submitTrangNguyenAttempt,
 } from '@/lib/trangNguyenExam'
-import { MOCK_EXAM_ID, MOCK_EXAM_VERSION } from '@/app/game/lop-1/tieng-viet/trang-nguyen/thi-thu/_exam/config'
+import { MOCK_EXAM_ID, isSupportedMockExamVersion } from '@/app/game/lop-1/tieng-viet/trang-nguyen/thi-thu/_exam/config'
 import { generateMockTrangNguyenExam, sanitizeGeneratedExam } from '@/app/game/lop-1/tieng-viet/trang-nguyen/thi-thu/_exam/exam-generator'
 import { isValidTrangNguyenAnswerMap } from '@/app/game/lop-1/tieng-viet/trang-nguyen/thi-thu/_lib/exam-grading.server'
 import type { ExamAnswers } from '@/app/game/lop-1/tieng-viet/trang-nguyen/thi-thu/_exam/types'
@@ -45,7 +45,7 @@ export async function GET(request: Request) {
   const seed = url.searchParams.get('seed')
   if (seed !== null) {
     const examVersion = url.searchParams.get('examVersion') ?? ''
-    if (!seed.trim() || seed.length > 128 || examVersion !== MOCK_EXAM_VERSION)
+    if (!seed.trim() || seed.length > 128 || !isSupportedMockExamVersion(examVersion))
       return NextResponse.json({ message: 'Mã đề thi không hợp lệ hoặc đã hết phiên bản hỗ trợ.' }, { status: 400, headers: { 'Cache-Control': 'no-store' } })
     try {
       const exam = generateMockTrangNguyenExam({ seed, examVersion })
@@ -94,7 +94,7 @@ export async function PATCH(request: Request) {
   const answers = parsed.data.answers as ExamAnswers
   let exam
   try {
-    if (submittedAttempt.examVersion !== MOCK_EXAM_VERSION) throw new Error('Unsupported exam version')
+    if (!isSupportedMockExamVersion(submittedAttempt.examVersion)) throw new Error('Unsupported exam version')
     exam = generateMockTrangNguyenExam({ seed: submittedAttempt.seed, examVersion: submittedAttempt.examVersion })
   } catch {
     return NextResponse.json({ message: 'Phiên thi không hợp lệ.' }, { status: 400 })

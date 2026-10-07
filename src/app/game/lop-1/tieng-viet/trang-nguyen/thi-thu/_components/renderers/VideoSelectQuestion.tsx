@@ -29,7 +29,7 @@ export default function VideoSelectQuestion(props: QuestionRendererProps) {
     <label className="mx-auto mt-2 block max-w-xs">
       <span className="mb-2 block text-sm font-bold text-slate-700">Chọn chữ cái nơi ong đậu</span>
       <select value={typeof answer === 'string' ? answer : ''} disabled={disabled} onChange={event => onAnswer(question.id, event.target.value)} className="min-h-14 w-full rounded-xl border-2 border-slate-300 bg-white px-4 text-center text-xl font-extrabold outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:bg-slate-100">
-        <option value="">-- Chọn chữ --</option>
+        <option value="" disabled hidden>-- Chọn chữ --</option>
         {(question.options ?? []).map(option => <option key={option.id} value={option.id}>{option.text}</option>)}
       </select>
     </label>

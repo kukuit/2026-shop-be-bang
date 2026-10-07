@@ -1,0 +1,12 @@
+.questionWithTrailingVoice :global(.exam-question) {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.trailingVoiceRow {
+  display: flex;
+  justify-content: flex-start;
+  margin-top: 6px;
+  padding-bottom: 19px;
+  border-bottom: 1px solid #4a4a4a;
+}

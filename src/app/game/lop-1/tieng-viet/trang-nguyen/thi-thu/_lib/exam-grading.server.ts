@@ -24,7 +24,7 @@ export function gradeQuestion(question: ExamQuestion & { correctAnswer: ExamAnsw
     return Array.isArray(answer) && Array.isArray(question.correctAnswer) && sameSet(answer, question.correctAnswer)
   if (question.type === 'sorting')
     return Array.isArray(answer) && Array.isArray(question.correctAnswer) && sameArray(answer, question.correctAnswer)
-  if (question.type === 'matching' || question.type === 'categorize' || question.type === 'drag-to-slot')
+  if (question.type === 'matching' || question.type === 'drag-match' || question.type === 'categorize' || question.type === 'drag-to-slot' || question.type === 'drag-fill')
     return !Array.isArray(answer) && typeof answer === 'object' && !Array.isArray(question.correctAnswer)
       && sameMapping(answer, question.correctAnswer as Record<string, string>)
   if (typeof answer !== 'string' || typeof question.correctAnswer !== 'string') return false
@@ -59,19 +59,36 @@ export function isValidTrangNguyenAnswerMap(answers: ExamAnswers, exam: Generate
       return typeof answer === 'string' && options.has(answer)
     if (question.type === 'multi-select')
       return isStringArray(answer) && new Set(answer).size === answer.length && answer.every(id => options.has(id))
+    if (question.type === 'text-input' && question.data?.generator === 'FILL_LETTER_IN_BLANK') {
+      const allowedLetters = question.data.allowedLetters as string[] | undefined
+      const normalized = typeof answer === 'string' ? normalizeAnswer(answer) : ''
+      return typeof answer === 'string' && Array.from(normalized).length === 1
+        && Boolean(allowedLetters?.includes(normalized))
+    }
+    if (question.type === 'hidden-letter-input' || question.type === 'rotated-letter-input') {
+      const allowedLetters = question.data?.allowedLetters as string[] | undefined
+      const normalized = typeof answer === 'string' ? normalizeAnswer(answer) : ''
+      return typeof answer === 'string' && Array.from(normalized).length === 1
+        && Boolean(allowedLetters?.includes(normalized))
+    }
     if (question.type === 'text-input') return typeof answer === 'string' && answer.length <= 100
-    if (question.type === 'number-input') return typeof answer === 'string' && /^\d{1,3}$/.test(answer.trim())
+    if (question.type === 'number-input') {
+      const maxDigits = question.data?.generator === 'COUNT_TARGET_LETTER' ? 2 : 3
+      return typeof answer === 'string' && new RegExp(`^\\d{1,${maxDigits}}$`).test(answer.trim())
+    }
     if (question.type === 'select-input') {
       const choices = question.data?.choices as string[] | undefined
       return typeof answer === 'string' && (choices?.includes(answer) ?? options.has(answer))
     }
     if (question.type === 'video-select') return typeof answer === 'string' && options.has(answer)
-    if (question.type === 'matching') {
+    if (question.type === 'animated-select') return typeof answer === 'string' && options.has(answer)
+    if (question.type === 'matching' || question.type === 'drag-match') {
       const data = question.data as { leftItems?: Array<{ id: string }>; rightItems?: Array<{ id: string }> }
       const leftIds = new Set(data.leftItems?.map(item => item.id) ?? [])
       const rightIds = new Set(data.rightItems?.map(item => item.id) ?? [])
       return isStringMapping(answer) && Object.keys(answer).every(id => leftIds.has(id))
         && Object.values(answer).every(id => rightIds.has(id)) && new Set(Object.values(answer)).size === Object.keys(answer).length
+        && (question.type === 'matching' || Object.keys(answer).length === leftIds.size)
     }
     if (question.type === 'categorize') {
       const data = question.data as { items?: Array<{ id: string }>; groups?: Array<{ id: string }> }
@@ -90,6 +107,15 @@ export function isValidTrangNguyenAnswerMap(answers: ExamAnswers, exam: Generate
       const itemIds = new Set(data.items?.map(item => item.id) ?? [])
       return isStringMapping(answer) && Object.keys(answer).every(id => slotIds.has(id))
         && Object.values(answer).every(id => itemIds.has(id)) && new Set(Object.values(answer)).size === Object.keys(answer).length
+    }
+    if (question.type === 'drag-fill') {
+      const data = question.data as { items?: Array<{ id: string }>; letterBank?: string[] }
+      const itemIds = new Set(data.items?.map(item => item.id) ?? [])
+      const availableLetters = new Set(data.letterBank ?? [])
+      return isStringMapping(answer) && Object.keys(answer).length <= itemIds.size
+        && Object.keys(answer).every(id => itemIds.has(id))
+        && Object.values(answer).every(letter => availableLetters.has(letter))
+        && new Set(Object.values(answer)).size === Object.keys(answer).length
     }
     return false
   })

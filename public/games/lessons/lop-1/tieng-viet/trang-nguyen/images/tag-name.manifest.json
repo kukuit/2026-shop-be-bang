@@ -1,0 +1,640 @@
+{
+  "id": "trang-nguyen-tag-name-tight",
+  "image": "/games/lessons/lop-1/tieng-viet/trang-nguyen/images/tag-name.png",
+  "width": 1536,
+  "height": 1024,
+  "cropMode": "tight-bounds",
+  "background": "white",
+  "padding": 4,
+  "grid": {
+    "columns": 8,
+    "rows": 4,
+    "cellWidth": 192,
+    "cellHeight": 256
+  },
+  "items": [
+    {
+      "id": "a",
+      "targetLetter": "a",
+      "word": "cá",
+      "letters": [
+        "c",
+        "a"
+      ],
+      "row": 0,
+      "col": 0,
+      "x": 35,
+      "y": 135,
+      "width": 120,
+      "height": 103,
+      "cell": {
+        "x": 0,
+        "y": 0,
+        "width": 192,
+        "height": 256
+      },
+      "padding": 4
+    },
+    {
+      "id": "b",
+      "targetLetter": "b",
+      "word": "bò",
+      "letters": [
+        "b",
+        "o"
+      ],
+      "row": 0,
+      "col": 1,
+      "x": 209,
+      "y": 120,
+      "width": 153,
+      "height": 136,
+      "cell": {
+        "x": 192,
+        "y": 0,
+        "width": 192,
+        "height": 256
+      },
+      "padding": 4
+    },
+    {
+      "id": "c",
+      "targetLetter": "c",
+      "word": "cò",
+      "letters": [
+        "c",
+        "o"
+      ],
+      "row": 0,
+      "col": 2,
+      "x": 409,
+      "y": 93,
+      "width": 120,
+      "height": 163,
+      "cell": {
+        "x": 384,
+        "y": 0,
+        "width": 192,
+        "height": 256
+      },
+      "padding": 4
+    },
+    {
+      "id": "d",
+      "targetLetter": "d",
+      "word": "dơi",
+      "letters": [
+        "d",
+        "ơ",
+        "i"
+      ],
+      "row": 0,
+      "col": 3,
+      "x": 577,
+      "y": 132,
+      "width": 176,
+      "height": 112,
+      "cell": {
+        "x": 576,
+        "y": 0,
+        "width": 192,
+        "height": 256
+      },
+      "padding": 4
+    },
+    {
+      "id": "dd",
+      "targetLetter": "đ",
+      "word": "đà điểu",
+      "letters": [
+        "đ",
+        "a",
+        "d",
+        "i",
+        "ê",
+        "u"
+      ],
+      "row": 0,
+      "col": 4,
+      "x": 802,
+      "y": 93,
+      "width": 122,
+      "height": 163,
+      "cell": {
+        "x": 768,
+        "y": 0,
+        "width": 192,
+        "height": 256
+      },
+      "padding": 4
+    },
+    {
+      "id": "e",
+      "targetLetter": "e",
+      "word": "ve",
+      "letters": [
+        "v",
+        "e"
+      ],
+      "row": 0,
+      "col": 5,
+      "x": 991,
+      "y": 112,
+      "width": 93,
+      "height": 144,
+      "cell": {
+        "x": 960,
+        "y": 0,
+        "width": 192,
+        "height": 256
+      },
+      "padding": 4
+    },
+    {
+      "id": "ee",
+      "targetLetter": "ê",
+      "word": "dê",
+      "letters": [
+        "d",
+        "ê"
+      ],
+      "row": 0,
+      "col": 6,
+      "x": 1158,
+      "y": 104,
+      "width": 152,
+      "height": 152,
+      "cell": {
+        "x": 1152,
+        "y": 0,
+        "width": 192,
+        "height": 256
+      },
+      "padding": 4
+    },
+    {
+      "id": "g",
+      "targetLetter": "g",
+      "word": "gà",
+      "letters": [
+        "g",
+        "a"
+      ],
+      "row": 0,
+      "col": 7,
+      "x": 1368,
+      "y": 116,
+      "width": 137,
+      "height": 140,
+      "cell": {
+        "x": 1344,
+        "y": 0,
+        "width": 192,
+        "height": 256
+      },
+      "padding": 4
+    },
+    {
+      "id": "h",
+      "targetLetter": "h",
+      "word": "hổ",
+      "letters": [
+        "h",
+        "ô"
+      ],
+      "row": 1,
+      "col": 0,
+      "x": 27,
+      "y": 329,
+      "width": 164,
+      "height": 142,
+      "cell": {
+        "x": 0,
+        "y": 256,
+        "width": 192,
+        "height": 256
+      },
+      "padding": 4
+    },
+    {
+      "id": "i",
+      "targetLetter": "i",
+      "word": "chim",
+      "letters": [
+        "c",
+        "h",
+        "i",
+        "m"
+      ],
+      "row": 1,
+      "col": 1,
+      "x": 229,
+      "y": 348,
+      "width": 132,
+      "height": 119,
+      "cell": {
+        "x": 192,
+        "y": 256,
+        "width": 192,
+        "height": 256
+      },
+      "padding": 4
+    },
+    {
+      "id": "k",
+      "targetLetter": "k",
+      "word": "kỳ đà",
+      "letters": [
+        "k",
+        "y",
+        "đ",
+        "a"
+      ],
+      "row": 1,
+      "col": 2,
+      "x": 403,
+      "y": 352,
+      "width": 156,
+      "height": 128,
+      "cell": {
+        "x": 384,
+        "y": 256,
+        "width": 192,
+        "height": 256
+      },
+      "padding": 4
+    },
+    {
+      "id": "l",
+      "targetLetter": "l",
+      "word": "lợn",
+      "letters": [
+        "l",
+        "ơ",
+        "n"
+      ],
+      "row": 1,
+      "col": 3,
+      "x": 608,
+      "y": 347,
+      "width": 141,
+      "height": 127,
+      "cell": {
+        "x": 576,
+        "y": 256,
+        "width": 192,
+        "height": 256
+      },
+      "padding": 4
+    },
+    {
+      "id": "m",
+      "targetLetter": "m",
+      "word": "mèo",
+      "letters": [
+        "m",
+        "e",
+        "o"
+      ],
+      "row": 1,
+      "col": 4,
+      "x": 799,
+      "y": 332,
+      "width": 132,
+      "height": 153,
+      "cell": {
+        "x": 768,
+        "y": 256,
+        "width": 192,
+        "height": 256
+      },
+      "padding": 4
+    },
+    {
+      "id": "n",
+      "targetLetter": "n",
+      "word": "nai",
+      "letters": [
+        "n",
+        "a",
+        "i"
+      ],
+      "row": 1,
+      "col": 5,
+      "x": 984,
+      "y": 318,
+      "width": 128,
+      "height": 167,
+      "cell": {
+        "x": 960,
+        "y": 256,
+        "width": 192,
+        "height": 256
+      },
+      "padding": 4
+    },
+    {
+      "id": "o",
+      "targetLetter": "o",
+      "word": "ong",
+      "letters": [
+        "o",
+        "n",
+        "g"
+      ],
+      "row": 1,
+      "col": 6,
+      "x": 1167,
+      "y": 336,
+      "width": 147,
+      "height": 141,
+      "cell": {
+        "x": 1152,
+        "y": 256,
+        "width": 192,
+        "height": 256
+      },
+      "padding": 4
+    },
+    {
+      "id": "oo",
+      "targetLetter": "ô",
+      "word": "ốc",
+      "letters": [
+        "ô",
+        "c"
+      ],
+      "row": 1,
+      "col": 7,
+      "x": 1359,
+      "y": 353,
+      "width": 149,
+      "height": 117,
+      "cell": {
+        "x": 1344,
+        "y": 256,
+        "width": 192,
+        "height": 256
+      },
+      "padding": 4
+    },
+    {
+      "id": "ow",
+      "targetLetter": "ơ",
+      "word": "hươu",
+      "letters": [
+        "h",
+        "ư",
+        "ơ",
+        "u"
+      ],
+      "row": 2,
+      "col": 0,
+      "x": 32,
+      "y": 542,
+      "width": 126,
+      "height": 181,
+      "cell": {
+        "x": 0,
+        "y": 512,
+        "width": 192,
+        "height": 256
+      },
+      "padding": 4
+    },
+    {
+      "id": "p",
+      "targetLetter": "p",
+      "word": "bọ cạp",
+      "letters": [
+        "b",
+        "o",
+        "c",
+        "a",
+        "p"
+      ],
+      "row": 2,
+      "col": 1,
+      "x": 214,
+      "y": 563,
+      "width": 148,
+      "height": 159,
+      "cell": {
+        "x": 192,
+        "y": 512,
+        "width": 192,
+        "height": 256
+      },
+      "padding": 4
+    },
+    {
+      "id": "q",
+      "targetLetter": "q",
+      "word": "quạ",
+      "letters": [
+        "q",
+        "u",
+        "a"
+      ],
+      "row": 2,
+      "col": 2,
+      "x": 399,
+      "y": 575,
+      "width": 160,
+      "height": 140,
+      "cell": {
+        "x": 384,
+        "y": 512,
+        "width": 192,
+        "height": 256
+      },
+      "padding": 4
+    },
+    {
+      "id": "r",
+      "targetLetter": "r",
+      "word": "rùa",
+      "letters": [
+        "r",
+        "u",
+        "a"
+      ],
+      "row": 2,
+      "col": 3,
+      "x": 594,
+      "y": 596,
+      "width": 158,
+      "height": 118,
+      "cell": {
+        "x": 576,
+        "y": 512,
+        "width": 192,
+        "height": 256
+      },
+      "padding": 4
+    },
+    {
+      "id": "s",
+      "targetLetter": "s",
+      "word": "sóc",
+      "letters": [
+        "s",
+        "o",
+        "c"
+      ],
+      "row": 2,
+      "col": 4,
+      "x": 798,
+      "y": 575,
+      "width": 138,
+      "height": 148,
+      "cell": {
+        "x": 768,
+        "y": 512,
+        "width": 192,
+        "height": 256
+      },
+      "padding": 4
+    },
+    {
+      "id": "t",
+      "targetLetter": "t",
+      "word": "thỏ",
+      "letters": [
+        "t",
+        "h",
+        "o"
+      ],
+      "row": 2,
+      "col": 5,
+      "x": 984,
+      "y": 551,
+      "width": 124,
+      "height": 174,
+      "cell": {
+        "x": 960,
+        "y": 512,
+        "width": 192,
+        "height": 256
+      },
+      "padding": 4
+    },
+    {
+      "id": "u",
+      "targetLetter": "u",
+      "word": "cú",
+      "letters": [
+        "c",
+        "u"
+      ],
+      "row": 2,
+      "col": 6,
+      "x": 1176,
+      "y": 570,
+      "width": 106,
+      "height": 149,
+      "cell": {
+        "x": 1152,
+        "y": 512,
+        "width": 192,
+        "height": 256
+      },
+      "padding": 4
+    },
+    {
+      "id": "uw",
+      "targetLetter": "ư",
+      "word": "sư tử",
+      "letters": [
+        "s",
+        "ư",
+        "t"
+      ],
+      "row": 2,
+      "col": 7,
+      "x": 1344,
+      "y": 547,
+      "width": 167,
+      "height": 179,
+      "cell": {
+        "x": 1344,
+        "y": 512,
+        "width": 192,
+        "height": 256
+      },
+      "padding": 4
+    },
+    {
+      "id": "v",
+      "targetLetter": "v",
+      "word": "voi",
+      "letters": [
+        "v",
+        "o",
+        "i"
+      ],
+      "row": 3,
+      "col": 0,
+      "x": 26,
+      "y": 803,
+      "width": 165,
+      "height": 148,
+      "cell": {
+        "x": 0,
+        "y": 768,
+        "width": 192,
+        "height": 256
+      },
+      "padding": 4
+    },
+    {
+      "id": "x",
+      "targetLetter": "x",
+      "word": "xén tóc",
+      "letters": [
+        "x",
+        "e",
+        "n",
+        "t",
+        "o",
+        "c"
+      ],
+      "row": 3,
+      "col": 1,
+      "x": 213,
+      "y": 799,
+      "width": 160,
+      "height": 143,
+      "cell": {
+        "x": 192,
+        "y": 768,
+        "width": 192,
+        "height": 256
+      },
+      "padding": 4
+    },
+    {
+      "id": "y",
+      "targetLetter": "y",
+      "word": "yến",
+      "letters": [
+        "y",
+        "ê",
+        "n"
+      ],
+      "row": 3,
+      "col": 2,
+      "x": 403,
+      "y": 799,
+      "width": 155,
+      "height": 141,
+      "cell": {
+        "x": 384,
+        "y": 768,
+        "width": 192,
+        "height": 256
+      },
+      "padding": 4
+    }
+  ]
+}

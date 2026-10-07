@@ -2,6 +2,7 @@
 
 import QuestionFrame, { type QuestionRendererProps } from './QuestionFrame'
 import QuestionVisual from './QuestionVisual'
+import styles from '../exam.module.css'
 
 type SceneItem = { id: string; label: string; emoji: string; letter: string }
 type RotatedItem = { letter: string; rotation: number }
@@ -23,7 +24,7 @@ export default function TextInputQuestion(props: QuestionRendererProps) {
         disabled={disabled}
         value={typeof answer === 'string' ? answer : ''}
         onChange={event => onAnswer(question.id, event.target.value)}
-        className="min-h-14 w-full rounded-xl border-2 border-slate-300 bg-white px-4 text-center text-2xl font-extrabold tracking-wide text-slate-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:bg-slate-100"
+        className={styles.numberCardAnswerInput}
         aria-label={`Nhập đáp án cho câu ${question.number}`}
       />
     </label>

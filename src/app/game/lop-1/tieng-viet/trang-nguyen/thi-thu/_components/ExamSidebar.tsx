@@ -1,6 +1,6 @@
 'use client'
 
-import { Send } from 'lucide-react'
+import { GraduationCap } from 'lucide-react'
 import type { ExamAnswers, ExamQuestion } from '../_exam/types'
 import ExamTimer from './ExamTimer'
 import QuestionNavigator from './QuestionNavigator'
@@ -28,11 +28,10 @@ export default function ExamSidebar({
       <div className={styles.sidebarCard}>
         <ExamTimer remainingSeconds={remainingSeconds} />
         <div className={styles.sidebarQuestions}>
-          <p className={styles.sidebarHeading}>Câu hỏi</p>
           <QuestionNavigator questions={questions} answers={answers} currentQuestion={currentQuestion} disabled={disabled} onNavigate={onNavigate} />
         </div>
         <button type="button" disabled={disabled} onClick={onSubmit} className={styles.submitButton}>
-          <Send size={16} /> Nộp bài
+          <GraduationCap size={18} fill="currentColor" /> Nộp bài
         </button>
       </div>
     </aside>

@@ -5,7 +5,16 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 export function useExamAudio() {
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const playingIdRef = useRef<string | null>(null)
+  const volumeRef = useRef(1)
   const [playingId, setPlayingId] = useState<string | null>(null)
+  const [volume, setVolumeState] = useState(1)
+
+  const setVolume = useCallback((nextVolume: number) => {
+    const normalized = Math.max(0, Math.min(1, nextVolume))
+    volumeRef.current = normalized
+    setVolumeState(normalized)
+    if (audioRef.current) audioRef.current.volume = normalized
+  }, [])
 
   const stop = useCallback(() => {
     const audio = audioRef.current
@@ -36,6 +45,7 @@ export function useExamAudio() {
     const playSource = (index: number) => {
       const audio = new Audio(sources[index])
       audio.preload = 'none'
+      audio.volume = volumeRef.current
       audioRef.current = audio
       const clear = () => {
         if (audioRef.current !== audio) return
@@ -61,6 +71,6 @@ export function useExamAudio() {
   }, [stop])
 
   useEffect(() => stop, [stop])
-  return { playingId, play, stop }
+  return { playingId, play, stop, volume, setVolume }
 }
 

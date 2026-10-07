@@ -10,7 +10,7 @@ export default function ExamStartOverlay({ onStart, onCancel, starting, error }:
         <div className="mt-6 flex flex-col-reverse justify-center gap-2 sm:flex-row">
           <button type="button" disabled={starting} onClick={onCancel} className="min-h-11 rounded-full border-2 border-[#d8cecc] px-6 font-semibold text-[#6f6664] hover:bg-[#faf8f7] disabled:opacity-60">Quay lại</button>
           <button type="button" disabled={starting} onClick={onStart} className="min-h-11 rounded-full bg-[#c72029] px-7 font-bold text-white hover:bg-[#ad1922] disabled:cursor-wait disabled:opacity-60">
-            {starting ? 'ĐANG BẮT ĐẦU…' : 'Bắt đầu'}
+            {starting ? 'ĐANG TẠO ĐỀ…' : 'Bắt đầu thi'}
           </button>
         </div>
       </section>

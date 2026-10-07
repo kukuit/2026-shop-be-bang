@@ -8,18 +8,24 @@ import AuthMenu from '@/components/auth/AuthMenu'
 import { useAuth } from '@/components/auth/AuthProvider'
 import GameGradePopup from './GameGradePopup'
 
+const TRANG_NGUYEN_EXAM_ROUTE = '/game/lop-1/tieng-viet/trang-nguyen/thi-thu'
+
+function isTrangNguyenExamRoute(pathname: string) {
+  const normalizedPathname = pathname.replace(/\/+$/, '') || '/'
+  return normalizedPathname === TRANG_NGUYEN_EXAM_ROUTE
+    || normalizedPathname.startsWith(`${TRANG_NGUYEN_EXAM_ROUTE}/`)
+}
+
 function routeInfo(pathname: string) {
   const segments = pathname.split('/').filter(Boolean)
   const current = segments.at(-1) ?? 'game'
-  const isTrangNguyenExam = segments[2] === 'tieng-viet' && segments[3] === 'trang-nguyen' && current === 'thi-thu'
-  const parent = isTrangNguyenExam ? '/game/lop-1/tieng-viet' : `/${segments.slice(0, -1).join('/')}`
+  const parent = `/${segments.slice(0, -1).join('/')}`
   const subject = segments[2]
   const grade = segments[1]?.replace('lop-', 'Lớp ')
   const title = current.startsWith('bai-') ? `BÀI ${current.slice(4)} · ${subject === 'toan' ? 'TOÁN' : subject === 'tieng-viet' ? 'TIẾNG VIỆT' : 'TIẾNG ANH'} · ${grade.toUpperCase()}`
     : current === 'toan' ? 'QUẦN ĐẢO TOÁN HỌC'
       : current === 'tieng-viet' ? 'VÙNG ĐẤT TIẾNG VIỆT'
         : current === 'tieng-anh' ? 'VŨ TRỤ TIẾNG ANH'
-          : segments[2] === 'tieng-viet' && segments[3] === 'trang-nguyen' && current === 'thi-thu' ? 'THI THỬ TRẠNG NGUYÊN · TIẾNG VIỆT · LỚP 1'
           : `GAME ${grade.toUpperCase()}`
   const displayTitle = segments.length === 4 && segments[1] === 'lop-1' && subject === 'tieng-viet' && current.startsWith('tuan-')
     ? `Tiếng Việt: Tuần ${current.slice(5)}`
@@ -34,7 +40,7 @@ export default function GameRouteShell({ children }: { children: ReactNode }) {
     && !/\/(bubble-shooter|drag-drop|gold-mining|racing|egg-hunt)(\/|$)/.test(pathname)
     && !pathname.includes('/luyen-tap/')
   if (!active) return <>{children}</>
-  if (pathname === '/game/lop-1/tieng-viet/trang-nguyen/thi-thu') {
+  if (isTrangNguyenExamRoute(pathname)) {
     return <div className="min-h-dvh bg-[#f3f3f3] text-[#333]">{children}</div>
   }
   const { parent, title } = routeInfo(pathname)
@@ -54,7 +60,7 @@ export default function GameRouteShell({ children }: { children: ReactNode }) {
       <div className="mx-auto flex h-full w-full max-w-6xl items-center justify-between px-3 sm:px-5">
         {isWorldSelect ? <GameGradePopup /> : <Link href={parent} aria-label="Quay lại" className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl border-2 border-white/90 bg-blue-500 shadow-[0_3px_0_#164e63] transition active:translate-y-0.5 active:shadow-none"><ArrowLeft size={23} strokeWidth={3} /></Link>}
         <p className="min-w-0 truncate px-3 text-center text-sm font-black tracking-wide sm:text-base">{title}</p>
-        <AuthMenu game gamePopup trigger={accountTrigger} menuAlign="right" triggerClassName="grid h-11 w-11 shrink-0 place-items-center rounded-2xl border-2 border-white/90 bg-amber-400 text-amber-950 shadow-[0_3px_0_#a16207] transition active:translate-y-0.5 active:shadow-none" />
+        <AuthMenu game gamePopup spinWhileLoading trigger={accountTrigger} menuAlign="right" triggerClassName="grid h-11 w-11 shrink-0 place-items-center rounded-2xl border-2 border-white/90 bg-amber-400 text-amber-950 shadow-[0_3px_0_#a16207] transition active:translate-y-0.5 active:shadow-none" />
       </div>
     </header>
     {children}

@@ -1,0 +1,75 @@
+{
+  "id": "trang-nguyen-flower-name-tight",
+  "image": "/games/lessons/lop-1/tieng-viet/trang-nguyen/images/flower-name.png",
+  "width": 1536,
+  "height": 1024,
+  "cropMode": "tight-bounds",
+  "background": "very-light-gray",
+  "padding": 0,
+  "items": [
+    {
+      "id": "hoa-lan",
+      "word": "hoa lan",
+      "x": 36,
+      "y": 79,
+      "width": 366,
+      "height": 410
+    },
+    {
+      "id": "hoa-hong",
+      "word": "hoa hồng",
+      "x": 412,
+      "y": 92,
+      "width": 349,
+      "height": 391
+    },
+    {
+      "id": "hoa-huong-duong",
+      "word": "hoa hướng dương",
+      "x": 768,
+      "y": 89,
+      "width": 344,
+      "height": 395
+    },
+    {
+      "id": "hoa-sen",
+      "word": "hoa sen",
+      "x": 1141,
+      "y": 113,
+      "width": 372,
+      "height": 370
+    },
+    {
+      "id": "hoa-tulip",
+      "word": "hoa tulip",
+      "x": 35,
+      "y": 533,
+      "width": 320,
+      "height": 385
+    },
+    {
+      "id": "hoa-cuc",
+      "word": "hoa cúc",
+      "x": 422,
+      "y": 540,
+      "width": 301,
+      "height": 384
+    },
+    {
+      "id": "hoa-ly",
+      "word": "hoa ly",
+      "x": 767,
+      "y": 537,
+      "width": 367,
+      "height": 391
+    },
+    {
+      "id": "hoa-dam-but",
+      "word": "hoa dâm bụt",
+      "x": 1158,
+      "y": 547,
+      "width": 352,
+      "height": 376
+    }
+  ]
+}

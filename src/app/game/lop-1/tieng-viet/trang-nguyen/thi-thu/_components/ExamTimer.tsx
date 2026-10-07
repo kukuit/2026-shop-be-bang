@@ -1,6 +1,6 @@
 'use client'
 
-import { Clock3 } from 'lucide-react'
+import { Clock } from 'lucide-react'
 import styles from './exam.module.css'
 
 export function formatClock(totalSeconds: number) {
@@ -14,7 +14,8 @@ export function formatClock(totalSeconds: number) {
 export default function ExamTimer({ remainingSeconds, compact = false }: { remainingSeconds: number; compact?: boolean }) {
   const urgent = remainingSeconds <= 5 * 60
   return <div className={compact ? styles.timerCompact : styles.timer}>
-    {!compact && <span className={styles.timerLabel}><Clock3 size={17} />Còn lại</span>}
+    {!compact && <Clock className={styles.timerIcon} size={29} strokeWidth={2.2} />}
+    {!compact && <span className={styles.timerLabel}>Còn lại</span>}
     <span aria-live="off" className={`${styles.timerTime} ${compact ? styles.timerTimeCompact : ''} ${urgent ? styles.timerUrgent : ''}`}>{formatClock(remainingSeconds)}</span>
   </div>
 }

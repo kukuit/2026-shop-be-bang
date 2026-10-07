@@ -6,7 +6,7 @@ import { useAuth } from './AuthProvider'
 import LoginModal from './LoginModal'
 import { useOptionalGameProfile } from '@/components/games/profile/GameProfileProvider'
 
-export default function AuthMenu({ game = false, children, trigger, triggerClassName, menuAlign = 'right', gamePopup = false }: { game?: boolean; children?: ReactNode; trigger?: ReactNode; triggerClassName?: string; menuAlign?: 'left' | 'right'; gamePopup?: boolean }) {
+export default function AuthMenu({ game = false, children, trigger, triggerClassName, containerClassName, menuAlign = 'right', gamePopup = false, spinWhileLoading = false }: { game?: boolean; children?: ReactNode; trigger?: ReactNode; triggerClassName?: string; containerClassName?: string; menuAlign?: 'left' | 'right'; gamePopup?: boolean; spinWhileLoading?: boolean }) {
   const { user, loading, logout } = useAuth()
   const gameProfile = useOptionalGameProfile()
   const [loginOpen, setLoginOpen] = useState(false)
@@ -35,8 +35,8 @@ export default function AuthMenu({ game = false, children, trigger, triggerClass
   }, [menuOpen])
   if (loading)
     return (
-      trigger ? <span role="status" aria-label="Đang tải tài khoản" aria-disabled="true" className={`${triggerClassName ?? ''} pointer-events-none`}>
-        <span className="inline-flex animate-spin" aria-hidden="true">{trigger}</span>
+      trigger ? <span role="status" aria-label="Đang tải tài khoản" aria-disabled="true" className={`${containerClassName ?? ''} ${triggerClassName ?? ''} pointer-events-none`}>
+        <span className={`inline-flex items-center justify-center ${spinWhileLoading ? 'animate-spin' : ''}`} aria-hidden="true">{trigger}</span>
       </span> : <span
         className="flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-2.5 text-sm font-semibold text-slate-500"
         aria-label="Đang tải tài khoản"
@@ -65,7 +65,7 @@ export default function AuthMenu({ game = false, children, trigger, triggerClass
       </>
     )
   return (
-    <div ref={menuRef} className="relative">
+    <div ref={menuRef} className={containerClassName ?? 'relative'}>
       <button
         type="button"
         onClick={() => setMenuOpen((v) => !v)}

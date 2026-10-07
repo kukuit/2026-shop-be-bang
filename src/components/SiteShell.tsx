@@ -1,6 +1,8 @@
 'use client'
 
 import { usePathname } from 'next/navigation'
+import Image from 'next/image'
+import Link from 'next/link'
 import HeaderTop from '@/components/HeaderTop'
 import ChatWidget from '@/components/ChatWidget'
 
@@ -36,18 +38,21 @@ export default function SiteShell({ children }: { children: React.ReactNode }) {
           <HeaderTop />
           <div>{children}</div>
           <footer className="border-t border-pink-100 bg-pink-50/40">
-            <div className="max-w-6xl mx-auto px-4 md:px-6 py-8 text-sm text-slate-600">
-              <div className="flex flex-col md:flex-row md:justify-center md:items-start gap-10 md:gap-16">
-                <div className="text-center md:text-left">
-                  <p className="font-semibold text-slate-800">Shop Bé Băng</p>
-                  <p className="mt-1">Quần áo trẻ em mềm xinh, dễ mặc mỗi ngày</p>
-                  <p className="mt-1">Giao hàng toàn quốc</p>
-                </div>
-                <div className="text-center md:text-left">
-                  <p className="font-semibold text-slate-800">Hotline:</p>
-                  <p className="mt-1">0923 456 789</p>
-                  <p className="mt-1">Email: hello@shopbebang.vn</p>
-                </div>
+            <div className="mx-auto flex max-w-6xl flex-col items-center gap-5 px-4 py-6 text-sm text-slate-600 sm:px-6 md:flex-row md:justify-between lg:px-8">
+              <Link href="/" aria-label="Shop Bé Băng — trang chủ" className="shrink-0">
+                <Image src="/images/optimize/logo.png" alt="Shop Bé Băng" width={48} height={48} />
+              </Link>
+              <nav className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2" aria-label="Điều hướng cuối trang">
+                <Link href="/" className="hover:text-rose-600">Trang chủ</Link>
+                <Link href="/#new-arrivals" className="hover:text-rose-600">Mới về</Link>
+                <Link href="/#sale" className="hover:text-rose-600">Sale</Link>
+                <Link href="/#kids-learning" className="hover:text-rose-600">Bé học & chơi</Link>
+                <Link href="/#contact" className="hover:text-rose-600">Liên hệ</Link>
+              </nav>
+              <div id="contact" className="scroll-mt-20 text-center md:text-right">
+                <p className="mb-1 font-semibold text-slate-800">Liên hệ</p>
+                <a className="font-semibold text-slate-800 hover:text-rose-600" href="tel:0981353619">0981 353 619</a>
+                <p className="mt-1"><a className="hover:text-rose-600" href="mailto:info@shopbebang.com">info@shopbebang.com</a></p>
               </div>
             </div>
           </footer>

@@ -5,12 +5,78 @@ import { MOCK_EXAM_DURATION_SECONDS, MOCK_EXAM_ID, MOCK_EXAM_VERSION } from '@/a
 import { generateMockTrangNguyenExam, sanitizeGeneratedExam } from '@/app/game/lop-1/tieng-viet/trang-nguyen/thi-thu/_exam/exam-generator'
 import { gradeTrangNguyenAttempt } from '@/app/game/lop-1/tieng-viet/trang-nguyen/thi-thu/_lib/exam-grading.server'
 import type { ExamAnswers, ExamAttempt, ExamAttemptStatus } from '@/app/game/lop-1/tieng-viet/trang-nguyen/thi-thu/_exam/types'
+import type { SubmittedTrangNguyenAttempt } from '@/app/game/lop-1/tieng-viet/trang-nguyen/thi-thu/_lib/local-attempt'
 
 const durationSeconds = MOCK_EXAM_DURATION_SECONDS
 const attemptCollection = (userId: string) => getAdminDb()
   .collection('shopbebangcom').doc('exam')
   .collection('trang_nguyen_attempts').doc(userId)
   .collection('attempts')
+
+const submittedAttemptCollection = () => getAdminDb()
+  .collection('shopbebangcom').doc('exam')
+  .collection('trang_nguyen_submitted_attempts')
+
+function jsonSafe<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value)) as T
+}
+
+function mapSubmittedAttempt(data: FirebaseFirestore.DocumentData): SubmittedTrangNguyenAttempt {
+  const timestampToIso = (value: unknown) => new Date(timestampMillis(value)).toISOString()
+  return {
+    id: String(data.id),
+    status: data.status === 'EXPIRED' ? 'EXPIRED' : 'SUBMITTED',
+    examKey: 'trang-nguyen-tieng-viet-lop-1',
+    startedAt: timestampToIso(data.startedAt),
+    submittedAt: timestampToIso(data.submittedAt),
+    durationSeconds: Number(data.durationSeconds ?? durationSeconds),
+    elapsedSeconds: Number(data.elapsedSeconds ?? 0),
+    score: Number(data.score ?? 0),
+    correctCount: Number(data.correctCount ?? 0),
+    wrongCount: Number(data.wrongCount ?? 0),
+    unansweredCount: Number(data.unansweredCount ?? 0),
+    questions: Array.isArray(data.questions) ? data.questions : [],
+  }
+}
+
+export async function getSubmittedTrangNguyenAttempt(attemptId: string) {
+  const snapshot = await submittedAttemptCollection().doc(attemptId).get()
+  if (!snapshot.exists) return null
+  return mapSubmittedAttempt({ ...snapshot.data(), id: snapshot.id })
+}
+
+export async function saveSubmittedTrangNguyenAttempt(
+  attempt: SubmittedTrangNguyenAttempt,
+  userId: string | null,
+) {
+  const ref = submittedAttemptCollection().doc(attempt.id)
+  return getAdminDb().runTransaction(async transaction => {
+    const existing = await transaction.get(ref)
+    if (existing.exists) return mapSubmittedAttempt({ ...existing.data(), id: existing.id })
+
+    const now = Date.now()
+    const submittedAt = new Date(now).toISOString()
+    const elapsedSeconds = Math.max(0, Math.min(
+      attempt.durationSeconds,
+      Math.floor((now - new Date(attempt.startedAt).getTime()) / 1000),
+    ))
+    const completed: SubmittedTrangNguyenAttempt = {
+      ...attempt,
+      status: now - new Date(attempt.startedAt).getTime() >= attempt.durationSeconds * 1000 ? 'EXPIRED' : 'SUBMITTED',
+      submittedAt,
+      elapsedSeconds,
+    }
+    transaction.create(ref, {
+      ...completed,
+      questions: jsonSafe(completed.questions),
+      userId,
+      startedAt: Timestamp.fromDate(new Date(completed.startedAt)),
+      submittedAt: Timestamp.fromDate(new Date(completed.submittedAt)),
+      createdAt: FieldValue.serverTimestamp(),
+    })
+    return completed
+  })
+}
 
 function timestampMillis(value: unknown): number {
   if (value instanceof Timestamp) return value.toMillis()

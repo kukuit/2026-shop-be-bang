@@ -4,53 +4,48 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { useState } from 'react'
-import { Info } from 'lucide-react'
 import AuthMenu from '@/components/auth/AuthMenu'
 
-type Item = { label: string; href: string; icon: React.ReactNode }
+type Item = { label: string; href: string }
 
 const NAV_ITEMS: Item[] = [
-  { label: 'Shop Bé Băng', href: '/', icon: <Info className="w-4 h-4" /> },
+  { label: 'Trang chủ', href: '/' },
+  { label: 'Mới về', href: '/#new-arrivals' },
+  { label: 'Sale', href: '/#sale' },
+  { label: 'Bé học & chơi', href: '/#kids-learning' },
 ]
 
-const CONTAINER = 'max-w-6xl mx-auto px-4'
+const CONTAINER = 'mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8'
 
 function NavItem({
   href,
   label,
-  icon,
   isActive,
   onClick,
   isMobile = false,
 }: {
   href: string
   label: string
-  icon: React.ReactNode
   isActive: boolean
   onClick?: () => void
   isMobile?: boolean
 }) {
-  const base =
-    'flex items-center gap-2 px-2 py-2 text-[15px] sm:text-base font-medium transition-colors focus:outline-none focus-visible:ring-0 border-b-2 border-transparent'
-
-  const desktop = 'hidden sm:flex text-gray-600 hover:text-gray-900 hover:border-pink-300'
-  const desktopActive = 'border-[var(--shop-primary)] text-[var(--shop-primary)]'
-
-  const mobile = 'sm:hidden text-gray-700 hover:bg-gray-50 active:bg-gray-100'
-  const mobileActive = 'border-[var(--shop-primary)] bg-pink-50 text-[var(--shop-primary)]'
+  const base = 'font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-rose-500'
+  const desktop = 'hidden items-center border-b-2 border-transparent px-2 py-2 text-sm text-zinc-600 hover:border-rose-200 hover:text-rose-600 sm:flex'
+  const mobile = 'flex rounded-lg px-3 py-3 text-sm text-zinc-700 hover:bg-rose-50'
 
   return (
     <Link
       href={href}
       onClick={onClick}
+      aria-current={isActive ? 'page' : undefined}
       className={[
         base,
         isMobile ? mobile : desktop,
-        isActive ? (isMobile ? mobileActive : desktopActive) : '',
+        isActive ? 'border-rose-500 text-rose-600' : '',
       ].join(' ')}
     >
-      <span className={isActive ? 'text-[var(--shop-primary)]' : 'text-gray-500'}>{icon}</span>
-      <span className={isActive ? 'text-[var(--shop-primary)]' : ''}>{label}</span>
+      {label}
     </Link>
   )
 }
@@ -59,29 +54,35 @@ export default function HeaderTop() {
   const pathname = usePathname() || '/'
   const [open, setOpen] = useState(false)
 
-  const isActive = (href: string) => {
-    if (href === '/') return pathname === '/'
-    return pathname === href || pathname.startsWith(href + '/')
-  }
+  const isActive = (href: string) => href === '/' && pathname === '/'
 
   return (
     <header className="sticky top-0 z-30 bg-white/80 backdrop-blur border-b">
-      <div className={`${CONTAINER} h-14 flex items-center gap-2`}>
+      <div className={`${CONTAINER} flex h-16 items-center gap-3`}>
         <Link
           href="/"
-          aria-label="Go to home"
-          className="inline-flex items-center rounded-md hover:bg-gray-50"
+          aria-label="Shop Bé Băng — trang chủ"
+          className="inline-flex shrink-0 items-center gap-2 rounded-md"
           onClick={() => setOpen(false)}
         >
           <Image
             src="/images/optimize/logo.png"
             alt="Shop Bé Băng"
-            width={56}
-            height={56}
+            width={44}
+            height={44}
             className="rounded-full"
             priority
           />
+          <span className="whitespace-nowrap text-base font-bold tracking-tight text-rose-500 sm:text-lg">
+            Shop Bé Băng
+          </span>
         </Link>
+
+        <nav className="ml-4 hidden flex-1 items-center justify-center gap-5 sm:flex lg:gap-8" aria-label="Điều hướng chính">
+          {NAV_ITEMS.map((it) => (
+            <NavItem key={it.href} href={it.href} label={it.label} isActive={isActive(it.href)} />
+          ))}
+        </nav>
 
         <div className="ml-auto sm:hidden">
           <AuthMenu />
@@ -91,41 +92,27 @@ export default function HeaderTop() {
           aria-label="Open menu"
           aria-expanded={open}
           onClick={() => setOpen((v) => !v)}
-          className="sm:hidden inline-grid place-items-center w-10 h-10 hover:bg-gray-100"
+          className="inline-grid h-10 w-10 place-items-center rounded-full text-zinc-700 hover:bg-rose-50 sm:hidden"
         >
           <svg viewBox="0 0 24 24" className="w-5 h-5 text-gray-700">
             <path fill="currentColor" d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2z" />
           </svg>
         </button>
 
-        <nav className="ml-2 hidden sm:flex items-stretch justify-start">
-          <div className="flex items-end gap-3">
-            {NAV_ITEMS.map((it) => (
-              <NavItem
-                key={it.href}
-                href={it.href}
-                label={it.label}
-                icon={it.icon}
-                isActive={isActive(it.href)}
-              />
-            ))}
-          </div>
-        </nav>
         <div className="ml-auto hidden sm:block">
           <AuthMenu />
         </div>
       </div>
 
       {open && (
-        <div className="sm:hidden border-t bg-white/95 backdrop-blur">
+        <div className="border-t bg-white/95 backdrop-blur sm:hidden">
           <div className={`${CONTAINER}`}>
-            <nav className="flex flex-col py-1">
+            <nav className="flex flex-col py-2" aria-label="Điều hướng chính">
               {NAV_ITEMS.map((it) => (
                 <NavItem
                   key={it.href}
                   href={it.href}
                   label={it.label}
-                  icon={it.icon}
                   isActive={isActive(it.href)}
                   isMobile
                   onClick={() => setOpen(false)}

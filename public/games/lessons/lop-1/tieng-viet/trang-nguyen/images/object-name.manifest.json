@@ -1,0 +1,227 @@
+{
+  "id": "trang-nguyen-object-name-tight",
+  "image": "/games/lessons/lop-1/tieng-viet/trang-nguyen/images/object-name.png",
+  "width": 1536,
+  "height": 1024,
+  "cropMode": "tight-bounds",
+  "background": "very-light-gray",
+  "padding": 0,
+  "items": [
+    {
+      "id": "mu",
+      "word": "mũ",
+      "x": 31,
+      "y": 96,
+      "width": 215,
+      "height": 173
+    },
+    {
+      "id": "khan",
+      "word": "khăn",
+      "x": 274,
+      "y": 93,
+      "width": 198,
+      "height": 164
+    },
+    {
+      "id": "dep",
+      "word": "dép",
+      "x": 490,
+      "y": 108,
+      "width": 216,
+      "height": 159
+    },
+    {
+      "id": "tat",
+      "word": "tất",
+      "x": 732,
+      "y": 86,
+      "width": 157,
+      "height": 178
+    },
+    {
+      "id": "ba-lo",
+      "word": "ba lô",
+      "x": 924,
+      "y": 81,
+      "width": 192,
+      "height": 197
+    },
+    {
+      "id": "but-chi",
+      "word": "bút chì",
+      "x": 1157,
+      "y": 92,
+      "width": 158,
+      "height": 166
+    },
+    {
+      "id": "tay",
+      "word": "tẩy",
+      "x": 1355,
+      "y": 131,
+      "width": 151,
+      "height": 115
+    },
+    {
+      "id": "thuoc",
+      "word": "thước",
+      "x": 25,
+      "y": 317,
+      "width": 207,
+      "height": 169
+    },
+    {
+      "id": "vo",
+      "word": "vở",
+      "x": 272,
+      "y": 305,
+      "width": 175,
+      "height": 189
+    },
+    {
+      "id": "sach",
+      "word": "sách",
+      "x": 481,
+      "y": 318,
+      "width": 195,
+      "height": 169
+    },
+    {
+      "id": "cap",
+      "word": "cặp",
+      "x": 707,
+      "y": 312,
+      "width": 207,
+      "height": 183
+    },
+    {
+      "id": "binh-nuoc",
+      "word": "bình nước",
+      "x": 977,
+      "y": 303,
+      "width": 102,
+      "height": 200
+    },
+    {
+      "id": "o",
+      "word": "ô",
+      "x": 1120,
+      "y": 313,
+      "width": 208,
+      "height": 186
+    },
+    {
+      "id": "bong",
+      "word": "bóng",
+      "x": 1352,
+      "y": 324,
+      "width": 161,
+      "height": 161
+    },
+    {
+      "id": "o-to",
+      "word": "ô tô",
+      "x": 25,
+      "y": 552,
+      "width": 211,
+      "height": 146
+    },
+    {
+      "id": "gau-bong",
+      "word": "gấu bông",
+      "x": 272,
+      "y": 524,
+      "width": 171,
+      "height": 194
+    },
+    {
+      "id": "dong-ho",
+      "word": "đồng hồ",
+      "x": 493,
+      "y": 537,
+      "width": 150,
+      "height": 173
+    },
+    {
+      "id": "den",
+      "word": "đèn",
+      "x": 711,
+      "y": 524,
+      "width": 147,
+      "height": 189
+    },
+    {
+      "id": "keo",
+      "word": "kéo",
+      "x": 907,
+      "y": 544,
+      "width": 197,
+      "height": 177
+    },
+    {
+      "id": "luoc",
+      "word": "lược",
+      "x": 1127,
+      "y": 539,
+      "width": 178,
+      "height": 172
+    },
+    {
+      "id": "ban-chai-danh-rang",
+      "word": "bàn chải đánh răng",
+      "x": 1344,
+      "y": 525,
+      "width": 155,
+      "height": 186
+    },
+    {
+      "id": "xa-phong",
+      "word": "xà phòng",
+      "x": 37,
+      "y": 778,
+      "width": 197,
+      "height": 147
+    },
+    {
+      "id": "coc",
+      "word": "cốc",
+      "x": 297,
+      "y": 779,
+      "width": 177,
+      "height": 155
+    },
+    {
+      "id": "thia",
+      "word": "thìa",
+      "x": 528,
+      "y": 755,
+      "width": 195,
+      "height": 179
+    },
+    {
+      "id": "ghe",
+      "word": "ghế",
+      "x": 777,
+      "y": 739,
+      "width": 162,
+      "height": 213
+    },
+    {
+      "id": "chia-khoa",
+      "word": "chìa khóa",
+      "x": 1022,
+      "y": 762,
+      "width": 166,
+      "height": 167
+    },
+    {
+      "id": "dieu",
+      "word": "diều",
+      "x": 1286,
+      "y": 730,
+      "width": 208,
+      "height": 221
+    }
+  ]
+}
