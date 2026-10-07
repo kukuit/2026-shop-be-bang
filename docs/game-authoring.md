@@ -8,12 +8,12 @@ Giữ nguyên cấu trúc game; thêm câu hỏi random, voice, mục tiêu bài
 
 | Thành phần | Vị trí và vai trò |
 | --- | --- |
-| Route bài học | `src/app/game/<lop>/<mon>/bai-N/`: metadata/mục tiêu trong `lesson.ts`, nội dung trong `content.ts` ở các mẫu mới; `page.tsx` và route game con nối vào component dùng chung. |
+| Route bài học | Toán/Tiếng Anh dùng `src/app/game/<lop>/<mon>/bai-N/`; Tiếng Việt lớp 1 được gom theo tuần tại `src/app/game/lop-1/tieng-viet/tuan-N/`. Metadata/mục tiêu ở `lesson.ts`, nội dung ở `content.ts` trong các mẫu mới; `page.tsx` và route game con nối vào component dùng chung. |
 | Engine dùng lại | `src/components/games/bubble-shooter`, `drag-drop`, `gold-miner`, `racing`; `egg-hunt` là trò bổ sung ở Toán 1 bài 2, không mặc định thêm vào mọi bài. Slug route Đào vàng là `gold-mining`. |
 | Câu hỏi ngôn ngữ | `src/components/games/general/learning-question.ts`: `id`, `goalKey`, `answer`, `options`, voice và thông tin kỹ năng/chế độ nhập, trả lời. |
 | Mẫu Tiếng Anh | `src/components/games/english/vocabulary-lesson.ts`, `question-generator.ts`, `create-game-configs.ts`; cấu hình từng bài tại `english/tieng-anh-1-bai-N.ts`. |
 | Mẫu Toán | `src/app/game/lop-2/toan/bai-1/{lesson,content,config}.ts`; các bài Toán 1 còn dùng config/lesson riêng ở từng engine. |
-| Voice và tài nguyên | `public/games/lessons/<lop>/<mon>/bai-N/`; cơ chế phát dùng chung tại `src/components/games/general/`. Voice Toán xem thêm `docs/math-voices.md`. |
+| Voice và tài nguyên | Tài nguyên riêng theo bài dùng `public/games/lessons/<lop>/<mon>/bai-N/`; Tiếng Việt lớp 1 dùng kho voice chung `public/games/general/voices/tieng-viet/`. Cơ chế phát dùng chung tại `src/components/games/general/`. Voice Toán xem thêm `docs/math-voices.md`. |
 | Danh mục tracking | `src/components/games/general/tracking/lesson-catalog.ts`: `LESSON_CATALOG`, `LESSON_IDS`, kiểu `LessonId` và `LearningKey`. |
 | Bản đồ và tiến độ | `src/components/games/lesson-map/{data,englishData,vietnameseData,progress-config}.ts`; Toán lớp 2 dùng `TOAN_2_MATH_LESSONS` trong `src/app/game/lop-2/toan/bai-1/lesson.ts`. |
 | Điều hướng | `src/components/games/navigation/catalog.ts` và trang chọn bài/môn tương ứng: rà soát nơi cần đăng ký hoặc đổi trạng thái bài. |
@@ -23,7 +23,7 @@ Giữ nguyên cấu trúc game; thêm câu hỏi random, voice, mục tiêu bài
 
 ## Quy trình thêm bài
 
-1. Chọn mẫu cùng môn và dạng kiến thức. Tiếng Anh từ vựng/câu đơn: xem `docs/tieng-anh-1-bai-2.md` và bài tương ứng. Toán: xem `docs/toan-2-bai-1.md`. Tiếng Việt: xem `src/app/game/lop-1/tieng-viet/bai-1/` và `src/components/games/vietnamese/tieng-viet-1-bai-1.ts`.
+1. Chọn mẫu cùng môn và dạng kiến thức. Tiếng Anh từ vựng/câu đơn: xem `docs/tieng-anh-1-bai-2.md` và bài tương ứng. Toán: xem `docs/toan-2-bai-1.md`. Tiếng Việt lớp 1 được gom theo tuần: xem `src/app/game/lop-1/tieng-viet/tuan-1/` và `src/components/games/vietnamese/tieng-viet-1-tuan-1.ts`.
 2. Khai báo ID, tên và mục tiêu bài trong `lesson.ts`; đăng ký catalog để có kiểu ID/key hợp lệ. Không đổi key của bài cũ.
 3. Tạo pool/generator câu hỏi. Dùng `loadQuestions`/`loadLevels` theo vòng đời hiện có để tạo lượt mới; xáo trộn câu và lựa chọn, giữ đúng quan hệ đáp án–voice–mục tiêu. Không bắt buộc hai lượt random phải khác nhau tuyệt đối.
 4. Bảo đảm bao phủ mục tiêu theo số vòng và game được chọn. Factory Tiếng Anh hiện đặt 10 vòng, Đua xe lấy 3 lựa chọn và các game khác lấy 4; không mặc định factory phù hợp với mọi số mục tiêu hoặc dạng kiến thức mới.

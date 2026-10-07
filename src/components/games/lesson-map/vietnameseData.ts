@@ -1,5 +1,9 @@
 import { buildLessonMapData, type LessonDefinition, type LessonProgress } from './data'
 import type { AdventureNodeType } from './adventureTypes'
+import { TIENG_VIET_1_WEEK_1 } from '@/app/game/lop-1/tieng-viet/tuan-1/lesson'
+import { TIENG_VIET_1_WEEK_2 } from '@/app/game/lop-1/tieng-viet/tuan-2/lesson'
+import { TIENG_VIET_1_WEEK_3 } from '@/app/game/lop-1/tieng-viet/tuan-3/lesson'
+import { TIENG_VIET_1_WEEK_4 } from '@/app/game/lop-1/tieng-viet/tuan-4/lesson'
 
 export type VietnameseLessonDefinition = LessonDefinition & { nodeType: AdventureNodeType; mapTitle: string }
 const locations: readonly { nodeType: AdventureNodeType; mapTitle: string }[] = [
@@ -23,13 +27,17 @@ const locations: readonly { nodeType: AdventureNodeType; mapTitle: string }[] = 
 ]
 export const vietnameseLessonDefinitions: VietnameseLessonDefinition[] = locations.map(({ nodeType, mapTitle }, index) => {
   const id = index + 1
-  return { id, lessonId: `tieng-viet-1-bai-${id}`, title: id === 1 ? 'Tuần 1: A, B, C, E, Ê' : `Tuần ${id}`, mapTitle, href: `/game/lop-1/tieng-viet/bai-${id}`, nodeType, isCheckpoint: [4, 8, 12, 17].includes(id) }
+  // Weeks 1 and 2 keep their persisted legacy IDs so stored learning history remains attached.
+  const lessonId = id <= 2 ? `tieng-viet-1-bai-${id}` : `tieng-viet-1-tuan-${id}`
+  const title = id === 1 ? TIENG_VIET_1_WEEK_1.title : id === 2 ? TIENG_VIET_1_WEEK_2.title : id === 3 ? TIENG_VIET_1_WEEK_3.title : id === 4 ? TIENG_VIET_1_WEEK_4.title : `Tuần ${id}`
+  return { id, lessonId, title, mapTitle, href: `/game/lop-1/tieng-viet/tuan-${id}`, nodeType, isCheckpoint: [4, 8, 12, 17].includes(id) }
 })
 
 // Demo only: one completed lesson, one current and one additional unlocked stop.
 export const demoVietnameseProgress: LessonProgress[] = [
   { lessonId: 'tieng-viet-1-bai-1', completed: true, stars: 3 },
   { lessonId: 'tieng-viet-1-bai-2', completed: false, unlocked: true, stars: 2 },
-  { lessonId: 'tieng-viet-1-bai-3', completed: false, unlocked: true },
+  { lessonId: 'tieng-viet-1-tuan-3', completed: false, unlocked: true },
+  { lessonId: TIENG_VIET_1_WEEK_4.lessonId, completed: false, unlocked: true },
 ]
 export const buildVietnameseLessonMapData = buildLessonMapData

@@ -2091,7 +2091,7 @@ export default function HomePage() {
       <section className="shop-topbar">
         <div className="shop-container flex items-center justify-between gap-4 text-[11px] font-medium">
           <span>Welcome to Shop Bé Băng</span>
-          <span className="hidden sm:inline">Hotline: 0923 456 789</span>
+          <span className="hidden sm:inline">Hotline: 0981 353 619</span>
           <span>Register / Login</span>
         </div>
       </section>

@@ -12,7 +12,7 @@ import { getLessonDefinition } from './lesson-catalog'
 type TrackerOptions = { lessonId: LessonId; gameId: GameId; repository: GameTrackingRepository }
 type ActiveQuestion = {
   learningKey: LearningKey
-  sourceLesson?: 1 | 2 | 3 | 4 | 5
+  sourceLesson?: number
   expectedAnswer?: AnswerValue
   startedAt: number
   attempt: number
@@ -35,13 +35,13 @@ export class GameTracker {
     devLog('Start', { lessonId: options.lessonId, gameId: options.gameId })
   }
 
-  startQuestion(input: { learningKey: LearningKey; sourceLesson?: 1 | 2 | 3 | 4 | 5; expectedAnswer?: AnswerValue; skill?: LearningSkill; inputMode?: QuestionInputMode; answerMode?: QuestionAnswerMode }) {
+  startQuestion(input: { learningKey: LearningKey; sourceLesson?: number; expectedAnswer?: AnswerValue; skill?: LearningSkill; inputMode?: QuestionInputMode; answerMode?: QuestionAnswerMode }) {
     this.question = { ...input, startedAt: Date.now(), attempt: 1 }
   }
 
   recordAnswer(input: {
     learningKey: LearningKey
-    sourceLesson?: 1 | 2 | 3 | 4 | 5
+    sourceLesson?: number
     correct: boolean
     expectedAnswer?: AnswerValue
     selectedAnswer?: AnswerValue

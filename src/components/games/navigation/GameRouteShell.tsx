@@ -8,6 +8,14 @@ import AuthMenu from '@/components/auth/AuthMenu'
 import { useAuth } from '@/components/auth/AuthProvider'
 import GameGradePopup from './GameGradePopup'
 
+const TRANG_NGUYEN_EXAM_ROUTE = '/game/lop-1/tieng-viet/trang-nguyen/thi-thu'
+
+function isTrangNguyenExamRoute(pathname: string) {
+  const normalizedPathname = pathname.replace(/\/+$/, '') || '/'
+  return normalizedPathname === TRANG_NGUYEN_EXAM_ROUTE
+    || normalizedPathname.startsWith(`${TRANG_NGUYEN_EXAM_ROUTE}/`)
+}
+
 function routeInfo(pathname: string) {
   const segments = pathname.split('/').filter(Boolean)
   const current = segments.at(-1) ?? 'game'
@@ -19,7 +27,10 @@ function routeInfo(pathname: string) {
       : current === 'tieng-viet' ? 'VÙNG ĐẤT TIẾNG VIỆT'
         : current === 'tieng-anh' ? 'VŨ TRỤ TIẾNG ANH'
           : `GAME ${grade.toUpperCase()}`
-  return { parent, title }
+  const displayTitle = segments.length === 4 && segments[1] === 'lop-1' && subject === 'tieng-viet' && current.startsWith('tuan-')
+    ? `Tiếng Việt: Tuần ${current.slice(5)}`
+    : title
+  return { parent, title: displayTitle }
 }
 
 export default function GameRouteShell({ children }: { children: ReactNode }) {
@@ -29,6 +40,9 @@ export default function GameRouteShell({ children }: { children: ReactNode }) {
     && !/\/(bubble-shooter|drag-drop|gold-mining|racing|egg-hunt)(\/|$)/.test(pathname)
     && !pathname.includes('/luyen-tap/')
   if (!active) return <>{children}</>
+  if (isTrangNguyenExamRoute(pathname)) {
+    return <div className="min-h-dvh bg-[#f3f3f3] text-[#333]">{children}</div>
+  }
   const { parent, title } = routeInfo(pathname)
   const isWorldSelect = /^\/game\/lop-\d+\/?$/.test(pathname)
   const accountTrigger = <span className="relative grid h-10 w-10 place-items-center">
@@ -46,7 +60,7 @@ export default function GameRouteShell({ children }: { children: ReactNode }) {
       <div className="mx-auto flex h-full w-full max-w-6xl items-center justify-between px-3 sm:px-5">
         {isWorldSelect ? <GameGradePopup /> : <Link href={parent} aria-label="Quay lại" className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl border-2 border-white/90 bg-blue-500 shadow-[0_3px_0_#164e63] transition active:translate-y-0.5 active:shadow-none"><ArrowLeft size={23} strokeWidth={3} /></Link>}
         <p className="min-w-0 truncate px-3 text-center text-sm font-black tracking-wide sm:text-base">{title}</p>
-        <AuthMenu game gamePopup trigger={accountTrigger} menuAlign="right" triggerClassName="grid h-11 w-11 shrink-0 place-items-center rounded-2xl border-2 border-white/90 bg-amber-400 text-amber-950 shadow-[0_3px_0_#a16207] transition active:translate-y-0.5 active:shadow-none" />
+        <AuthMenu game gamePopup spinWhileLoading trigger={accountTrigger} menuAlign="right" triggerClassName="grid h-11 w-11 shrink-0 place-items-center rounded-2xl border-2 border-white/90 bg-amber-400 text-amber-950 shadow-[0_3px_0_#a16207] transition active:translate-y-0.5 active:shadow-none" />
       </div>
     </header>
     {children}

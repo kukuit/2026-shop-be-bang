@@ -6,7 +6,7 @@ export interface MathQuestion {
   answer: string | number
   options: Array<string | number>
   learningKey?: LearningKey
-  sourceLesson?: 1 | 2 | 3 | 4 | 5
+  sourceLesson?: number
   id?: string
   skill?: LearningSkill
   inputMode?: QuestionInputMode

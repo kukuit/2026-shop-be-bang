@@ -12,7 +12,7 @@ export function LessonStars({ stars }: { stars: number }) {
   return <span className={styles.stars} aria-label={`${stars} trên 5 sao`}>{[1, 2, 3, 4, 5].map(value => <Star key={value} size={15} aria-hidden="true" fill={value <= stars ? '#ffc94b' : 'none'} color={value <= stars ? '#b87908' : '#7896a6'} />)}</span>
 }
 
-export default function LessonJourneyNode({ theme = 'ocean', lesson, lessonOrder = lesson.id, status = lesson.status, stars = lesson.stars, onClick }: { theme?: JourneyTheme; lesson: LessonMapItem; lessonOrder?: number; status?: LessonStatus; stars?: number; onClick?: () => void }) {
+export default function LessonJourneyNode({ theme = 'ocean', lesson, lessonOrder = lesson.id, status = lesson.status, stars = lesson.stars, showCappy = status === 'current', onClick }: { theme?: JourneyTheme; lesson: LessonMapItem; lessonOrder?: number; status?: LessonStatus; stars?: number; showCappy?: boolean; onClick?: () => void }) {
   const label = `${theme !== 'ocean' ? lesson.title : `Bài ${lesson.id}: ${lesson.title}`}${lesson.mapTitle ? ` - ${lesson.mapTitle}` : ''}${lesson.shortTitle ? `: ${lesson.shortTitle}` : ''}${status === 'locked' ? ', chưa mở' : status === 'completed' ? ', đã hoàn thành' : status === 'current' ? ', chơi tiếp' : ''}`
   const content = <>
     <span className={styles.number}>{theme === 'adventure' ? lesson.id : String(lesson.id).padStart(2, '0')}
@@ -20,7 +20,7 @@ export default function LessonJourneyNode({ theme = 'ocean', lesson, lessonOrder
       {status === 'locked' && <span className={styles.lock}><LockKeyhole size={13} /></span>}
     </span>
     {theme === 'adventure' ? <AdventureLocationArtwork type={lesson.nodeType ?? 'alphabetZone'} status={status} isCheckpoint={lesson.isCheckpoint} /> : theme === 'space' ? <PlanetArtwork id={lesson.id} status={status} /> : <IslandArtwork variant={(lesson.id - 1) % 4} status={status} lessonOrder={lessonOrder} />}
-    {theme === 'adventure' && status === 'current' && <CappyExplorer small />}
+    {showCappy && <CappyExplorer small />}
     <span className={styles.lessonTitle}>{lesson.mapTitle ?? lesson.title}</span>
     {lesson.shortTitle && <span className={styles.shortTitle}>{lesson.shortTitle}</span>}
     {status !== 'locked' && stars !== undefined && (status !== 'available' || stars > 0) && <LessonStars stars={stars} />}

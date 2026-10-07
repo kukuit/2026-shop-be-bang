@@ -68,3 +68,4 @@ export function useGameProfile() {
   if (!value) throw new Error('GameProfileProvider is required')
   return value
 }
+export function useOptionalGameProfile() { return useContext(Context) }

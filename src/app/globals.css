@@ -27,6 +27,7 @@ main {
 /* Màu chữ mặc định (đừng dùng biến đổi theo dark) */
 body {
   color: #111827; /* text-gray-900 */
+  font-family: "Game Nunito", Arial, sans-serif;
 }
 
 /* Nếu bạn muốn chắc chắn x2 khi hệ thống báo dark, vẫn giữ light */

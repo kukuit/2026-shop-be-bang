@@ -17,10 +17,11 @@ type GameCard = {
   subtitle?: string
 }
 
-export default function LessonGameGrid({ lessonId, games }: {
+export default function LessonGameGrid({ lessonId, games, compactFooter = false }: {
   lessonId: LessonId
   games: readonly GameCard[]
   subtitle: string
+  compactFooter?: boolean
 }) {
   const { user, loading } = useAuth()
   const userId = user?.id
@@ -75,11 +76,14 @@ export default function LessonGameGrid({ lessonId, games }: {
           {completed && <span aria-hidden="true" className="absolute right-2 top-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-emerald-600 text-white shadow-sm md:right-3 md:top-3">
             <Check size={16} strokeWidth={3} />
           </span>}
-          <div className="absolute inset-x-0 bottom-0 flex min-h-[84px] items-center justify-between gap-2 px-4 py-3 text-white sm:min-h-[100px] sm:px-5">
+          <div className={`absolute inset-x-0 bottom-0 flex items-center justify-between gap-2 text-white ${compactFooter ? 'px-3 py-1 sm:px-4' : 'min-h-[84px] px-4 py-3 sm:min-h-[100px] sm:px-5'}`}>
             <span className={`absolute inset-0 bg-gradient-to-t ${game.color} opacity-95`} />
-            <div className="relative min-w-0"><p className="text-[10px] font-black uppercase tracking-[.18em] text-white/80 sm:text-xs">Nhiệm vụ {games.indexOf(game) + 1}</p><p className="mt-0.5 truncate text-base font-black sm:text-xl xl:text-2xl">{game.title}</p></div>
-            <span aria-hidden="true" className="relative inline-flex h-11 shrink-0 items-center justify-center gap-1.5 rounded-full border-2 border-white bg-amber-400 px-4 text-sm font-black text-amber-950 shadow-[0_3px_0_#a16207] sm:h-12 sm:px-5">
-              {completed ? <><RotateCcw size={17} /> Chơi lại</> : <><Play size={17} className="fill-current" /> Chơi</>}
+            <div className="relative min-w-0">
+              {!compactFooter && <p className="text-[10px] font-black uppercase tracking-[.18em] text-white/80 sm:text-xs">Nhiệm vụ {games.indexOf(game) + 1}</p>}
+              <p className={`mt-0.5 truncate font-black ${compactFooter ? 'text-sm sm:text-base' : 'text-base sm:text-xl xl:text-2xl'}`}>{game.title}</p>
+            </div>
+            <span aria-hidden="true" className={`relative inline-flex shrink-0 items-center justify-center rounded-full border-2 border-white bg-amber-400 text-amber-950 shadow-[0_3px_0_#a16207] ${compactFooter ? 'h-10 w-10 sm:h-11 sm:w-11' : 'h-11 gap-1.5 px-4 text-sm font-black sm:h-12 sm:px-5'}`}>
+              {completed ? <><RotateCcw size={17} />{!compactFooter && 'Chơi lại'}</> : <><Play size={17} className="fill-current" />{!compactFooter && 'Chơi'}</>}
             </span>
           </div>
         </Link>

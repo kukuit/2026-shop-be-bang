@@ -1,0 +1,7 @@
+.testQuestion :global([class*='imageResemblesLetterVisual']) {
+  justify-content: flex-start;
+}
+
+.testQuestion :global([class*='question30FruitScene']) {
+  justify-content: flex-start;
+}

@@ -1,0 +1,94 @@
+{
+  "id": "vegetable-8-grid",
+  "image": "/games/lessons/lop-1/tieng-viet/trang-nguyen/images/vegetable.png",
+  "width": 1536,
+  "height": 1024,
+  "grid": {
+    "columns": 4,
+    "rows": 2,
+    "cellWidth": 384,
+    "cellHeight": 512
+  },
+  "items": [
+    {
+      "id": "cai-thia",
+      "label": "cải thìa",
+      "row": 0,
+      "col": 0,
+      "x": 0,
+      "y": 0,
+      "width": 384,
+      "height": 512
+    },
+    {
+      "id": "rau-muong",
+      "label": "rau muống",
+      "row": 0,
+      "col": 1,
+      "x": 384,
+      "y": 0,
+      "width": 384,
+      "height": 512
+    },
+    {
+      "id": "bap-cai",
+      "label": "bắp cải",
+      "row": 0,
+      "col": 2,
+      "x": 768,
+      "y": 0,
+      "width": 384,
+      "height": 512
+    },
+    {
+      "id": "xa-lach",
+      "label": "xà lách",
+      "row": 0,
+      "col": 3,
+      "x": 1152,
+      "y": 0,
+      "width": 384,
+      "height": 512
+    },
+    {
+      "id": "cai-be-xanh",
+      "label": "cải bẹ xanh",
+      "row": 1,
+      "col": 0,
+      "x": 0,
+      "y": 512,
+      "width": 384,
+      "height": 512
+    },
+    {
+      "id": "cai-thao",
+      "label": "cải thảo",
+      "row": 1,
+      "col": 1,
+      "x": 384,
+      "y": 512,
+      "width": 384,
+      "height": 512
+    },
+    {
+      "id": "can-tay",
+      "label": "cần tây",
+      "row": 1,
+      "col": 2,
+      "x": 768,
+      "y": 512,
+      "width": 384,
+      "height": 512
+    },
+    {
+      "id": "rau-bina",
+      "label": "rau bina",
+      "row": 1,
+      "col": 3,
+      "x": 1152,
+      "y": 512,
+      "width": 384,
+      "height": 512
+    }
+  ]
+}

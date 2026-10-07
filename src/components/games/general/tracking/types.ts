@@ -10,7 +10,7 @@ export type AnswerValue = string | number
 export interface GameQuestionResult {
   learningKey: LearningKey
   week?: number
-  sourceLesson?: 1 | 2 | 3 | 4 | 5
+  sourceLesson?: number
   correct: boolean
   expectedAnswer?: AnswerValue
   selectedAnswer?: AnswerValue

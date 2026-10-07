@@ -123,7 +123,7 @@ function ReadyDragDropGame({ config }: { config: DragDropGameConfig }) {
   const longestAnswer = Math.max(0, ...displayedAnswers.map(value => config.images?.[String(value)] ? 0 : Array.from(String(value).normalize('NFC')).length))
   const hasLongAnswers = displayedAnswers.length !== 4 && longestAnswer > 3
     && (displayedAnswers.length === 6 || config.answerTrayColumns === 'auto')
-  const answerColumns = displayedAnswers.length === 4 ? 4 : hasLongAnswers ? 3 : 6
+  const answerColumns = level.answerTrayColumns ?? (displayedAnswers.length === 4 ? 4 : hasLongAnswers ? 3 : 6)
   const density = level.groups && level.groups.length >= 4 ? 'dense' : level.groups && level.groups.length === 1 ? 'simple' : 'standard'
   const startMusic = useBackgroundMusic(soundEnabled, isReady && gameStarted)
   const voiceAssets = useMemo(() => config.introVoice
@@ -477,8 +477,17 @@ function CountGroups({ groups, completed, wrongTarget, correctTarget, voiceButto
         <DropTarget large id={group.id} completed={completed[group.id]} wrong={false} correct={correctTarget === group.id} />
       </div>
     </div> : <div key={group.id} data-target-id={group.id} data-wide-answer={wideAnswer || undefined} className={`${styles.countGroup} ${wrongTarget === group.id ? styles.shake : ''}`}>
-      <div className={group.count === 1 && (inputModes?.[group.id] === 'text' || new RegExp('\\p{L}', 'u').test(group.icon)) ? styles.wordPrompt : styles.animals} style={inlineVoiceGroupIds.has(group.id) ? { display: 'flex', justifyContent: 'center', alignItems: 'center' } : undefined} data-items={group.count} aria-label={`${group.count} ${group.label}`}>
-        {(inlineVoiceGroupIds.has(group.id) ? voiceButton : undefined) ?? (group.count > 0 && Array.from({ length: group.count }, (_, itemIndex) => <span key={itemIndex}><GameImageValue value={group.icon} size={90} colorful /></span>))}
+      <div className={group.count === 1 && (inputModes?.[group.id] === 'text' || new RegExp('\\p{L}', 'u').test(group.icon)) ? styles.wordPrompt : styles.animals} style={group.imageSrc && group.promptText
+        ? { display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: 3 }
+        : inlineVoiceGroupIds.has(group.id) ? { display: 'flex', justifyContent: 'center', alignItems: 'center' } : undefined} data-items={group.count} aria-label={`${group.count} ${group.label}`}>
+        {(inlineVoiceGroupIds.has(group.id) ? voiceButton : undefined) ?? (group.count > 0 && Array.from({ length: group.count }, (_, itemIndex) => <span key={itemIndex}>
+          {group.imageSrc
+            ? group.imageCrop
+              ? <span role="img" aria-label={group.imageAlt ?? group.label} style={{ display: 'block', width: 90, height: 60, maxWidth: '100%', backgroundImage: `url(${group.imageSrc})`, backgroundRepeat: 'no-repeat', backgroundSize: `${group.imageCrop.columns * 100}% ${group.imageCrop.rows * 100}%`, backgroundPosition: `${group.imageCrop.columns === 1 ? 0 : group.imageCrop.column / (group.imageCrop.columns - 1) * 100}% ${group.imageCrop.rows === 1 ? 0 : group.imageCrop.row / (group.imageCrop.rows - 1) * 100}%` }} />
+              : <img src={group.imageSrc} alt={group.imageAlt ?? group.label} draggable={false} style={{ width: 90, height: 90, maxWidth: '100%', objectFit: 'contain' }} />
+            : <GameImageValue value={group.icon} size={90} colorful />}
+          {group.imageSrc && group.promptText && <span style={{ fontFamily: '"Game Nunito", Arial, sans-serif', fontSize: 'clamp(20px, 5cqw, 26px)', fontWeight: 900, lineHeight: 1.1 }}>{group.promptText}</span>}
+        </span>))}
       </div><DropTarget large id={group.id} completed={completed[group.id]} wrong={false} correct={correctTarget === group.id} />
     </div>)}
   </div>

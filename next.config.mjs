@@ -11,6 +11,16 @@ const nextConfig = {
         destination: '/demo/aqua/:path*',
         permanent: true,
       },
+      {
+        source: '/game/lop-1/tieng-viet/bai-:week',
+        destination: '/game/lop-1/tieng-viet/tuan-:week',
+        permanent: true,
+      },
+      {
+        source: '/game/lop-1/tieng-viet/bai-:week/:path*',
+        destination: '/game/lop-1/tieng-viet/tuan-:week/:path*',
+        permanent: true,
+      },
     ]
   },
   async headers() {

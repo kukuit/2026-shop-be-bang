@@ -1,0 +1,254 @@
+{
+  "id": "real-object-letter-shapes-24",
+  "image": "/games/lessons/lop-1/tieng-viet/trang-nguyen/images/real-object-letter-shapes.png",
+  "width": 1536,
+  "height": 1024,
+  "grid": {
+    "columns": 6,
+    "rows": 4,
+    "cellWidth": 256,
+    "cellHeight": 256
+  },
+  "items": [
+    {
+      "id": "a",
+      "letter": "a",
+      "row": 0,
+      "col": 0,
+      "x": 0,
+      "y": 0,
+      "width": 256,
+      "height": 256
+    },
+    {
+      "id": "b",
+      "letter": "b",
+      "row": 0,
+      "col": 1,
+      "x": 256,
+      "y": 0,
+      "width": 256,
+      "height": 256
+    },
+    {
+      "id": "c",
+      "letter": "c",
+      "row": 0,
+      "col": 2,
+      "x": 512,
+      "y": 0,
+      "width": 256,
+      "height": 256
+    },
+    {
+      "id": "d",
+      "letter": "d",
+      "row": 0,
+      "col": 3,
+      "x": 768,
+      "y": 0,
+      "width": 256,
+      "height": 256
+    },
+    {
+      "id": "dd",
+      "letter": "đ",
+      "row": 0,
+      "col": 4,
+      "x": 1024,
+      "y": 0,
+      "width": 256,
+      "height": 256
+    },
+    {
+      "id": "e",
+      "letter": "e",
+      "row": 0,
+      "col": 5,
+      "x": 1280,
+      "y": 0,
+      "width": 256,
+      "height": 256
+    },
+    {
+      "id": "ee",
+      "letter": "ê",
+      "row": 1,
+      "col": 0,
+      "x": 0,
+      "y": 256,
+      "width": 256,
+      "height": 256
+    },
+    {
+      "id": "g",
+      "letter": "g",
+      "row": 1,
+      "col": 1,
+      "x": 256,
+      "y": 256,
+      "width": 256,
+      "height": 256
+    },
+    {
+      "id": "h",
+      "letter": "h",
+      "row": 1,
+      "col": 2,
+      "x": 512,
+      "y": 256,
+      "width": 256,
+      "height": 256
+    },
+    {
+      "id": "i",
+      "letter": "i",
+      "row": 1,
+      "col": 3,
+      "x": 768,
+      "y": 256,
+      "width": 256,
+      "height": 256
+    },
+    {
+      "id": "k",
+      "letter": "k",
+      "row": 1,
+      "col": 4,
+      "x": 1024,
+      "y": 256,
+      "width": 256,
+      "height": 256
+    },
+    {
+      "id": "l",
+      "letter": "l",
+      "row": 1,
+      "col": 5,
+      "x": 1280,
+      "y": 256,
+      "width": 256,
+      "height": 256
+    },
+    {
+      "id": "m",
+      "letter": "m",
+      "row": 2,
+      "col": 0,
+      "x": 0,
+      "y": 512,
+      "width": 256,
+      "height": 256
+    },
+    {
+      "id": "n",
+      "letter": "n",
+      "row": 2,
+      "col": 1,
+      "x": 256,
+      "y": 512,
+      "width": 256,
+      "height": 256
+    },
+    {
+      "id": "o",
+      "letter": "o",
+      "row": 2,
+      "col": 2,
+      "x": 512,
+      "y": 512,
+      "width": 256,
+      "height": 256
+    },
+    {
+      "id": "oo",
+      "letter": "ô",
+      "row": 2,
+      "col": 3,
+      "x": 768,
+      "y": 512,
+      "width": 256,
+      "height": 256
+    },
+    {
+      "id": "ow",
+      "letter": "ơ",
+      "row": 2,
+      "col": 4,
+      "x": 1024,
+      "y": 512,
+      "width": 256,
+      "height": 256
+    },
+    {
+      "id": "p",
+      "letter": "p",
+      "row": 2,
+      "col": 5,
+      "x": 1280,
+      "y": 512,
+      "width": 256,
+      "height": 256
+    },
+    {
+      "id": "r",
+      "letter": "r",
+      "row": 3,
+      "col": 0,
+      "x": 0,
+      "y": 768,
+      "width": 256,
+      "height": 256
+    },
+    {
+      "id": "s",
+      "letter": "s",
+      "row": 3,
+      "col": 1,
+      "x": 256,
+      "y": 768,
+      "width": 256,
+      "height": 256
+    },
+    {
+      "id": "t",
+      "letter": "t",
+      "row": 3,
+      "col": 2,
+      "x": 512,
+      "y": 768,
+      "width": 256,
+      "height": 256
+    },
+    {
+      "id": "u",
+      "letter": "u",
+      "row": 3,
+      "col": 3,
+      "x": 768,
+      "y": 768,
+      "width": 256,
+      "height": 256
+    },
+    {
+      "id": "uw",
+      "letter": "ư",
+      "row": 3,
+      "col": 4,
+      "x": 1024,
+      "y": 768,
+      "width": 256,
+      "height": 256
+    },
+    {
+      "id": "x",
+      "letter": "x",
+      "row": 3,
+      "col": 5,
+      "x": 1280,
+      "y": 768,
+      "width": 256,
+      "height": 256
+    }
+  ]
+}

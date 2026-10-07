@@ -14,6 +14,9 @@ const published: Record<string, Pick<ProgressLesson, 'available' | 'games' | 're
   'tieng-anh-1-bai-2': { available: true, games, requiredGames: 4 },
   'tieng-anh-1-bai-1': { available: true, games, requiredGames: 2 },
   'tieng-viet-1-bai-1': { available: true, games: [GAME_IDS.BUBBLE_SHOOTER, GAME_IDS.GOLD_MINING, GAME_IDS.RACING, GAME_IDS.DRAG_DROP], requiredGames: 4 },
+  'tieng-viet-1-bai-2': { available: true, games: [GAME_IDS.BUBBLE_SHOOTER, GAME_IDS.GOLD_MINING, GAME_IDS.RACING, GAME_IDS.DRAG_DROP], requiredGames: 4 },
+  'tieng-viet-1-tuan-3': { available: true, games: [GAME_IDS.BUBBLE_SHOOTER, GAME_IDS.GOLD_MINING, GAME_IDS.RACING, GAME_IDS.DRAG_DROP], requiredGames: 4 },
+  'tieng-viet-1-tuan-4': { available: true, games: [GAME_IDS.BUBBLE_SHOOTER, GAME_IDS.GOLD_MINING, GAME_IDS.RACING, GAME_IDS.DRAG_DROP], requiredGames: 4 },
 }
 const maps = { toan: lessonDefinitions, 'tieng-anh': englishUnitDefinitions, 'tieng-viet': vietnameseLessonDefinitions }
 export type MapSubject = keyof typeof maps

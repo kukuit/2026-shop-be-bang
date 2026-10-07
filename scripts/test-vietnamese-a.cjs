@@ -10,15 +10,15 @@ Module._resolveFilename = function (id, ...args) { return resolve.call(this, id.
 require.extensions['.ts'] = (module, filename) => module._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), {
   compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020, esModuleInterop: true },
 }).outputText, filename)
-const lessonPath = '../src/app/game/lop-1/tieng-viet/bai-1'
+const lessonPath = '../src/app/game/lop-1/tieng-viet/tuan-1'
 const { DEFAULT_GOAL_COUNTS, generateQuestionSet, createQuestionPool } = require(`${lessonPath}/content.ts`)
-const { TIENG_VIET_1_BAI_1 } = require(`${lessonPath}/lesson.ts`)
+const { TIENG_VIET_1_WEEK_1 } = require(`${lessonPath}/lesson.ts`)
 const { GameTracker } = require('../src/components/games/general/tracking/game-session.ts')
 const { isLearningKeyForLesson } = require('../src/components/games/general/tracking/lesson-catalog.ts')
 const { ScoreSystem } = require('../src/components/games/bubble-shooter/systems/ScoreSystem.ts')
 const tracking = require('../src/components/games/general/tracking/index.ts')
 const adaptive = require('../src/components/games/general/adaptive.ts')
-const configs = require('../src/components/games/vietnamese/tieng-viet-1-bai-1.ts')
+const configs = require('../src/components/games/vietnamese/tieng-viet-1-tuan-1.ts')
 const seeded = seed => () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t ^= t + Math.imul(t ^ t >>> 7, 61 | t); return ((t ^ t >>> 14) >>> 0) / 4294967296 }
 const countsOf = questions => questions.reduce((counts, q) => ({ ...counts, [q.goalKey]: (counts[q.goalKey] || 0) + 1 }), {})
 
@@ -27,10 +27,10 @@ async function main() {
     const pool = createQuestionPool(game)
     assert.ok(pool.length > 10)
     assert.equal(new Set(pool.map(q => q.id)).size, pool.length)
-    assert.ok(pool.every(q => q.voice), 'Every selected content target should use a recorded voice')
+    assert.ok(pool.every(q => q.voice || q.instructionVoice || q.voiceSequence?.length), 'Every selected content target should use a recorded voice or a composed recorded sequence')
     if (game === 'bubble-shooter') assert.ok(!pool.some(q => q.goalKey === 'REVIEW_SENTENCE_WEEK_1'), 'Bubble shooter should omit the hard-to-read sentence')
     else assert.ok(pool.some(q => q.goalKey === 'REVIEW_SENTENCE_WEEK_1'), 'Other games retain sentence review')
-    const correctPositions = new Set(), schedules = new Set(), variants = new Set()
+    const correctPositions = new Set(), schedules = new Set(), variants = new Set(), imageIds = new Set()
     let previous = []
     for (let seed = 1; seed <= 200; seed++) {
       const questions = generateQuestionSet(game, { random: seeded(seed), previousIds: previous.map(q => q.id) })
@@ -41,17 +41,18 @@ async function main() {
       for (const q of questions) {
         assert.equal(q.options.filter(value => value === q.answer).length, 1)
         assert.equal(new Set(q.options).size, q.options.length)
-        assert.ok(isLearningKeyForLesson(TIENG_VIET_1_BAI_1.lessonId, q.goalKey))
+        assert.ok(isLearningKeyForLesson(TIENG_VIET_1_WEEK_1.lessonId, q.goalKey))
         assert.ok(!isLearningKeyForLesson('toan-1-bai-1', q.goalKey))
         if (game === 'racing') assert.equal(q.options.length, 3)
         assert.ok([1, 2, 3, 4, 5].includes(q.sourceLesson))
         if (q.inputMode === 'audio') { assert.ok(q.voice); assert.equal(q.displayText, '🔊') }
         assert.ok(q.options.length >= 3)
         if (game === 'drag-drop') assert.equal(q.options.length, 6, 'Drag-drop should show one correct answer plus five distractors')
-        for (const pathName of [q.voice, q.instructionVoice].filter(Boolean)) {
+        for (const pathName of [q.voice, q.instructionVoice, ...(q.voiceSequence || []).map(segment => segment.src)].filter(Boolean)) {
           assert.ok(fs.existsSync(path.join(root, 'public', pathName.replace(/^\//, ''))), `Missing voice ${pathName}`)
         }
         if (!q.voice) assert.equal(q.voiceFallback?.target, undefined, 'Do not synthesize an unrecorded Vietnamese target with a system voice')
+        if (q.imageId) imageIds.add(q.imageId)
         correctPositions.add(q.options.indexOf(q.answer)); variants.add(q.id)
       }
       schedules.add(questions.map(q => q.goalKey).join(','))
@@ -60,6 +61,7 @@ async function main() {
     assert.ok(correctPositions.size >= 3)
     assert.ok(schedules.size > 20)
     assert.ok(variants.size > 20)
+    assert.deepEqual([...imageIds].sort(), ['ba', 'bo', 'ca', 'ca_tim', 'co', 'ghe', 'khe', 'me'], '200 rounds should rotate through all Week 1 image targets')
     for (const weak of Object.keys(DEFAULT_GOAL_COUNTS[game])) {
       const adapted = countsOf(generateQuestionSet(game, { random: seeded(42), weakTargets: [weak, 'recognize-number-0'], adaptiveCount: 4 }))
       assert.equal(Object.values(adapted).reduce((a, b) => a + b, 0), 25)
@@ -70,7 +72,7 @@ async function main() {
     assert.deepEqual(countsOf(unrelated), DEFAULT_GOAL_COUNTS[game])
     console.log(`PASS ${game}: pool=${pool.length}, 200 sessions, unique variants/options, structured/adaptive coverage`)
   }
-  const gameConfigs = [configs.TIENG_VIET_1_BAI_1_BUBBLE_CONFIG, configs.TIENG_VIET_1_BAI_1_GOLD_CONFIG, configs.TIENG_VIET_1_BAI_1_RACING_CONFIG, configs.TIENG_VIET_1_BAI_1_DRAG_CONFIG]
+  const gameConfigs = [configs.TIENG_VIET_1_WEEK_1_BUBBLE_CONFIG, configs.TIENG_VIET_1_WEEK_1_GOLD_CONFIG, configs.TIENG_VIET_1_WEEK_1_RACING_CONFIG, configs.TIENG_VIET_1_WEEK_1_DRAG_CONFIG]
   for (const config of gameConfigs) {
     const load = config.loadQuestions || config.loadLevels
     const first = await load(), second = await load(first)
@@ -97,7 +99,7 @@ async function main() {
     assert.equal(saved.correctCount, 25); assert.equal(saved.wrongCount, 25)
     assert.ok(saved.results.every(result => isLearningKeyForLesson(saved.lessonId, result.learningKey) && result.week === 1 && [1,2,3,4,5].includes(result.sourceLesson)))
   }
-  assert.equal(configs.TIENG_VIET_1_BAI_1_RACING_CONFIG.wolfEnabled, false)
+  assert.equal(configs.TIENG_VIET_1_WEEK_1_RACING_CONFIG.wolfEnabled, false)
   console.log('PASS all four adapters: fresh 25 rounds on replay, scoped learning-key tracking')
 
   const originalGet = tracking.getLearningProgress

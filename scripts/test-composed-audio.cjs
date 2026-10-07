@@ -73,6 +73,14 @@ async function main() {
   assert.ok(Math.abs(number.args[0] - intro.args[0] - intro.args[2]) < .00001, 'no added gap after số')
   assert.ok(Math.abs(next.args[0] - number.args[0] - number.args[2] - .05) < .00001, 'other boundaries retain selected gap')
   assert.equal(joined.at(-1).trimmedEndMs, 0)
+  const pauseOffset = sources.length
+  await player.play([
+    { src: 'instruction.mp3', text: 'Bé hãy nghe và chọn', pauseAfterMs: 240 },
+    { src: 'target.mp3', text: 'g' },
+  ])
+  const [instruction, target] = sources.slice(pauseOffset)
+  assert.ok(Math.abs(target.args[0] - instruction.args[0] - instruction.args[2] - .24) < .00001,
+    'a requested natural pause separates the instruction from the letter')
   player.setBlocked(true)
   assert.equal(contexts.at(-1).state, 'suspended')
   player.setBlocked(false)
@@ -83,7 +91,7 @@ async function main() {
   const gamePlayer = new QuestionVoicePlayer()
   const recordings = []
   global.Audio = class {
-    constructor(src) { recordings.push(src) }
+    constructor(src) { this.src = src; recordings.push(this) }
     play() { return Promise.resolve() }
     pause() {} removeAttribute() {} load() {}
   }
@@ -100,15 +108,30 @@ async function main() {
   await flush()
   assert.equal(sources.length, beforeStop, 'changing questions cancels pending composed audio')
   gamePlayer.play(['single.mp3'])
-  assert.deepEqual(recordings, ['single.mp3'], 'single recording keeps original player')
+  assert.deepEqual(recordings.map(recording => recording.src), ['single.mp3'], 'single recording keeps original player')
   gamePlayer.dispose()
   assert.equal(contexts.at(-1).state, 'closed')
   const failing = new QuestionVoicePlayer()
   global.fetch = async () => { throw new Error('offline') }
   failing.playComposedSequence(sequence)
   await flush()
-  assert.equal(recordings.at(-1), 'ba.mp3', 'failed Web Audio load falls back to the existing player')
+  assert.equal(recordings.at(-1).src, 'ba.mp3', 'failed Web Audio load falls back to the existing player')
   failing.dispose()
+  const originalAudioContext = global.AudioContext
+  global.AudioContext = undefined
+  const fallbackPause = new QuestionVoicePlayer()
+  const fallbackOffset = recordings.length
+  fallbackPause.playComposedSequence([
+    { src: 'instruction.mp3', text: 'Bé hãy nghe và chọn', pauseAfterMs: 240 },
+    { src: 'target.mp3', text: 'g' },
+  ])
+  assert.equal(recordings[fallbackOffset].src, 'instruction.mp3')
+  recordings[fallbackOffset].onended()
+  assert.equal(recordings.length, fallbackOffset + 1, 'fallback playback keeps the instruction pause')
+  await new Promise(resolve => setTimeout(resolve, 300))
+  assert.equal(recordings[fallbackOffset + 1].src, 'target.mp3', 'fallback resumes with the target after the pause')
+  fallbackPause.dispose()
+  global.AudioContext = originalAudioContext
   console.log('PASS silence bounds, stereo, internal pauses, padding, scheduling, cache reuse and cancellation')
 }
 main().catch(error => { console.error(error); process.exitCode = 1 })

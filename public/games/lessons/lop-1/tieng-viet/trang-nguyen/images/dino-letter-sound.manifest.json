@@ -1,0 +1,279 @@
+{
+  "id": "trang-nguyen-dino-letter-sound",
+  "image": "/games/lessons/lop-1/tieng-viet/trang-nguyen/images/dino-letter-sound.png",
+  "width": 1536,
+  "height": 1024,
+  "cropMode": "grid-cell",
+  "grid": {
+    "columns": 6,
+    "rows": 4,
+    "cellWidth": 256,
+    "cellHeight": 256
+  },
+  "items": [
+    {
+      "id": "a",
+      "letter": "a",
+      "audioId": "a",
+      "row": 0,
+      "col": 0,
+      "x": 0,
+      "y": 0,
+      "width": 256,
+      "height": 256
+    },
+    {
+      "id": "b",
+      "letter": "b",
+      "audioId": "b",
+      "row": 0,
+      "col": 1,
+      "x": 256,
+      "y": 0,
+      "width": 256,
+      "height": 256
+    },
+    {
+      "id": "c",
+      "letter": "c",
+      "audioId": "c",
+      "row": 0,
+      "col": 2,
+      "x": 512,
+      "y": 0,
+      "width": 256,
+      "height": 256
+    },
+    {
+      "id": "d",
+      "letter": "d",
+      "audioId": "d",
+      "row": 0,
+      "col": 3,
+      "x": 768,
+      "y": 0,
+      "width": 256,
+      "height": 256
+    },
+    {
+      "id": "dd",
+      "letter": "đ",
+      "audioId": "dd",
+      "row": 0,
+      "col": 4,
+      "x": 1024,
+      "y": 0,
+      "width": 256,
+      "height": 256
+    },
+    {
+      "id": "e",
+      "letter": "e",
+      "audioId": "e",
+      "row": 0,
+      "col": 5,
+      "x": 1280,
+      "y": 0,
+      "width": 256,
+      "height": 256
+    },
+    {
+      "id": "ee",
+      "letter": "ê",
+      "audioId": "ee",
+      "row": 1,
+      "col": 0,
+      "x": 0,
+      "y": 256,
+      "width": 256,
+      "height": 256
+    },
+    {
+      "id": "g",
+      "letter": "g",
+      "audioId": "g",
+      "row": 1,
+      "col": 1,
+      "x": 256,
+      "y": 256,
+      "width": 256,
+      "height": 256
+    },
+    {
+      "id": "h",
+      "letter": "h",
+      "audioId": "h",
+      "row": 1,
+      "col": 2,
+      "x": 512,
+      "y": 256,
+      "width": 256,
+      "height": 256
+    },
+    {
+      "id": "i",
+      "letter": "i",
+      "audioId": "i",
+      "row": 1,
+      "col": 3,
+      "x": 768,
+      "y": 256,
+      "width": 256,
+      "height": 256
+    },
+    {
+      "id": "k",
+      "letter": "k",
+      "audioId": "k",
+      "row": 1,
+      "col": 4,
+      "x": 1024,
+      "y": 256,
+      "width": 256,
+      "height": 256
+    },
+    {
+      "id": "l",
+      "letter": "l",
+      "audioId": "l",
+      "row": 1,
+      "col": 5,
+      "x": 1280,
+      "y": 256,
+      "width": 256,
+      "height": 256
+    },
+    {
+      "id": "m",
+      "letter": "m",
+      "audioId": "m",
+      "row": 2,
+      "col": 0,
+      "x": 0,
+      "y": 512,
+      "width": 256,
+      "height": 256
+    },
+    {
+      "id": "n",
+      "letter": "n",
+      "audioId": "n",
+      "row": 2,
+      "col": 1,
+      "x": 256,
+      "y": 512,
+      "width": 256,
+      "height": 256
+    },
+    {
+      "id": "o",
+      "letter": "o",
+      "audioId": "o",
+      "row": 2,
+      "col": 2,
+      "x": 512,
+      "y": 512,
+      "width": 256,
+      "height": 256
+    },
+    {
+      "id": "oo",
+      "letter": "ô",
+      "audioId": "oo",
+      "row": 2,
+      "col": 3,
+      "x": 768,
+      "y": 512,
+      "width": 256,
+      "height": 256
+    },
+    {
+      "id": "ow",
+      "letter": "ơ",
+      "audioId": "ow",
+      "row": 2,
+      "col": 4,
+      "x": 1024,
+      "y": 512,
+      "width": 256,
+      "height": 256
+    },
+    {
+      "id": "p",
+      "letter": "p",
+      "audioId": "p",
+      "row": 2,
+      "col": 5,
+      "x": 1280,
+      "y": 512,
+      "width": 256,
+      "height": 256
+    },
+    {
+      "id": "r",
+      "letter": "r",
+      "audioId": "r",
+      "row": 3,
+      "col": 0,
+      "x": 0,
+      "y": 768,
+      "width": 256,
+      "height": 256
+    },
+    {
+      "id": "s",
+      "letter": "s",
+      "audioId": "s",
+      "row": 3,
+      "col": 1,
+      "x": 256,
+      "y": 768,
+      "width": 256,
+      "height": 256
+    },
+    {
+      "id": "t",
+      "letter": "t",
+      "audioId": "t",
+      "row": 3,
+      "col": 2,
+      "x": 512,
+      "y": 768,
+      "width": 256,
+      "height": 256
+    },
+    {
+      "id": "u",
+      "letter": "u",
+      "audioId": "u",
+      "row": 3,
+      "col": 3,
+      "x": 768,
+      "y": 768,
+      "width": 256,
+      "height": 256
+    },
+    {
+      "id": "uw",
+      "letter": "ư",
+      "audioId": "uw",
+      "row": 3,
+      "col": 4,
+      "x": 1024,
+      "y": 768,
+      "width": 256,
+      "height": 256
+    },
+    {
+      "id": "v",
+      "letter": "v",
+      "audioId": "v",
+      "row": 3,
+      "col": 5,
+      "x": 1280,
+      "y": 768,
+      "width": 256,
+      "height": 256
+    }
+  ]
+}

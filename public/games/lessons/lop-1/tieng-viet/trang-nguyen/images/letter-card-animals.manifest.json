@@ -1,0 +1,80 @@
+{
+  "id": "trang-nguyen-letter-card-animals",
+  "image": "/games/lessons/lop-1/tieng-viet/trang-nguyen/images/letter-card-animals.png",
+  "width": 1536,
+  "height": 1024,
+  "cropMode": "tight-bounds",
+  "padding": 4,
+  "grid": {
+    "columns": 2,
+    "rows": 2,
+    "cellWidth": 768,
+    "cellHeight": 512
+  },
+  "items": [
+    {
+      "id": "pig-orange",
+      "label": "heo cam",
+      "row": 0,
+      "col": 0,
+      "x": 145,
+      "y": 23,
+      "width": 479,
+      "height": 471,
+      "cell": {
+        "x": 0,
+        "y": 0,
+        "width": 768,
+        "height": 512
+      }
+    },
+    {
+      "id": "rabbit-pink",
+      "label": "thỏ hồng",
+      "row": 0,
+      "col": 1,
+      "x": 912,
+      "y": 4,
+      "width": 479,
+      "height": 491,
+      "cell": {
+        "x": 768,
+        "y": 0,
+        "width": 768,
+        "height": 512
+      }
+    },
+    {
+      "id": "bear-brown",
+      "label": "gấu nâu",
+      "row": 1,
+      "col": 0,
+      "x": 146,
+      "y": 523,
+      "width": 480,
+      "height": 481,
+      "cell": {
+        "x": 0,
+        "y": 512,
+        "width": 768,
+        "height": 512
+      }
+    },
+    {
+      "id": "chick-yellow",
+      "label": "gà con vàng",
+      "row": 1,
+      "col": 1,
+      "x": 912,
+      "y": 514,
+      "width": 480,
+      "height": 490,
+      "cell": {
+        "x": 768,
+        "y": 512,
+        "width": 768,
+        "height": 512
+      }
+    }
+  ]
+}
