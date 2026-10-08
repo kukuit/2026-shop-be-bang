@@ -11,13 +11,13 @@ Ví dụ: “Hãy chọn số tám mươi chín” → `hay-chon-so.mp3` → `ta
 
 Các game Toán lớp 2 bài 1 dùng `createMathQuestionVoice(text)` trong `math-voice.ts`: câu nhiều đoạn đi qua module ghép và trả về `voiceSequence`; một bản thu trả về `instructionVoice` theo luồng voice đơn; chưa có bản thu thì dùng `voiceFallback`. `createMathVoiceSequence` vẫn giữ API cũ cho nơi cần mảng bản thu, kể cả một đoạn.
 
-Phát `voiceSequence` bằng `QuestionVoicePlayer.playComposedSequence()`; game Phaser dùng `playQuestionVoice()`, game kéo thả gọi cùng bộ phát. Cả 4 game Toán lớp 2 bài 1 dùng `ComposedAudioPlayer` trong `composed-audio.ts`.
+Phát `voiceSequence` bằng `QuestionVoicePlayer.playComposedSequence()`; game Phaser dùng `playQuestionVoice()`, game kéo thả gọi cùng bộ phát. Chuỗi `instructionVoice` + `voice` cũng ghép qua Web Audio khi cả hai bản thu tồn tại. Cả bốn engine game dùng chung `ComposedAudioPlayer` và preset `NATURAL_COMPOSED_AUDIO_OPTIONS` trong `composed-audio.ts`.
 
-Bộ phát giải mã và cache từng file trong phiên chơi, đo RMS theo cửa sổ 5 ms để bỏ khoảng lặng đầu/cuối, giữ đệm 15 ms, không thêm khoảng nghỉ. Điểm nối “số” + tiếng số giữ tối đa 3 ms mỗi bên. Đoạn cuối câu giữ nguyên đuôi file. Tất cả đoạn được chuẩn bị trước rồi lên lịch bằng đồng hồ Web Audio ở tốc độ bản thu, không đợi mạng giữa câu. File MP3 gốc không thay đổi.
+Bộ phát giải mã và cache từng file trong phiên chơi, đo RMS theo cửa sổ 5 ms để bỏ khoảng lặng đầu/cuối, giữ tối đa 45 ms đệm ở mỗi bên, không thêm khoảng nghỉ nhân tạo và cắt lặng dư cuối câu. Điểm nối “số” + tiếng số giữ tối đa 3 ms mỗi bên. `pauseAfterMs` khai báo rõ trong dữ liệu vẫn được giữ. Tất cả đoạn được chuẩn bị trước rồi lên lịch bằng đồng hồ Web Audio ở tốc độ bản thu, không đợi mạng giữa câu. File MP3 gốc không thay đổi.
 
 Tạm dừng/tắt tiếng/voice phản hồi tạm khóa AudioContext riêng bằng `setBlocked`; tiếp tục từ vị trí đã dừng. Chuyển câu và chơi lại gọi `stop`; thoát scene/component gọi `dispose` để đóng context và giải phóng cache. Nếu Web Audio không khả dụng hoặc tải/giải mã lỗi, bộ phát quay về luồng audio/TTS cũ. Voice đơn và voice hiệu ứng/đúng/sai giữ cơ chế phát riêng hiện có.
 
-Trang `/game/test/composed-voice/` dùng cùng module và thông số mặc định; có thể điều chỉnh đệm, khoảng nghỉ và so sánh với bản gốc. `playSequence()` giữ cách phát cũ phục vụ đối chiếu.
+Trang `/game/test/composed-voice/` dùng cùng module và preset mặc định; có thể điều chỉnh đệm, khoảng nghỉ và so sánh với bản gốc. `playSequence()` giữ cách phát cũ phục vụ đối chiếu.
 
 ## Đọc số
 

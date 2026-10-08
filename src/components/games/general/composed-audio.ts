@@ -38,7 +38,13 @@ export function detectSpeechBounds(buffer: PCM): SpeechBounds {
 }
 
 type CachedAudio = { buffer: AudioBuffer; bounds: SpeechBounds }
-export type ComposedAudioOptions = { paddingMs?: number; gapMs?: number }
+export type ComposedAudioOptions = { paddingMs?: number; gapMs?: number; trimFinalSilence?: boolean }
+/** Shared timing used when joining recorded question voices in games and exam previews. */
+export const NATURAL_COMPOSED_AUDIO_OPTIONS: ComposedAudioOptions = Object.freeze({
+  paddingMs: 45,
+  gapMs: 0,
+  trimFinalSilence: true,
+})
 export type SegmentMeasurement = { text: string; durationMs: number; trimmedStartMs: number; trimmedEndMs: number }
 
 /** Shared composed playback with per-recording cache and silence-aware joins. */
@@ -50,6 +56,16 @@ export class ComposedAudioPlayer {
   private generation = 0
   private disposed = false
   private blocked = false
+  private volume = .8
+
+  setVolume(volume: number) {
+    this.volume = Math.max(0, Math.min(1, Number.isFinite(volume) ? volume : .8))
+    const now = this.context?.currentTime ?? 0
+    for (const gain of this.gains) {
+      gain.gain.cancelScheduledValues(now)
+      gain.gain.setValueAtTime(this.volume, now)
+    }
+  }
 
   setBlocked(blocked: boolean) {
     this.blocked = blocked
@@ -87,6 +103,7 @@ export class ComposedAudioPlayer {
     if (generation !== this.generation) return []
     const padding = Math.max(0, Math.min(100, options.paddingMs ?? 15)) / 1000
     const gap = Math.max(0, Math.min(200, options.gapMs ?? 0)) / 1000
+    const trimFinalSilence = options.trimFinalSilence ?? false
     let when = context.currentTime + .03
     const measurements: SegmentMeasurement[] = []
     try {
@@ -95,9 +112,8 @@ export class ComposedAudioPlayer {
         const tightAfter = isNumberIntroduction(sequence[index], sequence[index + 1])
         // Keep 3 ms protection on each side, without the normal inter-segment pause.
         const start = Math.max(0, bounds.start - (tightBefore ? Math.min(padding, .003) : padding))
-        // The last word has no following clip to join: preserve its complete release
-        // and natural trailing silence instead of ending the sentence at the gate.
-        const end = index === clips.length - 1 ? buffer.duration
+        // Preserve the final tail by default; short prompt sequences may opt into trimming it too.
+        const end = index === clips.length - 1 && !trimFinalSilence ? buffer.duration
           : Math.min(buffer.duration, bounds.end + (tightAfter ? Math.min(padding, .003) : padding))
         const rate = sequence[index].playbackRate ?? 1
         if (!Number.isFinite(rate) || rate <= 0) throw new Error('Tốc độ đọc không hợp lệ.')
@@ -110,8 +126,8 @@ export class ComposedAudioPlayer {
         source.connect(gain)
         gain.connect(context.destination)
         gain.gain.setValueAtTime(0, when)
-        gain.gain.linearRampToValueAtTime(.8, when + fade)
-        gain.gain.setValueAtTime(.8, when + duration - fade)
+        gain.gain.linearRampToValueAtTime(this.volume, when + fade)
+        gain.gain.setValueAtTime(this.volume, when + duration - fade)
         gain.gain.linearRampToValueAtTime(0, when + duration)
         this.sources.push(source)
         this.gains.push(gain)
