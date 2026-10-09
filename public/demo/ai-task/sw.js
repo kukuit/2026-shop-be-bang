@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'ai-task-local-shell-'
-const CACHE_NAME = `${CACHE_PREFIX}v1`
+const CACHE_NAME = `${CACHE_PREFIX}v2`
 const OFFLINE_URL = '/demo/ai-task/offline.html'
 const LOCAL_MODE_KEY = new URL('/__ai_task_local_mode__', self.location.origin).href
 let localModeEnabled = false

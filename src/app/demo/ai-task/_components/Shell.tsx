@@ -61,8 +61,8 @@ function ShellContent({ children }: { children: React.ReactNode }) {
     const reloadForFirstControl = () => {
       if (!enabled) return
       try {
-        if (window.sessionStorage.getItem('ai-task.sw-shell-version') === 'v1') return
-        window.sessionStorage.setItem('ai-task.sw-shell-version', 'v1')
+        if (window.sessionStorage.getItem('ai-task.sw-shell-version') === 'v2') return
+        window.sessionStorage.setItem('ai-task.sw-shell-version', 'v2')
         window.location.reload()
       } catch { /* IndexedDB remains usable when session storage is restricted. */ }
     }
