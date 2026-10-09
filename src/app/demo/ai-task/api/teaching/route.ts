@@ -115,9 +115,7 @@ export async function GET(req: NextRequest) {
         return json(await teachingMonthOverview(auth.user.id, year, month - 1))
       }
       case 'overviewPageData': {
-        const year = z.coerce.number().int().min(2000).max(9999).parse(params.get('year'))
-        const month = z.coerce.number().int().min(1).max(12).parse(params.get('month'))
-        return json(await teachingOverviewPageData(auth.user.id, year, month - 1))
+        return json(await teachingOverviewPageData(auth.user.id))
       }
       default: return json({ error: 'Không tìm thấy tài nguyên.' }, 404)
     }

@@ -957,20 +957,18 @@ function monthOverviewFrom(students: Student[], sessions: TeachingSession[], yea
   }
 }
 
-export async function teachingOverviewPageData(userId: string, year: number, monthIndex: number, now = new Date()) {
+export async function teachingOverviewPageData(userId: string, now = new Date()) {
   const today = vietnamTodayKey(now)
   const todayStart = vietnamDateTime(today, '00:00')
   const todayEnd = vietnamDateTime(shiftVietnamDate(today, 1), '00:00')
   const nowIso = now.toISOString()
   const reviewWindowStart = new Date(now.getTime() - 24 * 60 * 60_000).toISOString()
   const prepared = await materializeRecurringSessions(userId, todayStart, todayEnd)
-  const monthRange = vietnamMonthRange(year, monthIndex)
   const materializedSessions = { items: prepared.sessions, from: prepared.sessionsFrom, to: prepared.sessionsTo }
-  const monthSessions = await readSessionWindow(userId, monthRange.from, monthRange.to, undefined, materializedSessions)
-  const monthCoversReviewWindow = Date.parse(monthRange.from) <= Date.parse(reviewWindowStart) && Date.parse(monthRange.to) >= now.getTime()
-  const recentScheduled = monthCoversReviewWindow
-    ? monthSessions.filter(session => session.status === 'SCHEDULED' && Date.parse(session.startAt) >= Date.parse(reviewWindowStart) && Date.parse(session.startAt) < now.getTime())
-    : await readSessionWindow(userId, reviewWindowStart, nowIso, 'SCHEDULED', materializedSessions)
+  const [recentScheduled, billing] = await Promise.all([
+    readSessionWindow(userId, reviewWindowStart, nowIso, 'SCHEDULED', materializedSessions),
+    teachingStudentBillingSummary(userId, now),
+  ])
   const students = prepared.students
   const studentById = new Map(students.map(student => [student.id, student]))
   const todaySessions = prepared.sessions.filter(session => {
@@ -978,8 +976,35 @@ export async function teachingOverviewPageData(userId: string, year: number, mon
     return start >= Date.parse(todayStart) && start < Date.parse(todayEnd) && session.lifecycleStatus !== 'SUPERSEDED'
   })
   const overdue = recentScheduled.filter(session => session.lifecycleStatus !== 'SUPERSEDED' && Date.parse(session.startAt) + session.scheduledDurationMinutes * 60_000 < now.getTime()).sort((a, b) => Date.parse(a.startAt) - Date.parse(b.startAt))
+  const periodRows = billing.rows.map(row => {
+    const student = studentById.get(row.studentId)
+    if (!student) return null
+    return {
+      studentId: row.studentId,
+      studentName: student.name,
+      studentStatus: student.status,
+      actualDurationMinutes: row.actualDurationMinutes,
+      completedSessions: row.completedSessions,
+      feeAmount: row.feeAmount,
+      openingBalanceAmount: row.openingBalanceAmount,
+      paidAmount: row.paidAmount,
+      amountDue: row.amountDue,
+      remainingAmount: Math.max(0, row.remainingAmount),
+    }
+  }).filter((row): row is NonNullable<typeof row> => row !== null).sort((a, b) => a.studentName.localeCompare(b.studentName, 'vi'))
+  const period = {
+    period: billing.period,
+    rows: periodRows,
+    totalActualDurationMinutes: periodRows.reduce((sum, row) => sum + row.actualDurationMinutes, 0),
+    totalCompletedSessions: periodRows.reduce((sum, row) => sum + row.completedSessions, 0),
+    totalFeeAmount: periodRows.reduce((sum, row) => sum + row.feeAmount, 0),
+    totalOpeningBalanceAmount: periodRows.reduce((sum, row) => sum + row.openingBalanceAmount, 0),
+    totalPaidAmount: periodRows.reduce((sum, row) => sum + row.paidAmount, 0),
+    totalAmountDue: periodRows.reduce((sum, row) => sum + row.amountDue, 0),
+    totalRemainingAmount: periodRows.reduce((sum, row) => sum + row.remainingAmount, 0),
+  }
   return {
-    month: monthOverviewFrom(students, monthSessions, year, monthIndex, monthRange.from, monthRange.to),
+    period,
     dashboard: {
       today, todaySessions: await toTeachingSessionViews(userId, todaySessions, studentById),
       reviewCount: overdue.length, overdueSessions: await toTeachingSessionViews(userId, overdue.slice(0, 5), studentById),
