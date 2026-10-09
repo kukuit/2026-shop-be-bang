@@ -73,9 +73,7 @@ export async function localTeachingGet<T>(params: Record<string, string>): Promi
       return await localMonthOverview(workspaceId, year, month - 1) as T
     }
     case 'overviewPageData': {
-      const year = z.coerce.number().int().min(2000).max(9999).parse(params.year)
-      const month = z.coerce.number().int().min(1).max(12).parse(params.month)
-      return await localOverviewPageData(workspaceId, year, month - 1) as T
+      return await localOverviewPageData(workspaceId) as T
     }
     default: throw new Error('Không tìm thấy tài nguyên.')
   }

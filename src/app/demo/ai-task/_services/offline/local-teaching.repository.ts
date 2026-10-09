@@ -613,24 +613,29 @@ export async function localMonthOverview(workspaceId: string, year: number, mont
   return { year, month: monthIndex + 1, rows, totalActualDurationMinutes: rows.reduce((sum, row) => sum + row.actualDurationMinutes, 0), totalFeeAmount: rows.reduce((sum, row) => sum + row.feeAmount, 0) }
 }
 
-export async function localOverviewPageData(workspaceId: string, year: number, monthIndex: number, now = new Date()) {
+export async function localOverviewPageData(workspaceId: string, now = new Date()) {
   const today = vietnamTodayKey(now), tomorrow = shiftVietnamDate(today, 1)
   const todayStart = vietnamDateTime(today, '00:00'), todayEnd = vietnamDateTime(tomorrow, '00:00')
   const prepared = await localMaterializeRecurringSessions(workspaceId, todayStart, todayEnd)
   const [lessons] = await transaction(['lessons'], 'readonly', async tx => Promise.all([byWorkspace<StoredLesson>(tx.objectStore('lessons'), workspaceId)]))
-  const { from, to } = vietnamMonthRange(year, monthIndex)
-  const totals = new Map(prepared.students.map(student => [student.id, { studentId: student.id, studentName: student.name, studentStatus: student.status, actualDurationMinutes: 0, feeAmount: 0, completedSessions: 0 }]))
-  for (const session of lessons) {
-    if (session.status !== 'COMPLETED' || session.lifecycleStatus === 'SUPERSEDED' || session.startAt < from || session.startAt >= to) continue
-    const total = totals.get(session.studentId)
-    if (!total) continue
-    total.actualDurationMinutes += session.actualDurationMinutes || 0
-    total.feeAmount += session.feeAmount || 0
-    total.completedSessions++
-  }
-  const rows = Array.from(totals.values()).sort((a, b) => a.studentName.localeCompare(b.studentName, 'vi'))
-  const month = { year, month: monthIndex + 1, rows, totalActualDurationMinutes: rows.reduce((sum, row) => sum + row.actualDurationMinutes, 0), totalFeeAmount: rows.reduce((sum, row) => sum + row.feeAmount, 0) }
+  const billing = await localStudentBillingSummary(workspaceId, now)
   const studentById = new Map(prepared.students.map(student => [student.id, student]))
+  const rows = billing.rows.map(row => {
+    const student = studentById.get(row.studentId)
+    if (!student) return null
+    return { studentId: row.studentId, studentName: student.name, studentStatus: student.status, actualDurationMinutes: row.actualDurationMinutes, completedSessions: row.completedSessions, feeAmount: row.feeAmount, openingBalanceAmount: row.openingBalanceAmount, paidAmount: row.paidAmount, amountDue: row.amountDue, remainingAmount: Math.max(0, row.remainingAmount) }
+  }).filter((row): row is NonNullable<typeof row> => row !== null).sort((a, b) => a.studentName.localeCompare(b.studentName, 'vi'))
+  const period = {
+    period: billing.period,
+    rows,
+    totalActualDurationMinutes: rows.reduce((sum, row) => sum + row.actualDurationMinutes, 0),
+    totalCompletedSessions: rows.reduce((sum, row) => sum + row.completedSessions, 0),
+    totalFeeAmount: rows.reduce((sum, row) => sum + row.feeAmount, 0),
+    totalOpeningBalanceAmount: rows.reduce((sum, row) => sum + row.openingBalanceAmount, 0),
+    totalPaidAmount: rows.reduce((sum, row) => sum + row.paidAmount, 0),
+    totalAmountDue: rows.reduce((sum, row) => sum + row.amountDue, 0),
+    totalRemainingAmount: rows.reduce((sum, row) => sum + row.remainingAmount, 0),
+  }
   const todaySessions = prepared.sessions.filter(session => {
     const start = Date.parse(session.startAt)
     return start >= Date.parse(todayStart) && start < Date.parse(todayEnd) && session.lifecycleStatus !== 'SUPERSEDED'
@@ -638,7 +643,7 @@ export async function localOverviewPageData(workspaceId: string, year: number, m
   const reviewFrom = now.getTime() - 24 * 60 * 60_000
   const overdue = lessons.filter(session => session.status === 'SCHEDULED' && session.lifecycleStatus !== 'SUPERSEDED' && Date.parse(session.startAt) >= reviewFrom && Date.parse(session.startAt) < now.getTime() && Date.parse(session.startAt) + session.scheduledDurationMinutes * 60_000 < now.getTime()).sort((a, b) => Date.parse(a.startAt) - Date.parse(b.startAt))
   const dashboard = { today, todaySessions: todaySessions.map(session => viewOf(session, studentById.get(session.studentId), true)), reviewCount: overdue.length, overdueSessions: overdue.slice(0, 5).map(session => viewOf(session, studentById.get(session.studentId), true)) }
-  return { month, dashboard }
+  return { period, dashboard }
 }
 
 export async function localDashboard(workspaceId: string, now = new Date()) {

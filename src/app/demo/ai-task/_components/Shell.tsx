@@ -13,12 +13,12 @@ import WorkspaceSwitcher from './WorkspaceSwitcher'
 
 const nav = [
   ['/demo/ai-task', 'Tổng quan', LayoutDashboard, false],
+  ['/demo/ai-task/students', 'Học viên', Users, false],
   ['/demo/ai-task/calendar', 'Lịch học', CalendarDays, false],
   ['/demo/ai-task/chatbot', 'Trợ lý AI', Bot, false],
-  ['/demo/ai-task/students', 'Học viên', Users, false],
   ['/demo/ai-task/settings', 'Cài đặt', Settings, false],
 ] as const
-const mobileNav = nav.slice(0, 4)
+const mobileNav = nav
 
 export default function Shell({ children }: { children: React.ReactNode }) {
   return <WorkspaceProvider><ShellContent>{children}</ShellContent></WorkspaceProvider>
@@ -61,8 +61,8 @@ function ShellContent({ children }: { children: React.ReactNode }) {
     const reloadForFirstControl = () => {
       if (!enabled) return
       try {
-        if (window.sessionStorage.getItem('ai-task.sw-shell-version') === 'v2') return
-        window.sessionStorage.setItem('ai-task.sw-shell-version', 'v2')
+        if (window.sessionStorage.getItem('ai-task.sw-shell-version') === 'v7') return
+        window.sessionStorage.setItem('ai-task.sw-shell-version', 'v7')
         window.location.reload()
       } catch { /* IndexedDB remains usable when session storage is restricted. */ }
     }
