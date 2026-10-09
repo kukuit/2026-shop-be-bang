@@ -1404,7 +1404,7 @@ function main() {
 
   assert.equal(LETTER_CARD_ANIMALS_JSON.cropMode, 'tight-bounds')
   assert.equal(LETTER_CARD_ANIMALS_JSON.items.length, 4)
-  assert.ok(fs.existsSync(path.join(root, 'public/games/lessons/lop-1/tieng-viet/trang-nguyen/images/letter-card-animals.png')))
+  assert.ok(fs.existsSync(path.join(root, 'public/games/lessons/lop-1/tieng-viet/trang-nguyen/images/letter-card-animals.webp')))
   const q17UsedCombinations = new Set()
   const questionSeventeenBatch = Array.from({ length: 10 }, (_, index) => {
     const seed = `lower-upper-test-batch-${index}`

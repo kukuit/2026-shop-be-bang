@@ -1,4 +1,4 @@
-import { ComposedAudioPlayer } from './composed-audio'
+import { ComposedAudioPlayer, NATURAL_COMPOSED_AUDIO_OPTIONS } from './composed-audio'
 import type { VoiceSegment } from './composed-voice'
 
 /** Routes composed sentences to Web Audio; single recordings retain their own path. */
@@ -34,7 +34,7 @@ export class QuestionVoicePlayer {
     this.composed ??= new ComposedAudioPlayer()
     this.composed.setBlocked(this.blocked)
     this.composedActive = true
-    void this.composed.play(sequence, {}, () => {
+    void this.composed.play(sequence, NATURAL_COMPOSED_AUDIO_OPTIONS, () => {
       if (generation === this.generation) this.composedActive = false
     }).catch(() => {
       if (generation !== this.generation) return
@@ -45,7 +45,12 @@ export class QuestionVoicePlayer {
 
   play(sources: Array<string | undefined>, fallback?: { instruction?: string; target?: string }) {
     const texts = [fallback?.instruction, fallback?.target]
-    this.playSequence(sources.map((src, index) => ({ src, text: texts[index] })))
+    const sequence = sources.map((src, index) => ({ src, text: texts[index] ?? '' }))
+    if (sources.length > 1 && sources.every((src): src is string => Boolean(src))) {
+      this.playComposedSequence(sources.map((src, index) => ({ src, text: texts[index] ?? '' })))
+      return
+    }
+    this.playSequence(sequence)
   }
 
   playSequence(sequence: Array<{ src?: string; text?: string; playbackRate?: number }>) {

@@ -2,9 +2,10 @@
 
 ## Routes and authentication
 
-- `/demo/ai-task`: main chat, editable confirmation forms, task disambiguation and persisted history.
+- `/demo/ai-task`: teaching dashboard.
+- `/demo/ai-task/chatbot`: main chat, editable confirmation forms, task disambiguation and persisted history.
 - `/demo/ai-task/tasks`: expandable task tree, search, filters, manual creation/editing, subtree moves, trash and restore.
-- `/demo/ai-task/dashboard`: summary and dynamic group management.
+- `/demo/ai-task/dashboard`: legacy alias that redirects to `/demo/ai-task`.
 - `/demo/ai-task/api`: authenticated GET resources and POST operations.
 
 Uses the existing `AuthProvider`, `AuthMenu`/`LoginModal`, `requireAuth`, `fetchWithAuthRetry` and cross-site mutation guard. The login modal stays on the module route; client refresh handles expired access tokens, so `/auth/continue` does not need to change. Every API request verifies the current server session. The server derives the owner from `auth.user.id`; clients cannot choose an owner. `activeGame` is unrelated to task access.

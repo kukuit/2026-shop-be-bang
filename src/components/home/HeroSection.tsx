@@ -16,13 +16,13 @@ export default function HeroSection() {
           <div className="mt-7 flex flex-wrap gap-3">
             <Link
               href="#new-arrivals"
-              className="inline-flex min-h-11 items-center justify-center rounded-full bg-rose-500 px-6 text-sm font-semibold text-white transition hover:bg-rose-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-600"
+              className="inline-flex min-h-11 items-center justify-center rounded-full bg-rose-500 px-6 text-sm font-semibold text-white transition duration-200 hover:-translate-y-0.5 hover:bg-rose-600 hover:shadow-md active:translate-y-0 motion-reduce:transition-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-600"
             >
               Xem hàng mới{' '}
             </Link>
             <Link
               href="#sale"
-              className="inline-flex min-h-11 items-center justify-center rounded-full border border-rose-300 bg-white/60 px-6 text-sm font-semibold text-rose-600 transition hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-600"
+              className="inline-flex min-h-11 items-center justify-center rounded-full border border-rose-300 bg-white/60 px-6 text-sm font-semibold text-rose-600 transition duration-200 hover:-translate-y-0.5 hover:bg-white hover:shadow-md active:translate-y-0 motion-reduce:transition-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-600"
             >
               Săn sale
             </Link>

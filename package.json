@@ -26,6 +26,9 @@
     "game:backfill-progress": "node scripts/backfill-game-progress.cjs",
     "test:game-me": "node scripts/test-game-me-progress.cjs",
     "test:ai-task": "node scripts/test-ai-task.cjs",
+    "test:ai-task:teaching": "node scripts/test-ai-task-teaching.cjs",
+    "test:ai-task:offline": "node scripts/test-ai-task-offline.cjs",
+    "teaching:migrate-pricing": "node scripts/migrate-teaching-pricing.cjs",
     "test:ai-task:recognition": "node scripts/test-ai-task-recognition.cjs",
     "test:ai-task:browser": "node scripts/test-ai-task-browser.cjs"
   },

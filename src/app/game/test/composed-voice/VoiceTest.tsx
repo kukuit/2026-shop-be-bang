@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { RefreshCw, Square, Volume2 } from 'lucide-react'
 import { QuestionVoicePlayer } from '@/components/games/general/QuestionVoicePlayer'
-import { ComposedAudioPlayer, type SegmentMeasurement } from '@/components/games/general/composed-audio'
+import { ComposedAudioPlayer, NATURAL_COMPOSED_AUDIO_OPTIONS, type SegmentMeasurement } from '@/components/games/general/composed-audio'
 import { GAME_NAMES, generateVoiceSamples, type VoiceSample } from './samples'
 
 export default function VoiceTest() {
@@ -11,8 +11,8 @@ export default function VoiceTest() {
   const composedRef = useRef<ComposedAudioPlayer | null>(null)
   const requestRef = useRef(0)
   const [mode, setMode] = useState('trimmed')
-  const [paddingMs, setPaddingMs] = useState(15)
-  const [gapMs, setGapMs] = useState(0)
+  const [paddingMs, setPaddingMs] = useState(NATURAL_COMPOSED_AUDIO_OPTIONS.paddingMs ?? 15)
+  const [gapMs, setGapMs] = useState(NATURAL_COMPOSED_AUDIO_OPTIONS.gapMs ?? 0)
   const [status, setStatus] = useState('')
   const [measurements, setMeasurements] = useState<SegmentMeasurement[]>([])
   const [samples, setSamples] = useState<VoiceSample[]>([])
@@ -44,7 +44,9 @@ export default function VoiceTest() {
     const request = requestRef.current
     setStatus('Đang chuẩn bị âm thanh…')
     try {
-      const measurements = await composedRef.current!.play(sample.sequence, { paddingMs, gapMs }, () => {
+      const measurements = await composedRef.current!.play(sample.sequence, {
+        ...NATURAL_COMPOSED_AUDIO_OPTIONS, paddingMs, gapMs,
+      }, () => {
         if (request === requestRef.current) setStatus('Đã phát xong: ' + sample.text)
       })
       if (request !== requestRef.current) return
@@ -81,7 +83,7 @@ export default function VoiceTest() {
           <label className="flex flex-col gap-2">Nghỉ giữa đoạn: {gapMs} ms
             <input type="range" min="0" max="100" step="5" value={gapMs} disabled={mode === 'original'} onChange={event => { stop(); setGapMs(Number(event.target.value)) }} />
           </label>
-          <p className="w-full text-xs leading-5 text-slate-500">Mặc định giữ đệm 15 ms, không thêm nhịp nghỉ. Nếu tiếng bị cụt, tăng đệm rồi bấm loa nghe lại. File MP3 gốc được giữ nguyên.</p>
+          <p className="w-full text-xs leading-5 text-slate-500">Mặc định giữ tối đa 45 ms đệm mỗi bên, không thêm nhịp nghỉ và cắt lặng dư ở cuối câu. Nếu tiếng bị cụt, tăng đệm rồi bấm loa nghe lại. File MP3 gốc được giữ nguyên.</p>
         </div>
         <div className="my-5 flex flex-wrap gap-3">
           <button type="button" onClick={regenerate} className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-sky-700 px-4 py-2 font-medium text-white hover:bg-sky-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-700">

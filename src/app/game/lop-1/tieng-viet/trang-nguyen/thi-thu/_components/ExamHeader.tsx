@@ -7,7 +7,7 @@ import AuthMenu from '@/components/auth/AuthMenu'
 import { useAuth } from '@/components/auth/AuthProvider'
 import styles from './exam.module.css'
 
-export default function ExamHeader() {
+export default function ExamHeader({ onBack, backHref = '/', backDisabled = false }: { onBack?: () => void; backHref?: string; backDisabled?: boolean }) {
   const { user, loading } = useAuth()
   const displayName = loading ? '' : user?.displayName.trim() || 'Đăng nhập'
   const initial = Array.from(user?.displayName.normalize('NFC') ?? '')[0]?.toLocaleUpperCase('vi-VN') ?? 'H'
@@ -15,10 +15,17 @@ export default function ExamHeader() {
   return (
     <header className={styles.header}>
       <div className={styles.headerInner}>
-        <Link href="/" className={styles.backButton}>
-          <ArrowLeft size={16} strokeWidth={2.2} />
-          <span>Quay lại</span>
-        </Link>
+        {onBack ? (
+          <button type="button" onClick={onBack} disabled={backDisabled} className={styles.backButton} aria-label="Quay lại">
+            <ArrowLeft size={16} strokeWidth={2.2} />
+            <span>Quay lại</span>
+          </button>
+        ) : (
+          <Link href={backHref} className={styles.backButton}>
+            <ArrowLeft size={16} strokeWidth={2.2} />
+            <span>Quay lại</span>
+          </Link>
+        )}
         <div className={styles.eventTitle}>
           <span>Trạng Nguyên Tiếng Việt<br />Khối 1 (2026 - 2027)</span>
         </div>

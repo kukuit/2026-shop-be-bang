@@ -79,7 +79,7 @@ export default function AttemptReview({ attempt, onBack }: { attempt: SubmittedT
                 <h1 className="text-xl font-black text-slate-900">Xem lại bài thi</h1>
                 <p className="mt-1 text-sm text-slate-600">Câu đúng màu xanh, câu sai màu đỏ, câu bỏ trống màu xám.</p>
               </div>
-              <button type="button" onClick={onBack} className="min-h-10 rounded-lg border border-slate-300 px-4 text-sm font-bold text-slate-700 hover:bg-slate-50">Về kết quả</button>
+              <button type="button" onClick={onBack} className="min-h-10 rounded-lg border border-slate-300 px-4 text-sm font-bold text-slate-700 hover:bg-slate-50">Về trang thi thử</button>
             </div>
             <div className="mb-5 flex gap-2" role="group" aria-label="Lọc câu hỏi">
               <button type="button" onClick={() => { setFilter('all'); setCurrentPage(1) }} aria-pressed={filter === 'all'} className={`rounded-full px-4 py-2 text-sm font-bold ${filter === 'all' ? 'bg-blue-700 text-white' : 'bg-slate-100 text-slate-700'}`}>Tất cả ({attempt.questions.length})</button>
@@ -93,10 +93,10 @@ export default function AttemptReview({ attempt, onBack }: { attempt: SubmittedT
               onNavigate={navigate}
               statuses={Object.fromEntries(attempt.questions.map(question => [question.order, !isQuestionAnswered(question.snapshot, question.userAnswer ?? undefined) ? 'unanswered' : question.isCorrect ? 'correct' : 'wrong']))}
             />
-            {visibleQuestions.length === 0 ? <p className="rounded-xl bg-slate-50 p-6 text-center font-semibold text-slate-600">Không có câu sai trong bài thi này.</p> : <div className={styles.questionList}>
+            {visibleQuestions.length === 0 ? <p className="rounded-xl bg-slate-50 p-6 text-center font-semibold text-slate-600">Không có câu sai trong bài thi này.</p> : <div className={`${styles.questionList} ${styles.reviewQuestionList}`}>
               {visibleQuestions.map(result => {
                 const labels = answerLabels(result.snapshot)
-                return <article id={`review-question-${result.order}`} key={result.id} className="scroll-mt-4 rounded-xl border border-slate-200 bg-white p-3 sm:p-5">
+                return <article id={`review-question-${result.order}`} key={result.id} className={`${styles.reviewQuestion} rounded-xl border border-slate-200 bg-white p-3 sm:p-5`}>
                   <div className={`mb-4 flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-extrabold ${!isQuestionAnswered(result.snapshot, result.userAnswer ?? undefined) ? 'bg-slate-100 text-slate-600' : result.isCorrect ? 'bg-emerald-50 text-emerald-800' : 'bg-red-50 text-red-800'}`}>
                     {!isQuestionAnswered(result.snapshot, result.userAnswer ?? undefined) ? <span className="grid h-5 w-5 place-items-center rounded-full bg-slate-300 text-xs text-white">{result.order}</span> : result.isCorrect ? <CheckCircle2 size={19} /> : <XCircle size={19} />}
                     {!isQuestionAnswered(result.snapshot, result.userAnswer ?? undefined) ? `Câu ${result.order} · Chưa hoàn thành` : result.isCorrect ? `Câu ${result.order} · Trả lời đúng` : `Câu ${result.order} · Trả lời sai`}

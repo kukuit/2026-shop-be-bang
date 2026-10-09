@@ -1,5 +1,6 @@
 'use client'
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
+import { usePathname } from 'next/navigation'
 import type { SafeAuthUser } from '@/lib/auth/types'
 import { refreshAccessToken } from '@/lib/auth/client-refresh'
 
@@ -55,23 +56,40 @@ function loadAuthenticatedUser() {
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname()
   const [user, setUser] = useState<SafeAuthUser | null>(null)
   const [accessTokenExpiresAt, setAccessTokenExpiresAt] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
+  const authChecked = useRef(false)
   const refreshUser = useCallback(async () => {
+    authChecked.current = true
     try {
       const state = await loadAuthenticatedUser()
       setUser(state.user)
       setAccessTokenExpiresAt(state.accessTokenExpiresAt)
     } catch { setUser(null); setAccessTokenExpiresAt(null) } finally { setLoading(false) }
   }, [])
-  useEffect(() => { void refreshUser() }, [refreshUser])
+  useEffect(() => {
+    if (pathname === '/demo/ai-task' || pathname.startsWith('/demo/ai-task/')) {
+      const mode = window.localStorage.getItem('ai-task.active-workspace-mode')
+      if (mode !== 'CLOUD') {
+        setLoading(false)
+        return
+      }
+    }
+    if (!authChecked.current) void refreshUser()
+    else setLoading(false)
+  }, [pathname, refreshUser])
   useEffect(() => {
     if (!user || !accessTokenExpiresAt) return
+    if (pathname === '/demo/ai-task' || pathname.startsWith('/demo/ai-task/')) {
+      if (window.localStorage.getItem('ai-task.active-workspace-mode') !== 'CLOUD') return
+    }
 
     let stopped = false
     let timer: number | undefined
     const refreshSilently = async () => {
+      if ((pathname === '/demo/ai-task' || pathname.startsWith('/demo/ai-task/')) && window.localStorage.getItem('ai-task.active-workspace-mode') !== 'CLOUD') return
       if (timer !== undefined) window.clearTimeout(timer)
       timer = undefined
       const result = await refreshAccessToken()
@@ -94,7 +112,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       document.removeEventListener('visibilitychange', resume)
       window.removeEventListener('online', resume)
     }
-  }, [user, accessTokenExpiresAt])
+  }, [user, accessTokenExpiresAt, pathname])
   const login = useCallback(async (username: string, password: string) => {
     const response = await fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password }) })
     const body = await readJson<{ user?: SafeAuthUser; accessTokenExpiresAt?: number; message?: string }>(response)

@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { flushSync } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft, ArrowRight, Grid2X2, LoaderCircle, X } from 'lucide-react'
 import { isQuestionAnswered } from '../_exam/answer-utils'
@@ -18,12 +19,12 @@ import type { LocalTrangNguyenAttempt, SubmittedTrangNguyenAttempt } from '../_l
 import ExamResult from './ExamResult'
 import ExamHeader from './ExamHeader'
 import ExamSidebar from './ExamSidebar'
-import ExamStartOverlay from './ExamStartOverlay'
 import ExamTimer from './ExamTimer'
 import QuestionRenderer from './QuestionRenderer'
 import QuestionNavigator from './QuestionNavigator'
 import SubmitExamDialog from './SubmitExamDialog'
 import AttemptReview from './AttemptReview'
+import EndExamDialog from './EndExamDialog'
 import { useExamAudio } from '../_hooks/useExamAudio'
 import styles from './exam.module.css'
 
@@ -38,6 +39,14 @@ async function enterExamFullscreen() {
     if (!document.fullscreenElement) await document.documentElement.requestFullscreen()
   } catch (error) {
     console.warn('Fullscreen is unavailable', error)
+  }
+}
+
+async function exitExamFullscreen() {
+  try {
+    if (document.fullscreenElement) await document.exitFullscreen()
+  } catch (error) {
+    console.warn('Fullscreen could not be closed', error)
   }
 }
 
@@ -92,12 +101,14 @@ export default function TrangNguyenExam({ attemptId }: { attemptId?: string }) {
   const [starting, setStarting] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [showSubmitDialog, setShowSubmitDialog] = useState(false)
-  const [showStartConfirm, setShowStartConfirm] = useState(false)
+  const [showExitConfirm, setShowExitConfirm] = useState(false)
   const [showNavigator, setShowNavigator] = useState(false)
   const [currentQuestion, setCurrentQuestion] = useState(1)
   const [reviewing, setReviewing] = useState(false)
   const attemptRef = useRef<LocalTrangNguyenAttempt | null>(null)
   const startingRef = useRef(false)
+  const startRequestIdRef = useRef(0)
+  const pendingStartAttemptIdRef = useRef<string | null>(null)
   const isSubmittingRef = useRef(false)
   const autoSubmitAttemptRef = useRef<string | null>(null)
   const pendingQuestionNavigationRef = useRef<number | null>(null)
@@ -129,6 +140,10 @@ export default function TrangNguyenExam({ attemptId }: { attemptId?: string }) {
       return
     }
 
+    startRequestIdRef.current += 1
+    startingRef.current = false
+    pendingStartAttemptIdRef.current = null
+    setStarting(false)
     let cancelled = false
     const restore = async () => {
       setLoadState('loading')
@@ -208,22 +223,63 @@ export default function TrangNguyenExam({ attemptId }: { attemptId?: string }) {
   const startExam = useCallback(async () => {
     if (startingRef.current) return
     startingRef.current = true
-    setStarting(true)
-    setActionError(null)
-    await enterExamFullscreen()
+    const requestId = ++startRequestIdRef.current
+    pendingStartAttemptIdRef.current = null
+    flushSync(() => {
+      setStarting(true)
+      setActionError(null)
+    })
     try {
+      await enterExamFullscreen()
+      if (requestId !== startRequestIdRef.current) {
+        await exitExamFullscreen()
+        return
+      }
+      // Give React and the browser a frame to paint the loading spinner before
+      // generating the randomized exam synchronously.
+      await new Promise<void>(resolve => window.requestAnimationFrame(() => window.setTimeout(resolve, 0)))
+      if (requestId !== startRequestIdRef.current) return
       const nextAttempt = createLocalAttempt()
       if (!saveLocalAttempt(nextAttempt)) throw new Error('Không lưu được đề thi trên thiết bị. Hãy kiểm tra dung lượng trình duyệt rồi thử lại.')
+      pendingStartAttemptIdRef.current = nextAttempt.id
       stop()
-      setShowStartConfirm(false)
+      // Keep the loading view mounted until the attempt route takes over.
       router.push(`${EXAM_LANDING_PATH}/${nextAttempt.id}`)
     } catch (error) {
+      if (requestId !== startRequestIdRef.current) return
+      if (pendingStartAttemptIdRef.current) removeLocalAttempt(pendingStartAttemptIdRef.current)
+      pendingStartAttemptIdRef.current = null
       setActionError(error instanceof Error ? error.message : 'Chưa tạo được đề thi. Bé thử lại nhé.')
-    } finally {
-      startingRef.current = false
       setStarting(false)
+    } finally {
+      if (requestId === startRequestIdRef.current && pendingStartAttemptIdRef.current === null) {
+        startingRef.current = false
+      }
     }
   }, [router, stop])
+
+  const returnToExamLanding = useCallback(() => {
+    startRequestIdRef.current += 1
+    startingRef.current = false
+    if (pendingStartAttemptIdRef.current) removeLocalAttempt(pendingStartAttemptIdRef.current)
+    pendingStartAttemptIdRef.current = null
+    setStarting(false)
+    setActionError(null)
+    void exitExamFullscreen()
+    router.replace(EXAM_LANDING_PATH)
+  }, [router])
+
+  const endExamWithoutSubmitting = useCallback(() => {
+    const current = attemptRef.current
+    if (!current || current.status !== 'IN_PROGRESS' || submitting) return
+    removeLocalAttempt(current.id)
+    attemptRef.current = null
+    setAttempt(null)
+    setShowExitConfirm(false)
+    stop()
+    if (document.fullscreenElement) void document.exitFullscreen().catch(() => {})
+    router.replace(EXAM_LANDING_PATH)
+  }, [router, stop, submitting])
 
   const updateAnswer = useCallback((questionId: string, answer: ExamAnswer) => {
     const current = attemptRef.current
@@ -347,14 +403,13 @@ export default function TrangNguyenExam({ attemptId }: { attemptId?: string }) {
   const totalSeconds = attempt?.durationSeconds ?? MOCK_EXAM_DURATION_SECONDS
 
   if (loadState === 'loading') {
-    return <><ExamHeader /><main className={`${styles.examPage} grid place-items-center px-4`}><p className="flex items-center gap-3 font-semibold text-[#555]"><LoaderCircle className="animate-spin" />Đang mở phiên thi…</p></main></>
+    return <><ExamHeader onBack={returnToExamLanding} /><main className={`${styles.examPage} grid place-items-center px-4`}><p className="flex items-center gap-3 font-semibold text-[#555]"><LoaderCircle className="animate-spin" />Đang mở phiên thi…</p></main></>
   }
   if (loadState === 'error') {
-    return <><ExamHeader /><main className={`${styles.examPage} grid place-items-center px-4`}><section className="max-w-lg rounded-lg border border-[#e8c9c6] bg-white p-6 text-center"><h1 className="text-xl font-semibold text-[#333]">Không mở được phiên thi</h1><p role="alert" className="mt-2 text-sm text-red-700">{loadError}</p><div className="mt-5 flex flex-col justify-center gap-2 sm:flex-row"><button type="button" onClick={() => window.location.reload()} className="min-h-11 rounded-full bg-[#c72029] px-5 font-bold text-white">Thử tải lại</button><button type="button" onClick={() => router.push(EXAM_LANDING_PATH)} className="min-h-11 rounded-full border border-[#d8cecc] px-5 font-semibold text-[#6f6664]">Về trang thi thử</button></div></section></main></>
+    return <><ExamHeader onBack={returnToExamLanding} /><main className={`${styles.examPage} grid place-items-center px-4`}><section className="max-w-lg rounded-lg border border-[#e8c9c6] bg-white p-6 text-center"><h1 className="text-xl font-semibold text-[#333]">Không mở được phiên thi</h1><p role="alert" className="mt-2 text-sm text-red-700">{loadError}</p><div className="mt-5 flex flex-col justify-center gap-2 sm:flex-row"><button type="button" onClick={() => window.location.reload()} className="min-h-11 rounded-full bg-[#c72029] px-5 font-bold text-white">Thử tải lại</button><button type="button" onClick={() => router.push(EXAM_LANDING_PATH)} className="min-h-11 rounded-full border border-[#d8cecc] px-5 font-semibold text-[#6f6664]">Về trang thi thử</button></div></section></main></>
   }
-
-  if (submittedResult) return <><ExamHeader />{reviewing
-    ? <AttemptReview attempt={submittedResult} onBack={() => setReviewing(false)} />
+  if (submittedResult) return <><ExamHeader onBack={returnToExamLanding} />{reviewing
+    ? <AttemptReview attempt={submittedResult} onBack={returnToExamLanding} />
     : <ExamResult attempt={submittedResult} onReview={() => setReviewing(true)} onNewExam={() => void startExam()} starting={starting} error={actionError} />}</>
 
   const preview = !attempt
@@ -362,7 +417,12 @@ export default function TrangNguyenExam({ attemptId }: { attemptId?: string }) {
 
   return (
     <>
-      <ExamHeader />
+      <ExamHeader
+        onBack={starting ? returnToExamLanding : attempt ? () => {
+          if (attempt.status === 'IN_PROGRESS' && !submitting) setShowExitConfirm(true)
+        } : undefined}
+        backDisabled={submitting || attempt?.status === 'SUBMITTING'}
+      />
       <main className={styles.examPage}>
         {questions.length > 0 && <div className={`lg:hidden px-3 py-2 ${styles.mobileExamBar}`}>
           <div className="mx-auto flex max-w-6xl items-center justify-between gap-3">
@@ -396,11 +456,25 @@ export default function TrangNguyenExam({ attemptId }: { attemptId?: string }) {
                 <span className={styles.paginationCurrent} aria-current="page" aria-label={`Trang ${currentPage} trên ${pageCount}`}>{currentPage}</span>
                 <button type="button" className={styles.paginationButton} disabled={currentPage >= pageCount} onClick={() => navigateToPage(currentPage + 1)}><span>Trang sau</span><ArrowRight size={14} aria-hidden="true" /></button>
               </nav>
-            </> : <section className={styles.startPreview}>
+            </> : starting ? <section className={styles.startPreview} aria-busy="true">
+              <div role="status" aria-live="polite" className="flex flex-col items-center gap-3 font-semibold text-[#555]">
+                <LoaderCircle size={36} className="animate-spin" aria-hidden="true" />
+                <span>Đang tải bài thi…</span>
+              </div>
+            </section> : <section className={styles.startPreview}>
               <h1>Thi thử Trạng Nguyên Tiếng Việt lớp 1</h1>
               <p>Bài thi gồm 30 câu hỏi. Bé có 30 phút để hoàn thành bài thi.</p>
               {actionError && <p role="alert" className="mt-3 text-sm font-semibold text-red-700">{actionError}</p>}
-              <button type="button" className={styles.startButton} onClick={() => { setActionError(null); setShowStartConfirm(true) }}>Bắt đầu thi</button>
+              <button
+                type="button"
+                className={styles.startButton}
+                onClick={() => void startExam()}
+                disabled={starting}
+                aria-busy={starting}
+              >
+                {starting && <LoaderCircle size={18} className="animate-spin" aria-hidden="true" />}
+                {starting ? 'ĐANG TẠO ĐỀ…' : 'Bắt đầu thi'}
+              </button>
             </section>}
           </div>
 
@@ -415,7 +489,7 @@ export default function TrangNguyenExam({ attemptId }: { attemptId?: string }) {
           />}
         </div>
 
-        {!attempt && showStartConfirm && <ExamStartOverlay onStart={() => void startExam()} onCancel={() => { setShowStartConfirm(false); setActionError(null) }} starting={starting} error={actionError} />}
+        {showExitConfirm && attempt?.status === 'IN_PROGRESS' && <EndExamDialog onCancel={() => setShowExitConfirm(false)} onConfirm={endExamWithoutSubmitting} />}
         {showNavigator && <div className="fixed inset-0 z-[80] flex items-end bg-slate-950/40 lg:hidden" onMouseDown={event => { if (event.target === event.currentTarget) setShowNavigator(false) }}>
           <section role="dialog" aria-modal="true" aria-label="Danh sách câu hỏi và nộp bài" className="max-h-[82dvh] w-full overflow-y-auto rounded-t-3xl bg-white p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-2xl sm:p-6">
             <div className="mx-auto max-w-lg">

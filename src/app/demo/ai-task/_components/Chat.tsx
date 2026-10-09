@@ -1,163 +1,238 @@
 'use client'
+
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { Mic, Send } from 'lucide-react'
+import { Mic, Send, Trash2 } from 'lucide-react'
 import ChatMessage from '@/components/chat/ChatMessage'
 import VoiceInputSlot from '@/components/chat/VoiceInputSlot'
 import { useVoice } from '@/hooks/useVoice'
-import { api, useTasks } from './Provider'
-import { taskReply } from '../_lib/assistant-replies'
-import TaskForm from './TaskForm'
-import TaskResultGroups from './TaskResultGroups'
-import TaskCard from './TaskCard'
-import { displayDate, priorityLabels, statusLabels, type Message, type TreeNode } from '../_lib/model'
-import { newContext, readContext, type TaskConversationMemory, type TaskOverviewMemory } from '../_lib/task-memory'
-import { useQuery } from '@tanstack/react-query'
+import { fetchWithAuthRetry } from '@/lib/auth/client-fetch'
 import { useAuth } from '@/components/auth/AuthProvider'
-import { useBrowserContext } from '@/modules/ai-task/action-recognition/context/useBrowserContext'
+import type { TeachingAssistantMemory, TeachingChatContext, TeachingChatMessage } from '../_lib/teaching-chat'
+import { newTeachingChatContext } from '../_lib/teaching-chat'
+
+async function chatApi<T>(body?: unknown, resource?: string, signal?: AbortSignal): Promise<T> {
+  const query = resource ? '?' + (resource.includes('=') ? resource : 'resource=' + encodeURIComponent(resource)) : ''
+  const response = await fetchWithAuthRetry('/demo/ai-task/api/teaching-chat' + query, body
+    ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal }
+    : { cache: 'no-store', signal })
+  const data = await response.json()
+  if (!response.ok) throw new Error(response.status === 401 ? 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.' : data.error || 'Không thể xử lý yêu cầu chat.')
+  return data
+}
+
+type ChatState = { pendingId: string | null; context: TeachingChatContext }
+const emptyMemory: TeachingAssistantMemory = { note: null, defaultSubject: null, defaultDurationMinutes: null, updatedAt: null }
 
 export default function Chat() {
-  const { groups, revision, busy, run, refresh, notify, overview, overviewLoading, overviewError, reloadOverview, acceptOverview, context, setContext, contextReady } = useTasks()
   const { user } = useAuth()
-  const actionContext = useBrowserContext(user?.id)
-  const parents = useQuery({ queryKey: ['ai-task', 'parent-labels', user?.id, revision], queryFn: () => api<{ nodes: TreeNode[] }>(undefined, { resource: 'parents' }), enabled: !!user?.id })
-  const [messages, setMessages] = useState<Message[]>([])
-  const messagesRef = useRef(messages)
-  messagesRef.current = messages
-  const [historyLoading, setHistoryLoading] = useState(false)
-  const [historyLoaded, setHistoryLoaded] = useState(false)
-  const [pendingId, setPendingId] = useState<string | null>(null)
+  const [messages, setMessages] = useState<TeachingChatMessage[]>([])
+  const [chatState, setChatState] = useState<ChatState>({ pendingId: null, context: newTeachingChatContext() })
+  const [memory, setMemory] = useState(emptyMemory)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [historyLoading, setHistoryLoading] = useState(false)
   const [text, setText] = useState('')
   const [voiceText, setVoiceText] = useState(false)
   const [outgoing, setOutgoing] = useState('')
+  const [notice, setNotice] = useState('')
+  const [error, setError] = useState('')
   const request = useRef<{ text: string; id: string } | null>(null)
   const list = useRef<HTMLDivElement>(null)
   const input = useRef<HTMLTextAreaElement>(null)
   const pendingRef = useRef<HTMLDivElement>(null)
-  const pending = messages.find(m => m.status === 'pending' || m.status === 'choose')
+  const pending = messages.find(message => message.status === 'pending')
   const lastMessageId = messages[messages.length - 1]?.id
-  const blocked = overviewLoading || !contextReady || !!overviewError
   const hideVoice = !voiceText && !!text
-  const voice = useVoice(t => { setText(t); setVoiceText(true) }, notify, !busy && !loading && !blocked && !hideVoice)
-  const mergeMessages = useCallback((incoming: Message[]) => setMessages(old => {
+  const voice = useVoice(value => { setText(value); setVoiceText(true) }, setNotice, !busy && !loading && !error && !hideVoice)
+
+  const mergeMessages = useCallback((incoming: TeachingChatMessage[]) => setMessages(old => {
     const merged = new Map(old.map(message => [message.id, message]))
     incoming.forEach(message => merged.set(message.id, message))
     return Array.from(merged.values()).sort((a, b) => a.sequence - b.sequence)
   }), [])
+
   const load = useCallback(async (signal?: AbortSignal) => {
     try {
-      const state = await api<{ pendingId: string | null }>(undefined, { resource: 'chatState' }, signal)
+      const [state, memoryData, history] = await Promise.all([
+        chatApi<ChatState>(undefined, 'state', signal),
+        chatApi<{ memory: TeachingAssistantMemory; context: TeachingChatContext; pendingId: string | null }>(undefined, 'memory', signal),
+        chatApi<{ messages: TeachingChatMessage[] }>(undefined, 'messages', signal),
+      ])
       if (signal?.aborted) return
-      if (state.pendingId && !messagesRef.current.some(m => m.id === state.pendingId)) {
-        const turn = await api<{ messages: Message[] }>(undefined, { resource: 'turn', messageId: state.pendingId }, signal)
-        if (signal?.aborted) return
-        mergeMessages(turn.messages)
-      }
-      setPendingId(state.pendingId); setError('')
-    } catch (reason) { if (!signal?.aborted) setError(reason instanceof Error ? reason.message : 'Không tải được trạng thái chat.') }
-    finally { if (!signal?.aborted) setLoading(false) }
+      setChatState({ pendingId: state.pendingId, context: memoryData.context })
+      setMemory(memoryData.memory)
+      mergeMessages(history.messages)
+      setError('')
+    } catch (reason) {
+      if (!signal?.aborted) setError(reason instanceof Error ? reason.message : 'Không tải được cuộc trò chuyện.')
+    } finally {
+      if (!signal?.aborted) setLoading(false)
+    }
   }, [mergeMessages])
+
   const loadTurn = async (messageId: string) => {
-    const data = await api<{ messages: Message[] }>(undefined, { resource: 'turn', messageId })
+    const data = await chatApi<{ messages: TeachingChatMessage[] }>(undefined, 'resource=turn&messageId=' + encodeURIComponent(messageId))
     mergeMessages(data.messages)
     return data.messages
   }
-  const loadHistory = async () => {
-    setHistoryLoading(true)
-    try { const data = await api<{ messages: Message[] }>(undefined, { resource: 'messages' }); mergeMessages(data.messages); setHistoryLoaded(true) }
-    catch (reason) { notify(reason instanceof Error ? reason.message : 'Không tải được lịch sử. Bạn vẫn có thể chat.') }
-    finally { setHistoryLoading(false) }
-  }
-  useEffect(() => { const controller = new AbortController(); void load(controller.signal); return () => controller.abort() }, [load, revision])
+
+  useEffect(() => {
+    const controller = new AbortController()
+    void load(controller.signal)
+    return () => controller.abort()
+  }, [load, user?.id])
+
   useLayoutEffect(() => {
     const area = input.current
     if (!area) return
-    area.style.height = 'auto'; area.style.height = `${Math.min(area.scrollHeight, 240)}px`
+    area.style.height = 'auto'
+    area.style.height = Math.min(area.scrollHeight, 180) + 'px'
   }, [text])
+
   useEffect(() => {
     const container = list.current
     if (!container) return
-    if (pendingRef.current) container.scrollTo({ top: container.scrollTop + pendingRef.current.getBoundingClientRect().top - container.getBoundingClientRect().top - 60 })
-    else container.scrollTop = container.scrollHeight
+    if (pendingRef.current) {
+      container.scrollTo({ top: container.scrollTop + pendingRef.current.getBoundingClientRect().top - container.getBoundingClientRect().top - 60 })
+    } else container.scrollTop = container.scrollHeight
   }, [lastMessageId, pending?.status, outgoing])
-  const perform = async (body: { operation: string; messageId?: string; [key: string]: unknown }) => {
-    await run(async () => {
-      const response = await api<{ result?: { id?: string; overview?: TaskOverviewMemory } }>({ ...body, ...(body.operation === 'choose' ? { context: readContext(context), overview } : {}) })
-      const id = body.messageId || response.result?.id
-      const turn = id ? await loadTurn(id) : []
-      actionContext.remember(turn, body.operation === 'confirm' ? response.result?.id : undefined)
-      if (response.result?.overview) {
-        const saved = response.result.overview
-        acceptOverview(saved)
-        setContext({ ...newContext(), conversationDefaults: { groupId: saved.groupId, parentId: saved.parentId, priority: saved.priority, status: saved.status } })
-      } else if (body.operation === 'cancel' || body.operation === 'confirm') setContext({ ...newContext(), conversationDefaults: context.conversationDefaults })
-      else if (body.operation === 'choose') {
-        const proposal = turn.find(m => m.status === 'pending')?.proposal
-        if (proposal) setContext({ ...context, mode: proposal.taskId ? 'editing-task' : 'creating-task', activeDraft: proposal.data })
-      }
-      await load(); await refresh()
-    })
+
+  const perform = async (body: Record<string, unknown>) => {
+    setBusy(true)
+    setNotice('')
+    try {
+      await chatApi({ ...body })
+      await load()
+      return true
+    } catch (reason) {
+      setNotice(reason instanceof Error ? reason.message : 'Không xử lý được yêu cầu.')
+      return false
+    } finally { setBusy(false) }
   }
-  const cancel = (id: string) => { void perform({ operation: 'cancel', messageId: id }).catch(e => notify(e.message)) }
+
   const send = async () => {
     const submitted = text.trim()
-    if (!submitted || busy || blocked || voice.listening || loading || error) return
-    if (request.current?.text !== submitted) request.current = { text: submitted, id: crypto.randomUUID() }
+    if (!submitted || busy || loading || voice.listening || error) return
+    const previousRequest = request.current
+    const requestId = previousRequest && previousRequest.text === submitted ? previousRequest.id : crypto.randomUUID()
+    request.current = { text: submitted, id: requestId }
+    setBusy(true)
+    setOutgoing(submitted)
+    setNotice('')
     try {
-      await run(async () => {
-        setOutgoing(submitted)
-        const response = await api<{ result: { id: string; context: TaskConversationMemory } }>({ operation: 'chat', text: submitted, requestId: request.current!.id, context: readContext(context), browserContext: actionContext.current(), overview, ...(pendingId ? { pendingId } : {}) })
-        setContext(response.result.context)
-        if (pendingId) await loadTurn(pendingId)
-        actionContext.remember(await loadTurn(response.result.id)); setText(''); setVoiceText(false); request.current = null; await load()
+      const response = await chatApi<{ result: { id: string } }>({
+        operation: 'chat', text: submitted, requestId,
+        ...(chatState.pendingId ? { pendingId: chatState.pendingId } : {}),
       })
-    } catch (reason) { notify(reason instanceof Error ? reason.message : 'Gửi thất bại.') }
-    finally { setOutgoing('') }
+      const id = response.result?.id || requestId
+      await loadTurn(id)
+      const history = await chatApi<{ messages: TeachingChatMessage[] }>(undefined, 'messages')
+      mergeMessages(history.messages)
+      setText('')
+      setVoiceText(false)
+      request.current = null
+      const state = await chatApi<ChatState>(undefined, 'state')
+      const memoryData = await chatApi<{ memory: TeachingAssistantMemory; context: TeachingChatContext }>(undefined, 'memory')
+      setChatState(state)
+      setMemory(memoryData.memory)
+    } catch (reason) {
+      setNotice(reason instanceof Error ? reason.message : 'Gửi tin nhắn thất bại.')
+    } finally {
+      setBusy(false)
+      setOutgoing('')
+    }
   }
-  return <div className="demo-chat-view ai-task-chat">
-    <div className="demo-page-heading ai-task-chat-heading"><h1>Trợ lý công việc</h1>
-    <details className="ai-task-memory"><summary>Bộ nhớ tổng quan và ngữ cảnh</summary>
-      <div className="ai-task-before ai-task-memory-panel">
-      <MemoryDetails title="Bộ nhớ tổng quan" values={overview} groups={groups} nodes={parents.data?.nodes || []} />
-      <MemoryDetails title="Bộ nhớ ngữ cảnh" values={{ ...context.conversationDefaults, ...context.activeDraft }} groups={groups} nodes={parents.data?.nodes || []} />
-      <p>{context.mode === 'idle' ? 'Chưa có công việc đang tạo.' : context.mode === 'editing-task' ? 'Đang sửa công việc.' : 'Đang tạo công việc.'} Ngữ cảnh giữ trong tab này tối đa 2 giờ không hoạt động.</p>
-      <button disabled={busy || loading || !!pendingId} onClick={() => { setContext(newContext()); actionContext.clear() }}>Xóa ngữ cảnh</button>
-      </div>
-    </details>
+
+  const loadHistory = async () => {
+    setHistoryLoading(true)
+    try {
+      const history = await chatApi<{ messages: TeachingChatMessage[] }>(undefined, 'messages')
+      mergeMessages(history.messages)
+    } catch (reason) {
+      setNotice(reason instanceof Error ? reason.message : 'Không tải được lịch sử chat.')
+    } finally { setHistoryLoading(false) }
+  }
+
+  const clearContext = async () => {
+    if (await perform({ operation: 'clearContext' })) setChatState({ pendingId: null, context: newTeachingChatContext() })
+  }
+  const clearMemory = async () => {
+    if (await perform({ operation: 'clearMemory' })) setMemory(emptyMemory)
+  }
+  const clearHistory = async () => {
+    if (!window.confirm('Xóa toàn bộ lịch sử chat trợ lý dạy thêm? Bộ nhớ dài hạn vẫn được giữ.')) return
+    if (await perform({ operation: 'clearHistory' })) {
+      setMessages([])
+      setChatState({ pendingId: null, context: newTeachingChatContext() })
+    }
+  }
+
+  return <div className="demo-chat-view ai-task-chat ai-teaching-chat">
+    <div className="demo-page-heading ai-task-chat-heading">
+      <h1>Trợ lý dạy thêm</h1>
+      <details className="ai-task-memory">
+        <summary>Bộ nhớ dạy thêm</summary>
+        <div className="ai-task-before ai-task-memory-panel">
+          <section>
+            <strong>Bộ nhớ lâu dài</strong>
+            <p>{memory.note || 'Chưa có ghi nhớ riêng. Bạn có thể yêu cầu “hãy nhớ…” trong chat.'}</p>
+            {memory.defaultSubject && <p>Môn mặc định: {memory.defaultSubject}</p>}
+            {memory.defaultDurationMinutes && <p>Thời lượng mặc định: {memory.defaultDurationMinutes} phút</p>}
+            {memory.updatedAt && <small>Cập nhật {formatTime(memory.updatedAt)}</small>}
+            <button type="button" disabled={busy || !hasMemory(memory)} onClick={() => void clearMemory()}>Xóa bộ nhớ lâu dài</button>
+          </section>
+          <section>
+            <strong>Ngữ cảnh hội thoại</strong>
+            <p>Học viên đang nhắc: {chatState.context.activeStudentName || 'Chưa chọn'}</p>
+            <p>Buổi học đang nhắc: {chatState.context.activeSessionSummary || 'Chưa chọn'}</p>
+            <p>{chatState.context.pendingDraft ? 'Đề xuất: ' + chatState.context.pendingDraft.summary : 'Không có đề xuất chờ xác nhận.'}</p>
+            <small>Ngữ cảnh tự hết hạn sau 2 giờ không hoạt động.</small>
+            <button type="button" disabled={busy} onClick={() => void clearContext()}>Xóa ngữ cảnh chat</button>
+          </section>
+          <button type="button" className="ai-task-chat-clear" disabled={busy || !messages.length} onClick={() => void clearHistory()}><Trash2 size={14} /> Xóa lịch sử chat</button>
+        </div>
+      </details>
     </div>
-    {overviewError && <p role="alert">Không tải được bộ nhớ tổng quan. <button onClick={() => void reloadOverview()}>Thử lại</button></p>}
     <section className="demo-chat">
-      {!historyLoaded && <button className="ai-task-history" type="button" disabled={busy || historyLoading} onClick={() => void loadHistory()}>{historyLoading ? 'Đang tải…' : '↻ Tải 10 tin nhắn gần nhất'}</button>}
-      <div className="demo-chat-messages" ref={list} aria-label="Cuộc trò chuyện">
-        {loading && <p role="status">Đang mở chat…</p>}
-        {pendingId && !pending && <p className="demo-alert">Có yêu cầu chưa xử lý. <button disabled={busy} onClick={() => void loadTurn(pendingId).catch(e => notify(e.message))}>Mở yêu cầu đang chờ</button> <button disabled={busy} onClick={() => cancel(pendingId)}>Hủy yêu cầu cũ</button></p>}
-        {error && <div className="demo-alert" role="alert">{error} <button onClick={() => void load()}>Thử lại</button></div>}
-        {messages.map(m => <div className={`demo-chat-turn ${m.role}`} key={m.id}>
-          <ChatMessage role={m.role} content={m.proposal && m.status === 'confirmed' ? taskReply(m.proposal.action, m.proposal.data.title, true) : m.proposal && m.status === 'cancelled' ? 'Bạn đã hủy bỏ yêu cầu này.' : m.proposal && (['CREATE_TASK', 'CREATE_SUBTASK'].includes(m.proposal.action) || /Đã điền các trường|Mình đã chuẩn bị thông tin|Kiểm tra thông tin/.test(m.content)) ? taskReply(m.proposal.action, m.proposal.data.title) : m.content} assistantName="AI Công việc" />
-          {m.displayGroups ? <TaskResultGroups groups={m.displayGroups} /> : m.tasks && <div className="ai-task-results">{m.tasks.map(t => <TaskCard key={t.id} task={t} groups={groups} />)}</div>}
-          {m.status === 'choose' && <div className="demo-chat-confirmation ai-task-choice" ref={pendingRef}><p>Chọn công việc:</p>{m.candidates?.map(t => <div key={t.id}><TaskCard task={t} groups={groups} linked={false} path={m.candidatePaths?.[t.id]} /><button disabled={busy} onClick={() => { void perform({ operation: 'choose', messageId: m.id, taskId: t.id }).catch(e => notify(e.message)) }}>Chọn {t.title}</button></div>)}<button disabled={busy} onClick={() => cancel(m.id)}>Hủy yêu cầu</button></div>}
-          {m.proposal && (m.status === 'pending' ? <div className="demo-chat-confirmation demo-inline-confirmation" ref={pendingRef}><TaskForm compact key={`${m.id}:${JSON.stringify(m.proposal.data)}`} initial={m.id === pendingId && context.mode !== 'idle' ? { ...m.proposal.data, ...context.activeDraft } : m.proposal.data} onDraftChange={data => setContext({ ...context, mode: m.proposal!.taskId ? 'editing-task' : 'creating-task', activeDraft: data })} before={m.proposal.before} action={m.proposal.action} groups={groups} busy={busy} onCancel={() => cancel(m.id)} submitLabel={m.proposal.action === 'DELETE_TASK' ? 'Xác nhận xóa' : m.proposal.action === 'RESTORE_TASK' ? 'Xác nhận khôi phục' : ['CREATE_TASK', 'CREATE_SUBTASK'].includes(m.proposal.action) ? 'Thêm' : 'Cập nhật'} onSubmit={data => perform({ operation: 'confirm', messageId: m.id, data })} /></div> : null)}
-          {!m.proposal && m.status === 'cancelled' && <small>Đã hủy yêu cầu</small>}
+      {messages.length > 0 && <button className="ai-task-history" type="button" disabled={busy || historyLoading} onClick={() => void loadHistory()}>{historyLoading ? 'Đang tải…' : '↻ Tải lại 10 tin nhắn gần nhất'}</button>}
+      <div className="demo-chat-messages" ref={list} aria-label="Cuộc trò chuyện với trợ lý dạy thêm">
+        {loading && <p role="status">Đang mở trợ lý dạy thêm…</p>}
+        {error && <div className="demo-alert" role="alert">{error} <button type="button" onClick={() => void load()}>Thử lại</button></div>}
+        {!loading && !error && !messages.length && <div className="ai-teaching-welcome">
+          <strong>Chào bạn, mình có thể hỗ trợ quản lý việc dạy thêm.</strong>
+          <p>Ví dụ: “Hôm nay có những buổi nào?”, “Thêm học viên Minh Anh”, “Lịch sử học phí tháng này”.</p>
+        </div>}
+        {messages.map(message => <div className={'demo-chat-turn ' + message.role} key={message.id}>
+          <ChatMessage role={message.role} content={message.content} assistantName="AI Dạy thêm" />
+          {message.proposal && message.status === 'pending' && <div className="demo-chat-confirmation ai-teaching-proposal" ref={pendingRef}>
+            <strong>Đề xuất cần xác nhận</strong>
+            <p>{message.proposal.summary}</p>
+            <details><summary>Xem dữ liệu sẽ lưu</summary><pre>{JSON.stringify(message.proposal.data, null, 2)}</pre></details>
+            <div className="ai-teaching-proposal-actions">
+              <button type="button" className="demo-primary" disabled={busy} onClick={() => void perform({ operation: 'confirm', messageId: message.id })}>Xác nhận và lưu</button>
+              <button type="button" disabled={busy} onClick={() => void perform({ operation: 'cancel', messageId: message.id })}>Hủy</button>
+            </div>
+          </div>}
+          {message.proposal && message.status === 'confirmed' && <small className="ai-teaching-message-state">Đã xác nhận</small>}
+          {message.proposal && message.status === 'cancelled' && <small className="ai-teaching-message-state">Đã hủy đề xuất</small>}
         </div>)}
-        {outgoing && <div className="demo-chat-turn user"><ChatMessage role="user" content={outgoing} assistantName="AI Công việc" /><p role="status">Đang phân tích…</p></div>}
+        {chatState.pendingId && !pending && <p className="demo-alert">Có đề xuất chưa mở. <button type="button" disabled={busy} onClick={() => void loadTurn(chatState.pendingId!)}>Mở đề xuất</button> <button type="button" disabled={busy} onClick={() => void perform({ operation: 'cancel', messageId: chatState.pendingId })}>Hủy</button></p>}
+        {outgoing && <div className="demo-chat-turn user"><ChatMessage role="user" content={outgoing} assistantName="AI Dạy thêm" /><p role="status">Đang xem lịch và thông tin dạy thêm…</p></div>}
       </div>
-      <form className="demo-chat-input demo-chat-voice-input" onSubmit={e => { e.preventDefault(); void send() }}>
-        <VoiceInputSlot hidden={hideVoice}><button type="button" className={`demo-mic ${voice.listening ? 'listening' : ''}`} disabled={!voice.supported || busy || loading || blocked || !!error || hideVoice} tabIndex={hideVoice ? -1 : 0} onClick={voice.toggle} aria-pressed={voice.listening} aria-label={voice.listening ? 'Dừng ghi âm' : 'Nhập bằng giọng nói'} title={!voice.supported ? 'Trình duyệt chưa hỗ trợ nhập giọng nói' : undefined}><Mic size={24} /></button></VoiceInputSlot>
-        <textarea ref={input} rows={1} maxLength={4000} placeholder="Nhập công việc…" aria-label="Tin nhắn" disabled={busy || loading || blocked || !!error} value={text} onChange={e => { setText(e.target.value); setVoiceText(false) }} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); void send() } }} />
-        <button className="demo-primary" aria-label="Gửi tin nhắn" disabled={busy || loading || blocked || !!error || voice.listening || !text.trim()}><Send size={20} /></button>
-      </form><p className={`demo-chat-hint${voice.listening ? '' : ' ai-task-keyboard-hint'}`}>{voice.listening ? 'Đang nghe… Dừng ghi âm rồi kiểm tra nội dung và bấm Gửi.' : 'Enter để gửi · Shift + Enter để xuống dòng · Giờ Việt Nam'}</p>
+      {notice && <p className="ai-teaching-chat-notice" role="status">{notice}</p>}
+      <form className="demo-chat-input demo-chat-voice-input" onSubmit={event => { event.preventDefault(); void send() }}>
+        <VoiceInputSlot hidden={hideVoice}><button type="button" className={'demo-mic ' + (voice.listening ? 'listening' : '')} disabled={!voice.supported || busy || loading || !!error || hideVoice} tabIndex={hideVoice ? -1 : 0} onClick={voice.toggle} aria-pressed={voice.listening} aria-label={voice.listening ? 'Dừng ghi âm' : 'Nhập bằng giọng nói'} title={!voice.supported ? 'Trình duyệt chưa hỗ trợ nhập giọng nói' : undefined}><Mic size={24} /></button></VoiceInputSlot>
+        <textarea ref={input} rows={1} maxLength={4000} placeholder="Hỏi về học viên, lịch dạy hoặc học phí…" aria-label="Tin nhắn cho trợ lý dạy thêm" disabled={busy || loading || !!error} value={text} onChange={event => { setText(event.target.value); setVoiceText(false) }} onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); void send() } }} />
+        <button className="demo-primary" aria-label="Gửi tin nhắn" disabled={busy || loading || !!error || voice.listening || !text.trim()}><Send size={20} /></button>
+      </form>
+      <p className={'demo-chat-hint' + (voice.listening ? '' : ' ai-task-keyboard-hint')}>{voice.listening ? 'Đang nghe… Dừng ghi âm rồi kiểm tra nội dung và bấm Gửi.' : 'Enter để gửi · Shift + Enter để xuống dòng · Dữ liệu theo giờ Việt Nam'}</p>
     </section>
   </div>
 }
 
-function MemoryDetails({ title, values, groups, nodes }: { title: string; values: TaskConversationMemory['activeDraft']; groups: { id: string; name: string }[]; nodes: TreeNode[] }) {
-  return <div><strong>{title}</strong>
-    {values.title && <p>Công việc: {values.title}</p>}
-    <p>Nhóm: {values.groupId ? groups.find(g => g.id === values.groupId)?.name || 'Nhóm không còn khả dụng' : 'Chưa chọn'}</p>
-    <p>Thuộc công việc: {values.parentId ? nodes.find(n => n.id === values.parentId)?.title || 'Công việc không còn khả dụng' : 'Không có'}</p>
-    <p>Ưu tiên: {values.priority ? priorityLabels[values.priority] : 'Chưa chọn'} · Trạng thái: {values.status ? statusLabels[values.status] : 'Chưa chọn'}</p>
-    {(values.startNow || values.startClock || values.startTime) && <p>Bắt đầu: {values.startNow ? 'Ngay khi xác nhận' : values.startTime ? displayDate(values.startTime) : values.startClock}</p>}
-    {values.duration && <p>Thời lượng: {values.duration} phút</p>}{values.deadline && <p>Deadline: {displayDate(values.deadline)}</p>}{values.description && <p>Ghi chú: {values.description}</p>}
-  </div>
+function formatTime(value: string) {
+  return new Date(value).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', dateStyle: 'short', timeStyle: 'short' })
+}
+function hasMemory(value: TeachingAssistantMemory) {
+  return !!(value.note || value.defaultSubject || value.defaultDurationMinutes)
 }
