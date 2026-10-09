@@ -20,8 +20,8 @@ const learningCards = [
     description: 'Làm bài trực tiếp trên máy tính và điện thoại.',
     action: 'Thi thử ngay',
     href: '/game/lop-1/tieng-viet/trang-nguyen/thi-thu',
-    image: '/games/lessons/lop-1/images/optimize/tieng-viet-square.png',
-    alt: 'Cappy cùng bé học Tiếng Việt',
+    image: '/images/banner/trang-nguyen-tieng-viet.webp',
+    alt: 'Thi thử Trạng Nguyên Tiếng Việt lớp 1',
     tone: 'bg-[#fff5e8]',
     overlay: 'from-[#fff5e8] via-[#fff5e8]/75 to-transparent',
     cta: 'text-amber-700',
@@ -55,12 +55,9 @@ export default function KidsLearningSection() {
               </p>
               <Link
                 href={card.href}
-                className={`mt-5 inline-flex min-h-10 items-center justify-center rounded-full bg-white/90 px-5 text-sm font-semibold shadow-sm transition hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-current ${card.cta}`}
+                className={`mt-5 inline-flex min-h-10 items-center justify-center rounded-full bg-white/90 px-5 text-sm font-semibold shadow-sm transition duration-200 hover:-translate-y-0.5 hover:bg-white hover:shadow-md active:translate-y-0 motion-reduce:transition-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-current ${card.cta}`}
               >
-                {card.action}{' '}
-                <span className="ml-2" aria-hidden="true">
-                  →
-                </span>
+                {card.action}
               </Link>
             </div>
             <div className="absolute inset-y-0 right-0 w-[54%]">

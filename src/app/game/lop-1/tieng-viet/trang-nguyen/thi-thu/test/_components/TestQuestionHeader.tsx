@@ -19,7 +19,7 @@ export default function TestQuestionHeader({ questionNumber }: TestQuestionHeade
 
   return (
     <>
-      <ExamHeader />
+      <ExamHeader backHref="/game/lop-1/tieng-viet/trang-nguyen/thi-thu" />
       <nav className={styles.pagination} aria-label="Chọn câu test">
         <div className={styles.paginationInner}>
           <span className={styles.label}>

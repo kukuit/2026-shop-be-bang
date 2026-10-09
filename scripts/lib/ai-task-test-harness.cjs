@@ -20,18 +20,34 @@ class Ref {
   collection(name) { return new Query(`${this.path}/${name}`) }
   get() { reads.push(this.path); return Promise.resolve(snapshot(this, database)) }
 }
+const comparable = value => value instanceof Timestamp ? value.toMillis() : typeof value === 'string' && Number.isFinite(Date.parse(value)) ? Date.parse(value) : value
+const compareValues = (left, right) => comparable(left) < comparable(right) ? -1 : comparable(left) > comparable(right) ? 1 : 0
 class Query {
-  constructor(p, filters = [], max = Infinity, order = '__name__', direction = 'asc', cursor) { Object.assign(this, { path: p, filters, max, order, direction, cursor }) }
+  constructor(p, filters = [], max = Infinity, orders = [], cursor) { Object.assign(this, { path: p, filters, max, orders, cursor }) }
   doc(id = `auto_${++counter}`) { return new Ref(`${this.path}/${id}`) }
-  where(key, op, value) { assert.equal(op, '=='); return new Query(this.path, [...this.filters, [key, value]], this.max, this.order, this.direction, this.cursor) }
-  limit(max) { return new Query(this.path, this.filters, max, this.order, this.direction, this.cursor) }
-  orderBy(key, direction = 'asc') { return new Query(this.path, this.filters, this.max, typeof key === 'string' ? key : '__name__', direction, this.cursor) }
-  startAfter(cursor) { return new Query(this.path, this.filters, this.max, this.order, this.direction, typeof cursor === 'object' ? cursor.id : cursor) }
+  where(key, op, value) { assert.ok(['==', '>=', '<=', '>', '<'].includes(op)); return new Query(this.path, [...this.filters, [key, op, value]], this.max, this.orders, this.cursor) }
+  limit(max) { return new Query(this.path, this.filters, max, this.orders, this.cursor) }
+  orderBy(key, direction = 'asc') { return new Query(this.path, this.filters, this.max, [...this.orders, [typeof key === 'string' ? key : '__name__', direction]], this.cursor) }
+  startAfter(cursor) { return new Query(this.path, this.filters, this.max, this.orders, cursor) }
   read(state) {
     let docs = [...state.keys()].filter(p => p.startsWith(this.path + '/') && p.split('/').length === this.path.split('/').length + 1).map(p => snapshot(new Ref(p), state))
-    const key = d => this.order === '__name__' ? d.id : d.get(this.order)
-    docs = docs.filter(d => this.filters.every(([k, v]) => d.get(k) === v)).sort((a, b) => (key(a) < key(b) ? -1 : key(a) > key(b) ? 1 : 0) * (this.direction === 'asc' ? 1 : -1))
-    if (this.cursor !== undefined) docs = docs.filter(d => this.direction === 'asc' ? key(d) > this.cursor : key(d) < this.cursor)
+    const orders = this.orders.length ? this.orders : [['__name__', 'asc']]
+    const key = (d, field) => field === '__name__' ? d.id : d.get(field)
+    const compareDocs = (a, b) => {
+      for (const [field, direction] of orders) {
+        const result = compareValues(key(a, field), key(b, field))
+        if (result) return result * (direction === 'asc' ? 1 : -1)
+      }
+      return 0
+    }
+    docs = docs.filter(d => this.filters.every(([field, op, expected]) => {
+      const result = compareValues(d.get(field), expected)
+      return op === '==' ? result === 0 : op === '>=' ? result >= 0 : op === '<=' ? result <= 0 : op === '>' ? result > 0 : result < 0
+    })).sort(compareDocs)
+    if (this.cursor !== undefined) docs = docs.filter(d => {
+      if (typeof this.cursor === 'string') return orders[0][1] === 'asc' ? key(d, orders[0][0]) > this.cursor : key(d, orders[0][0]) < this.cursor
+      return compareDocs(d, this.cursor) > 0
+    })
     docs = docs.slice(0, this.max)
     return { docs, size: docs.length, empty: !docs.length }
   }
@@ -47,6 +63,7 @@ const db = {
         async get(ref) { reads.push(ref.path); assert.equal(written, false, 'Firestore reads must precede writes'); return ref instanceof Query ? ref.read(state) : snapshot(ref, state) },
         set(ref, value, options) { writes.push(ref.path); assert.ok(ref.path.startsWith('demo/ai-task/users/'), 'Write escaped AI Task namespace'); written = true; const data = materialize(value); const next = options?.merge ? { ...state.get(ref.path), ...data } : data; for (const key of Object.keys(next)) if (next[key]?.__deleteField) delete next[key]; state.set(ref.path, next); return tx },
         update(ref, value) { assert.ok(state.has(ref.path)); return tx.set(ref, value, { merge: true }) },
+        delete(ref) { assert.ok(ref.path.startsWith('demo/ai-task/users/'), 'Write escaped AI Task namespace'); writes.push(ref.path); written = true; state.delete(ref.path); return tx },
       }
       const result = await callback(tx)
       if (failCommit) { failCommit = false; throw new Error('Simulated commit failure') }

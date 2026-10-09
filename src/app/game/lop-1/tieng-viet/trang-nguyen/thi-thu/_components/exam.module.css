@@ -3,7 +3,15 @@
   overflow-x: clip;
   background: #f3f3f3;
   color: #333;
-  font-family: Arial, Roboto, sans-serif;
+  font-family: "Game Nunito", Arial, sans-serif;
+}
+
+.reviewQuestion {
+  scroll-margin-top: 50px;
+}
+
+.reviewQuestionList {
+  gap: 20px;
 }
 
 .header {
@@ -1866,6 +1874,10 @@
 }
 
 .startButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
   min-width: 210px;
   min-height: 44px;
   margin-top: 26px;
@@ -1881,6 +1893,11 @@
 
 .startButton:hover {
   background: #ad1922;
+}
+
+.startButton:disabled {
+  cursor: wait;
+  opacity: .72;
 }
 
 .startButton:focus-visible,

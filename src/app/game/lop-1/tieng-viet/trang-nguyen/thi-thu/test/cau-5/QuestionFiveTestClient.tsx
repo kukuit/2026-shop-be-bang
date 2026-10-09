@@ -60,7 +60,7 @@ export default function QuestionFiveTestClient({ questions, commonVoiceAvailable
               <div className="-mt-3 mb-5 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-b-lg border border-t-0 border-slate-200 bg-slate-50 px-4 py-3 text-xs font-semibold text-slate-600 sm:text-sm">
                 <span>Generator: <strong className="text-slate-800">FIND_LETTER_IN_ANIMAL_NAME</strong></span>
                 <span>Chữ đích: <strong className="text-slate-800">{metadata?.targetLetter}</strong></span>
-                <span>Sprite: <strong className="text-slate-800">tag-name.png</strong></span>
+                <span>Sprite: <strong className="text-slate-800">tag-name.webp</strong></span>
               </div>
             </div>
           })}

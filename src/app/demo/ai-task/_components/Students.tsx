@@ -1,0 +1,290 @@
+'use client'
+
+import Link from 'next/link'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { ArrowRight, Plus, UserRound, X } from 'lucide-react'
+import { DEFAULT_HOURLY_RATE, DEFAULT_SESSION_RATE, formatVnd, resolveStudentPricing, shiftVietnamDate, vietnamTodayKey, type PricingMode, type Student, type TeachingBillingPeriod, type TeachingSettings, type TeachingStudentBillingRow, type TeachingSessionView, type WeeklySchedule } from '../_lib/teaching-model'
+import { SessionReviewForm } from './TeachingForms'
+import { teachingGet, teachingPost, TeachingRequestError } from './teaching-client'
+import { notifyTeachingDataChanged, studentAvatarStyle, studentInitials } from './teaching-ui'
+import { useTeachingWorkspace } from './WorkspaceProvider'
+
+type ScheduleDraft = Omit<Pick<WeeklySchedule, 'seriesId' | 'dayOfWeek' | 'startTime' | 'durationMinutes'>, 'seriesId'> & { seriesId?: string }
+type StudentDraft = { id?: string; name: string; hourlyRate: string; pricingSelection: 'DEFAULT' | 'PER_SESSION' | 'PER_HOUR'; sessionRate: string; status: 'ACTIVE' | 'INACTIVE'; note: string; weeklySchedules: ScheduleDraft[]; scheduleEffectiveFrom: string; originalScheduleKey: string }
+type SchedulePreview = { start: string; end: string; existingSessions: number; overrides: number; projectedOld: number; projectedNew: number; removed: number; added: number }
+const blank = (): StudentDraft => ({ name: '', hourlyRate: '', pricingSelection: 'DEFAULT', sessionRate: '', status: 'ACTIVE', note: '', weeklySchedules: [], scheduleEffectiveFrom: vietnamTodayKey(), originalScheduleKey: '[]' })
+const weekdayLabels = ['Chủ nhật', 'Thứ hai', 'Thứ ba', 'Thứ tư', 'Thứ năm', 'Thứ sáu', 'Thứ bảy']
+const scheduleEntriesInWeekOrder = (schedules: Pick<WeeklySchedule, 'seriesId' | 'dayOfWeek' | 'startTime' | 'durationMinutes'>[]) => schedules.map((schedule, index) => ({ schedule, index })).sort((a, b) => (a.schedule.dayOfWeek || 7) - (b.schedule.dayOfWeek || 7) || a.schedule.startTime.localeCompare(b.schedule.startTime))
+const scheduleKey = (schedules: ScheduleDraft[]) => JSON.stringify(schedules.map(({ seriesId, dayOfWeek, startTime, durationMinutes }) => ({ seriesId: seriesId || '', dayOfWeek, startTime, durationMinutes })).sort((a, b) => a.dayOfWeek - b.dayOfWeek || a.startTime.localeCompare(b.startTime) || a.seriesId.localeCompare(b.seriesId)))
+const billingDate = (value: string) => { const [year, month, day] = value.split('-'); return `${day}/${month}/${year}` }
+const shortDateTime = (value: string) => new Date(value).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+const billingHours = (minutes: number) => `${new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 2 }).format(minutes / 60)} giờ`
+const scheduleProjection = (schedules: ScheduleDraft[], start: string, end: string) => {
+  const slots = new Set<string>()
+  for (let date = start; date < end; date = shiftVietnamDate(date, 1)) {
+    const day = new Date(`${date}T12:00:00Z`).getUTCDay()
+    for (const schedule of schedules) if (schedule.dayOfWeek === day) slots.add(`${schedule.seriesId || `${day}-${schedule.startTime}`}|${date}|${schedule.startTime}|${schedule.durationMinutes}`)
+  }
+  return slots
+}
+
+export default function Students() {
+  const { active } = useTeachingWorkspace()
+  const [students, setStudents] = useState<Student[]>([])
+  const [settings, setSettings] = useState<Pick<TeachingSettings, 'defaultPricingMode' | 'defaultSessionRate' | 'defaultHourlyRate'>>({ defaultPricingMode: 'PER_SESSION', defaultSessionRate: DEFAULT_SESSION_RATE, defaultHourlyRate: DEFAULT_HOURLY_RATE })
+  const [billingSummary, setBillingSummary] = useState<{ period: TeachingBillingPeriod; rows: TeachingStudentBillingRow[] } | null>(null)
+  const [draft, setDraft] = useState<StudentDraft | null>(null)
+  const [baseDraft, setBaseDraft] = useState<StudentDraft | null>(null)
+  const [detailStudent, setDetailStudent] = useState<Student | null>(null)
+  const [pendingStudent, setPendingStudent] = useState<Student | null>(null)
+  const [pendingSession, setPendingSession] = useState<TeachingSessionView | null>(null)
+  const [pendingSessionId, setPendingSessionId] = useState('')
+  const [reviewingPendingSession, setReviewingPendingSession] = useState(false)
+  const [pendingLoading, setPendingLoading] = useState(false)
+  const [pendingBusy, setPendingBusy] = useState(false)
+  const [pendingActionId, setPendingActionId] = useState('')
+  const [pendingActionKind, setPendingActionKind] = useState<'attended' | 'review' | 'absent' | null>(null)
+  const [pendingError, setPendingError] = useState('')
+  const [activeTab, setActiveTab] = useState<'profile' | 'schedule'>('profile')
+  const [preview, setPreview] = useState<SchedulePreview | null>(null)
+  const [scheduleConflicts, setScheduleConflicts] = useState<TeachingRequestError['scheduleConflicts']>(undefined)
+  const [pendingEffectiveDate, setPendingEffectiveDate] = useState<string | null>(null)
+  const [confirmDiscard, setConfirmDiscard] = useState(false)
+  const [confirmStatus, setConfirmStatus] = useState(false)
+  const [loadRequested, setLoadRequested] = useState(false)
+  const [dataLoaded, setDataLoaded] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [billingLoading, setBillingLoading] = useState(false)
+  const [billingError, setBillingError] = useState('')
+  const [previewLoading, setPreviewLoading] = useState(false)
+  const [error, setError] = useState('')
+  const dialog = useRef<HTMLDialogElement>(null)
+  const previewRequest = useRef(0)
+  const billingRequested = useRef(false)
+
+  const refresh = useCallback(async () => {
+    setLoading(true); setError('')
+    if (billingRequested.current) setBillingLoading(true)
+    try {
+      const billingLoad = billingRequested.current
+        ? teachingGet<{ period: TeachingBillingPeriod; rows: TeachingStudentBillingRow[] }>({ resource: 'billingSummary' }).then(data => { setBillingSummary(data); setBillingError('') }).catch(reason => { setBillingSummary(null); setBillingError(reason instanceof Error ? reason.message : 'Không tải được thống kê học phí.') })
+        : Promise.resolve()
+      const [pageData] = await Promise.all([
+        teachingGet<{ students: Student[]; settings: TeachingSettings }>({ resource: 'studentsPageData' }),
+        billingLoad,
+      ])
+      setStudents(pageData.students)
+      setSettings(pageData.settings)
+      setDataLoaded(true)
+    } catch (reason) { setError(reason instanceof Error ? reason.message : 'Không tải được danh sách học viên.') }
+    finally { setLoading(false); setBillingLoading(false) }
+  }, [])
+  const loadBillingSummary = async () => {
+    billingRequested.current = true
+    setBillingLoading(true); setBillingError('')
+    try {
+      const result = await teachingGet<{ period: TeachingBillingPeriod; rows: TeachingStudentBillingRow[] }>({ resource: 'billingSummary' })
+      setBillingSummary(result); setBillingError('')
+    } catch (reason) { setBillingSummary(null); setBillingError(reason instanceof Error ? reason.message : 'Không tải được thống kê học phí.') }
+    finally { setBillingLoading(false) }
+  }
+  useEffect(() => { if (loadRequested) void refresh() }, [refresh, loadRequested])
+  useEffect(() => {
+    if (active?.mode !== 'LOCAL') return
+    billingRequested.current = true
+    setLoadRequested(true)
+  }, [active?.id, active?.mode])
+  useEffect(() => {
+    const onTeachingDataChanged = () => { void refresh() }
+    window.addEventListener('teaching:data-changed', onTeachingDataChanged)
+    return () => window.removeEventListener('teaching:data-changed', onTeachingDataChanged)
+  }, [refresh])
+  const dialogOpen = !!draft || !!detailStudent || !!pendingStudent
+  useEffect(() => { if (dialogOpen && !dialog.current?.open) dialog.current?.showModal(); else if (!dialogOpen && dialog.current?.open) dialog.current.close() }, [dialogOpen])
+  const billingByStudent = useMemo(() => new Map<string, TeachingStudentBillingRow>((billingSummary?.rows || []).map(row => [row.studentId, row] as const)), [billingSummary])
+  const dirty = !!draft && !!baseDraft && JSON.stringify(draft) !== JSON.stringify(baseDraft)
+  const openNew = () => { const next = blank(); setDraft(next); setBaseDraft(next); setDetailStudent(null); setPendingStudent(null); setActiveTab('profile'); setPreview(null); setScheduleConflicts(undefined); setError(''); setConfirmDiscard(false) }
+  const makeDraft = (student: Student): StudentDraft => {
+    const schedules = (student.weeklySchedules || []).map(({ seriesId, dayOfWeek, startTime, durationMinutes }) => ({ seriesId, dayOfWeek, startTime, durationMinutes }))
+    const pricingSelection = student.pricingMode === 'PER_HOUR' ? 'PER_HOUR' : student.pricingMode === 'PER_SESSION' && student.sessionRate != null ? 'PER_SESSION' : 'DEFAULT'
+    return { id: student.id, name: student.name, hourlyRate: student.hourlyRate == null ? '' : String(student.hourlyRate), pricingSelection, sessionRate: student.sessionRate == null ? '' : String(student.sessionRate), status: student.status, note: student.note || '', weeklySchedules: schedules, scheduleEffectiveFrom: vietnamTodayKey(), originalScheduleKey: scheduleKey(schedules) }
+  }
+  const openEdit = (student: Student) => { const next = makeDraft(student); setDraft(next); setBaseDraft(next); setDetailStudent(null); setPendingStudent(null); setActiveTab('profile'); setPreview(null); setScheduleConflicts(undefined); setError(''); setConfirmDiscard(false) }
+  const closeRequest = () => { if (busy || pendingBusy) return; if (dirty) setConfirmDiscard(true); else { setDraft(null); setDetailStudent(null); setPendingStudent(null); setPendingSession(null); setPendingSessionId(''); setReviewingPendingSession(false); setPreview(null) } }
+  const openPendingSession = async (sessionId: string, reviewImmediately = false) => {
+    setPendingSessionId(sessionId); setPendingSession(null); setReviewingPendingSession(reviewImmediately); setPendingActionId(reviewImmediately ? sessionId : ''); setPendingActionKind(reviewImmediately ? 'review' : null); setPendingError(''); setPendingLoading(true)
+    try {
+      const result = await teachingGet<{ session: TeachingSessionView }>({ resource: 'session', id: sessionId })
+      if (result.session.status !== 'SCHEDULED' || result.session.lifecycleStatus === 'SUPERSEDED') {
+        setReviewingPendingSession(false)
+        setPendingSessionId('')
+        setPendingError('Buổi học vừa được cập nhật ở nơi khác. Danh sách đã được tải lại.')
+        await refresh()
+      } else setPendingSession(result.session)
+    } catch (reason) { setPendingError(reason instanceof Error ? reason.message : 'Không tải được buổi học cần xác nhận.') }
+    finally { setPendingLoading(false); setPendingActionId(''); setPendingActionKind(null) }
+  }
+  const openPending = (student: Student) => {
+    setDraft(null); setDetailStudent(null); setPendingStudent(student); setPendingError(''); setPendingSession(null); setPendingSessionId(''); setReviewingPendingSession(false)
+  }
+  const savePendingReview: React.ComponentProps<typeof SessionReviewForm>['onSave'] = async data => {
+    setPendingBusy(true); setPendingError('')
+    try {
+      await teachingPost({ operation: 'completeSession', data })
+      setPendingSession(null); setPendingSessionId(''); setReviewingPendingSession(false); setPendingError('')
+      notifyTeachingDataChanged('Đã xác nhận và lưu đánh giá buổi học.')
+    } catch (reason) { setPendingError(reason instanceof Error ? reason.message : 'Không lưu được xác nhận buổi học.'); throw reason }
+    finally { setPendingBusy(false) }
+  }
+  const confirmNoAttendance = async (sessionId: string) => {
+    setPendingBusy(true); setPendingActionId(sessionId); setPendingActionKind('absent'); setPendingError('')
+    try {
+      await teachingPost({ operation: 'sessionStatus', sessionId, action: 'cancel' })
+      setPendingError('')
+      notifyTeachingDataChanged('Đã xác nhận buổi học không diễn ra.')
+    } catch (reason) { setPendingError(reason instanceof Error ? reason.message : 'Không lưu được xác nhận buổi học.') }
+    finally { setPendingBusy(false); setPendingActionId(''); setPendingActionKind(null) }
+  }
+  const confirmAttendance = async (sessionId: string) => {
+    setPendingBusy(true); setPendingActionId(sessionId); setPendingActionKind('attended'); setPendingError('')
+    try {
+      await teachingPost({ operation: 'confirmAttendance', data: { sessionId } })
+      notifyTeachingDataChanged('Đã xác nhận buổi học và tính học phí theo thời lượng dự kiến.')
+    } catch (reason) { setPendingError(reason instanceof Error ? reason.message : 'Không lưu được xác nhận buổi học.') }
+    finally { setPendingBusy(false); setPendingActionId(''); setPendingActionKind(null) }
+  }
+  const updateWeeklySchedule = (index: number, changes: Partial<ScheduleDraft>) => { setPreview(null); setDraft(old => old ? ({ ...old, weeklySchedules: old.weeklySchedules.map((item, i) => i === index ? { ...item, ...changes } : item) }) : old) }
+  const changeScheduleEffectiveFrom = (date: string) => {
+    if (!draft || date < vietnamTodayKey()) return
+    if (draft.id && scheduleKey(draft.weeklySchedules) !== draft.originalScheduleKey) { setPendingEffectiveDate(date); return }
+    void applyScheduleEffectiveDate(date)
+  }
+  const applyScheduleEffectiveDate = async (date: string) => {
+    if (!draft) return
+    const requestId = ++previewRequest.current
+    setPreview(null); setScheduleConflicts(undefined); setError('')
+    setPendingEffectiveDate(null)
+    setDraft(old => old ? ({ ...old, scheduleEffectiveFrom: date }) : old)
+    if (!draft.id || !date) return
+    setPreviewLoading(true)
+    try {
+      const result = await teachingGet<{ weeklySchedules: WeeklySchedule[] }>({ resource: 'weeklySchedules', studentId: draft.id, date })
+      if (requestId !== previewRequest.current) return
+      const weeklySchedules = result.weeklySchedules.map(({ seriesId, dayOfWeek, startTime, durationMinutes }) => ({ seriesId, dayOfWeek, startTime, durationMinutes }))
+      setDraft(old => old ? ({ ...old, scheduleEffectiveFrom: date, weeklySchedules, originalScheduleKey: scheduleKey(weeklySchedules) }) : old)
+      setBaseDraft(old => old ? ({ ...old, scheduleEffectiveFrom: date, weeklySchedules, originalScheduleKey: scheduleKey(weeklySchedules) }) : old)
+    } catch (reason) { if (requestId === previewRequest.current) setError(reason instanceof Error ? reason.message : 'Không tải được lịch theo ngày hiệu lực.') }
+    finally { if (requestId === previewRequest.current) setPreviewLoading(false) }
+  }
+  const loadSchedulePreview = async (current: StudentDraft) => {
+    const start = current.scheduleEffectiveFrom
+    const end = shiftVietnamDate(start, 30)
+    setPreviewLoading(true); setError('')
+    try {
+      const result = await teachingGet<{ sessions: TeachingSessionView[] }>({ resource: 'sessions', from: `${start}T00:00:00+07:00`, to: `${end}T00:00:00+07:00`, studentId: current.id || '', materialize: 'false' })
+      const recurring = result.sessions.filter(session => session.source === 'RECURRING' && session.occurrenceDate && session.occurrenceDate >= start && session.occurrenceDate < end)
+      const currentSchedules = JSON.parse(current.originalScheduleKey) as ScheduleDraft[]
+      const oldSlots = scheduleProjection(currentSchedules, start, end)
+      const newSlots = scheduleProjection(current.weeklySchedules, start, end)
+      const removed = Array.from(oldSlots).filter(slot => !newSlots.has(slot)).length
+      const added = Array.from(newSlots).filter(slot => !oldSlots.has(slot)).length
+      setPreview({ start, end, existingSessions: recurring.filter(session => session.status === 'SCHEDULED' && !session.isOverride).length, overrides: recurring.filter(session => session.isOverride).length, projectedOld: oldSlots.size, projectedNew: newSlots.size, removed, added })
+    } catch (reason) { setError(reason instanceof Error ? reason.message : 'Không tải được bản xem trước lịch.') }
+    finally { setPreviewLoading(false) }
+  }
+  const save = async (event: React.FormEvent) => {
+    event.preventDefault()
+    if (!draft) return
+    const schedulesChanged = scheduleKey(draft.weeklySchedules) !== draft.originalScheduleKey
+    if (draft.id && schedulesChanged && !preview) { await loadSchedulePreview(draft); return }
+    await persist(draft, false)
+  }
+  const persist = async (current: StudentDraft, allowScheduleOverlap: boolean) => {
+    setBusy(true); setError(''); setScheduleConflicts(undefined)
+    const schedulesChanged = scheduleKey(current.weeklySchedules) !== current.originalScheduleKey
+    const data = {
+      ...(current.id ? { id: current.id } : {}), name: current.name,
+      hourlyRate: current.hourlyRate === '' ? null : Number(current.hourlyRate),
+      pricingMode: current.pricingSelection === 'DEFAULT' ? null : current.pricingSelection as PricingMode,
+      sessionRate: current.pricingSelection === 'PER_SESSION' && current.sessionRate !== '' ? Number(current.sessionRate) : null,
+      status: current.status, note: current.note || null,
+      ...(!current.id || schedulesChanged ? { weeklySchedules: current.weeklySchedules, scheduleEffectiveFrom: current.scheduleEffectiveFrom } : {}),
+    }
+    try {
+      await teachingPost({ operation: 'saveStudent', data, ...(allowScheduleOverlap ? { allowScheduleOverlap: true } : {}) })
+      setDraft(null); setBaseDraft(null); setPreview(null); notifyTeachingDataChanged('Đã lưu thông tin học viên.')
+    } catch (reason) {
+      if (reason instanceof TeachingRequestError && reason.scheduleConflicts?.length && !allowScheduleOverlap) setScheduleConflicts(reason.scheduleConflicts)
+      else setError(reason instanceof Error ? reason.message : 'Không lưu được học viên.')
+    } finally { setBusy(false) }
+  }
+  const toggle = async (student: Student) => {
+    setBusy(true); setError('')
+    try { await teachingPost({ operation: 'saveStudent', data: { id: student.id, name: student.name, hourlyRate: student.hourlyRate, status: student.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE', note: student.note } }); setConfirmStatus(false); setDetailStudent(null); notifyTeachingDataChanged(student.status === 'ACTIVE' ? 'Đã ngừng học viên.' : 'Đã kích hoạt học viên.') }
+    catch (reason) { setError(reason instanceof Error ? reason.message : 'Không cập nhật được trạng thái.') }
+    finally { setBusy(false) }
+  }
+  const updateDraft = (patch: Partial<StudentDraft>) => { setPreview(null); setDraft(old => old ? ({ ...old, ...patch }) : old) }
+
+  return <>
+    <div className="demo-page-heading teaching-heading"><div><p className="teaching-eyebrow">Danh sách lớp</p><h1>Học viên</h1><p>Hồ sơ, học phí và lịch học cố định theo tuần.</p></div><button className="demo-primary" disabled={busy || loading} onClick={() => dataLoaded ? openNew() : loadRequested ? void refresh() : setLoadRequested(true)}>{dataLoaded ? <><Plus size={17}/> Thêm học viên</> : loadRequested ? 'Tải lại học viên' : 'Tải học viên'}</button></div>
+    <section className="demo-panel teaching-panel">
+      {dataLoaded && (billingSummary ? <p className="teaching-billing-period"><strong>Tháng học phí: {billingDate(billingSummary.period.startDate)} – {billingDate(billingSummary.period.endDate)}</strong><span>Chốt ngày {billingSummary.period.cutoffDay}. Chỉ tính buổi đã hoàn thành và đánh giá.</span></p> : <div className="teaching-billing-period"><strong>Thống kê học phí chưa tải</strong><span>Phần này đọc dữ liệu buổi học trong tháng và các buổi đã qua để chờ xác nhận. <button type="button" disabled={billingLoading} onClick={() => void loadBillingSummary()}>{billingLoading ? 'Đang tải…' : 'Tải thống kê học phí'}</button></span>{billingError && <span role="alert">{billingError}</span>}</div>)}
+      {error && <div role="alert" className="demo-alert teaching-retry"><span>{error}</span><button onClick={() => void refresh()}>Thử lại</button></div>}
+      {loading ? <div className="teaching-loading-list" role="status" aria-label="Đang tải học viên"><div className="teaching-skeleton"/><div className="teaching-skeleton"/><div className="teaching-skeleton"/></div> : !dataLoaded ? <div className="teaching-empty-card"><UserRound size={24}/><strong>Danh sách chưa được tải</strong><p>Tải hồ sơ khi cần xem hoặc quản lý học viên. Thống kê học phí có thể tải riêng sau đó.</p><button className="demo-primary" onClick={() => loadRequested ? void refresh() : setLoadRequested(true)}>{loadRequested ? 'Tải lại danh sách' : 'Tải danh sách học viên'}</button></div> : !students.length ? <div className="teaching-empty-card"><UserRound size={24}/><strong>Chưa có học viên</strong><p>Thêm học viên để bắt đầu tạo lịch dạy.</p><button className="demo-primary" onClick={openNew}><Plus size={16}/> Thêm học viên</button></div> : <div className="teaching-students-table-wrap"><table className="teaching-students-table"><thead><tr><th>Học viên</th><th>Lịch cố định</th><th>Đã học trong tháng</th><th>Học phí tạm tính</th><th>Buổi đã qua · có học?</th><th>Thao tác</th></tr></thead><tbody>{students.map(student => {
+        const weeklyMinutes = (student.weeklySchedules || []).reduce((sum, item) => sum + item.durationMinutes, 0)
+        const billing = billingByStudent.get(student.id)
+        const billingModes = billing?.billingModes.length ? billing.billingModes : [resolveStudentPricing(student, settings as TeachingSettings).mode]
+        const usage = [
+          billingModes.includes('PER_SESSION') ? `${billing?.perSessionCompletedSessions || 0} buổi` : '',
+          billingModes.includes('PER_HOUR') ? billingHours(billing?.perHourDurationMinutes || 0) : '',
+        ].filter(Boolean).join(' · ')
+        return <tr key={student.id}>
+          <td><div className="teaching-student-table-person"><span className="teaching-student-avatar" style={{ ...studentAvatarStyle(student.id, students.map(item => item.id)), borderRadius: '50%' }} aria-hidden="true">{studentInitials(student.name)}</span><span><button className="teaching-student-table-name" onClick={() => { setDetailStudent(student); setDraft(null); setError(''); setConfirmStatus(false) }}>{student.name}</button><span className={`teaching-status teaching-status-${student.status.toLowerCase()}`}>{student.status === 'ACTIVE' ? 'Đang học' : 'Đã ngừng'}</span></span></div></td>
+          <td>{student.weeklySchedules?.length ? <><strong>{student.weeklySchedules.length} buổi/tuần</strong><small>{new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 1 }).format(weeklyMinutes / 60)} giờ/tuần</small></> : <span className="teaching-muted-cell">Chưa cài lịch</span>}</td>
+          <td><strong>{billingSummary ? usage : <span className="teaching-muted-cell">Chưa tải</span>}</strong></td>
+          <td><strong className="teaching-student-fee">{billingSummary ? formatVnd(billing?.feeAmount || 0) : '—'}</strong></td>
+          <td>{!billingSummary ? <span className="teaching-muted-cell">Chưa tải</span> : billing?.overdueUnconfirmedSessions ? <button type="button" className="teaching-overdue-cell teaching-overdue-trigger" aria-label={`Mở ${billing.overdueUnconfirmedSessions} buổi học chưa xác nhận của ${student.name}`} onClick={() => openPending(student)}><strong>{billing.overdueUnconfirmedSessions} buổi chưa xác nhận</strong><small>{billing.overdueUnconfirmedItems.slice(0, 3).map(item => shortDateTime(item.startAt)).join(' · ')}{billing.overdueUnconfirmedSessions > 3 ? ` · +${billing.overdueUnconfirmedSessions - 3} buổi` : ''}</small></button> : <span className="teaching-no-overdue">Không có</span>}</td>
+          <td><button className="teaching-student-edit" onClick={() => openEdit(student)}>Sửa</button></td>
+        </tr>
+      })}</tbody></table></div>}
+    </section>
+
+    <dialog ref={dialog} className="ai-task-dialog teaching-dialog teaching-student-dialog" onCancel={event => { event.preventDefault(); if (reviewingPendingSession) window.dispatchEvent(new Event('teaching:request-form-close')); else closeRequest() }} onClose={() => { setDraft(null); setDetailStudent(null); setPendingStudent(null); setPendingSession(null); setPendingSessionId(''); setPendingActionId(''); setPendingActionKind(null); setReviewingPendingSession(false); setPreview(null) }}>
+      {detailStudent && !draft && <section className="teaching-student-detail"><button className="teaching-dialog-close" aria-label="Đóng" onClick={closeRequest}><X size={18}/></button><p className="teaching-eyebrow">Hồ sơ học viên</p><h2>{detailStudent.name}</h2><span className={`teaching-status teaching-status-${detailStudent.status.toLowerCase()}`}>{detailStudent.status === 'ACTIVE' ? 'Đang học' : 'Đã ngừng hoạt động'}</span><div className="teaching-detail-grid"><div><small>Học phí</small><strong>{formatVnd(resolveStudentPricing(detailStudent, settings as TeachingSettings).unitRate)}/{resolveStudentPricing(detailStudent, settings as TeachingSettings).mode === 'PER_SESSION' ? 'buổi' : 'giờ'}</strong><span>{detailStudent.pricingMode ? 'Đơn giá riêng' : 'Theo mặc định'}</span></div><div><small>Lịch tuần</small><strong>{detailStudent.weeklySchedules?.length || 0} khung giờ</strong><span>{detailStudent.weeklySchedules?.reduce((sum, item) => sum + item.durationMinutes, 0) || 0} phút/tuần</span></div></div><h3>Lịch cố định</h3>{detailStudent.weeklySchedules?.length ? <ul className="teaching-detail-goals">{scheduleEntriesInWeekOrder(detailStudent.weeklySchedules).map(({ schedule: item }) => <li key={item.seriesId}>{weekdayLabels[item.dayOfWeek]} · {item.startTime} · {item.durationMinutes} phút</li>)}</ul> : <p>Chưa có lịch cố định theo tuần.</p>}{detailStudent.note && <><h3>Ghi chú</h3><p className="teaching-detail-note">{detailStudent.note}</p></>}{confirmStatus ? <div className="teaching-inline-confirm"><p>{detailStudent.status === 'ACTIVE' ? 'Ngừng hoạt động học viên này? Lịch và dữ liệu cũ vẫn được giữ.' : 'Kích hoạt lại học viên này?'}</p><button onClick={() => setConfirmStatus(false)}>Quay lại</button><button className={detailStudent.status === 'ACTIVE' ? 'teaching-danger-button' : 'demo-primary'} disabled={busy} onClick={() => void toggle(detailStudent)}>{detailStudent.status === 'ACTIVE' ? 'Ngừng hoạt động' : 'Kích hoạt'}</button></div> : null}{error && <p role="alert" className="demo-alert">{error}</p>}<div className="demo-form-actions"><button onClick={closeRequest}>Đóng</button><Link className="teaching-button" href={`/demo/ai-task/tasks?studentId=${encodeURIComponent(detailStudent.id)}`}>Xem buổi học</Link><button className="demo-primary" onClick={() => openEdit(detailStudent)}>Sửa hồ sơ</button><button onClick={() => setConfirmStatus(true)}>{detailStudent.status === 'ACTIVE' ? 'Ngừng học' : 'Kích hoạt lại'}</button></div></section>}
+      {pendingStudent && !draft && !detailStudent && (() => {
+        const billing = billingByStudent.get(pendingStudent.id)
+        const pendingItems = billing?.overdueUnconfirmedItems || []
+        return <section className="teaching-pending-dialog">
+          {!reviewingPendingSession && <button className="teaching-dialog-close" aria-label="Đóng" onClick={closeRequest}><X size={18}/></button>}
+          {reviewingPendingSession && pendingSession ? <SessionReviewForm key={pendingSession.id} session={pendingSession} students={students} settings={settings as TeachingSettings} onSave={savePendingReview} onCancel={() => { setReviewingPendingSession(false); setPendingSession(null); setPendingSessionId('') }}/> : <>
+            <p className="teaching-eyebrow">Xác nhận lịch học</p>
+            <h2>Buổi học chờ xác nhận · {pendingStudent.name}</h2>
+            <p className="teaching-pending-question">Đã học tính theo thời lượng dự kiến · Đánh giá nhập thời lượng thực tế · Không học không tính phí.</p>
+            {pendingLoading && <p role="status" className="teaching-inline-loading">Đang tải buổi học…</p>}
+            {pendingError && <><p role="alert" className="demo-alert">{pendingError}</p>{pendingSessionId && <button type="button" onClick={() => void openPendingSession(pendingSessionId, true)}>Thử tải lại buổi học</button>}</>}
+            {pendingItems.length ? <div className="teaching-pending-session-list">{pendingItems.map(item => <article key={item.sessionId} className="teaching-pending-session-row"><span><strong>{shortDateTime(item.startAt)}</strong><small>{item.title} · {item.scheduledDurationMinutes} phút</small></span><div><button type="button" className="teaching-confirm-attended" title="Tính học phí theo thời lượng dự kiến, không nhập đánh giá" disabled={pendingBusy || pendingLoading} onClick={() => void confirmAttendance(item.sessionId)}>{pendingActionId === item.sessionId && pendingActionKind === 'attended' ? 'Đang lưu…' : 'Đã học'}</button><button type="button" className="demo-primary" disabled={pendingBusy || pendingLoading} onClick={() => void openPendingSession(item.sessionId, true)}>{pendingActionId === item.sessionId && pendingActionKind === 'review' ? 'Đang mở…' : 'Đánh giá'}</button><button type="button" className="teaching-confirm-absent" disabled={pendingBusy || pendingLoading} onClick={() => void confirmNoAttendance(item.sessionId)}>{pendingActionId === item.sessionId && pendingActionKind === 'absent' ? 'Đang lưu…' : 'Không học'}</button></div></article>)}</div> : !pendingLoading && !pendingError ? <p className="teaching-pending-complete">Đã xử lý hết các buổi chờ xác nhận.</p> : null}
+          </>}
+        </section>
+      })()}
+      {draft && <form className="teaching-form teaching-student-form" onSubmit={save}>
+        <button className="teaching-dialog-close" type="button" aria-label="Đóng" onClick={closeRequest}><X size={18}/></button><p className="teaching-eyebrow">{draft.id ? 'Hồ sơ' : 'Hồ sơ mới'}</p><h2>{draft.id ? 'Sửa học viên' : 'Thêm học viên'}</h2>
+        <div className="teaching-student-tabs" role="tablist" aria-label="Thông tin học viên"><button type="button" role="tab" aria-selected={activeTab === 'profile'} onClick={() => setActiveTab('profile')}>Thông tin & học phí</button><button type="button" role="tab" aria-selected={activeTab === 'schedule'} onClick={() => setActiveTab('schedule')}>Lịch cố định</button></div>
+        {activeTab === 'profile' ? <div className="teaching-form-tab"><label>Tên học viên *<input autoFocus required maxLength={160} value={draft.name} onChange={event => updateDraft({ name: event.target.value })}/></label>
+          <fieldset className="teaching-pricing-options"><legend>Cấu hình học phí</legend><label className="teaching-radio-option"><input type="radio" name="student-pricing" checked={draft.pricingSelection === 'DEFAULT'} onChange={() => updateDraft({ pricingSelection: 'DEFAULT' })}/><span>Dùng giá mặc định<small>{settings.defaultPricingMode === 'PER_SESSION' ? `${formatVnd(settings.defaultSessionRate)}/buổi` : `${formatVnd(settings.defaultHourlyRate)}/giờ`}</small></span></label><label className="teaching-radio-option"><input type="radio" name="student-pricing" checked={draft.pricingSelection === 'PER_SESSION'} onChange={() => updateDraft({ pricingSelection: 'PER_SESSION', sessionRate: draft.sessionRate || String(settings.defaultSessionRate) })}/><span>Đơn giá riêng theo buổi</span></label>{draft.pricingSelection === 'PER_SESSION' && <label>Đơn giá (VND/buổi)<input type="number" min={0} max={100_000_000} step={1} required value={draft.sessionRate} onChange={event => updateDraft({ sessionRate: event.target.value })}/></label>}<label className="teaching-radio-option"><input type="radio" name="student-pricing" checked={draft.pricingSelection === 'PER_HOUR'} onChange={() => updateDraft({ pricingSelection: 'PER_HOUR', hourlyRate: draft.hourlyRate || String(settings.defaultHourlyRate) })}/><span>Đơn giá riêng theo giờ</span></label>{draft.pricingSelection === 'PER_HOUR' && <label>Đơn giá (VND/giờ)<input type="number" min={0} max={100_000_000} step={1} required value={draft.hourlyRate} onChange={event => updateDraft({ hourlyRate: event.target.value })}/></label>}</fieldset>
+          <label>Ghi chú<textarea maxLength={2000} value={draft.note} onChange={event => updateDraft({ note: event.target.value })} placeholder="Thông tin cần lưu ý…"/></label>{draft.id && <label>Trạng thái<select value={draft.status} onChange={event => updateDraft({ status: event.target.value as StudentDraft['status'] })}><option value="ACTIVE">Đang học</option><option value="INACTIVE">Đã ngừng hoạt động</option></select></label>}<button type="button" className="teaching-tab-next" onClick={() => setActiveTab('schedule')}>Tiếp tục: lịch cố định <ArrowRight size={16}/></button>
+        </div> : <div className="teaching-form-tab"><fieldset className="teaching-weekly-schedules"><legend>Lịch học cố định theo tuần</legend><p className="teaching-schedule-explainer">Các buổi tương lai được tạo tự động trong 30 ngày tới. Buổi đã học, đã nghỉ hoặc được sửa riêng sẽ được giữ nguyên.</p>
+          <label>Áp dụng thay đổi từ ngày<input type="date" required min={vietnamTodayKey()} value={draft.scheduleEffectiveFrom} onChange={event => changeScheduleEffectiveFrom(event.target.value)}/><small>Chỉ chọn hôm nay hoặc ngày trong tương lai.</small></label>{previewLoading && <p role="status" className="teaching-inline-loading">Đang tải lịch và bản xem trước…</p>}
+          {pendingEffectiveDate && <div className="teaching-inline-confirm" role="alertdialog" aria-label="Xác nhận tải lịch theo ngày hiệu lực"><p>Đổi ngày hiệu lực sẽ tải mẫu lịch đang áp dụng vào {pendingEffectiveDate}. Các chỉnh sửa lịch chưa lưu hiện tại sẽ bị thay thế.</p><button type="button" onClick={() => setPendingEffectiveDate(null)}>Giữ lịch đang sửa</button><button type="button" className="demo-primary" onClick={() => void applyScheduleEffectiveDate(pendingEffectiveDate)}>Tải lịch ngày này</button></div>}
+          {draft.weeklySchedules.map((schedule, index) => <div className="teaching-weekly-row" key={schedule.seriesId || index}><select aria-label={`Ngày học ${index + 1}`} value={schedule.dayOfWeek} onChange={event => updateWeeklySchedule(index, { dayOfWeek: Number(event.target.value) })}>{weekdayLabels.map((label, day) => <option key={day} value={day}>{label}</option>)}</select><label className="teaching-weekly-time">Bắt đầu<input aria-label={`Giờ bắt đầu ${index + 1}`} type="time" required value={schedule.startTime} onChange={event => updateWeeklySchedule(index, { startTime: event.target.value })}/></label><label className="teaching-weekly-duration">Phút<input aria-label={`Thời lượng ${index + 1}`} type="number" required min={1} max={1440} step={1} value={schedule.durationMinutes} onChange={event => updateWeeklySchedule(index, { durationMinutes: Number(event.target.value) })}/></label><button aria-label={`Xóa lịch ${index + 1}`} type="button" onClick={() => { setPreview(null); setDraft(old => old ? ({ ...old, weeklySchedules: old.weeklySchedules.filter((_, i) => i !== index) }) : old) }}>Xóa</button></div>)}
+          <button type="button" className="teaching-add-goal" disabled={draft.weeklySchedules.length >= 50} onClick={() => { setPreview(null); setDraft(old => old ? ({ ...old, weeklySchedules: [...old.weeklySchedules, { dayOfWeek: 1, startTime: '18:00', durationMinutes: 90 }] }) : old) }}><Plus size={15}/> Thêm khung giờ mỗi tuần</button>
+        </fieldset>
+        {preview && <section className="teaching-schedule-preview" aria-label="Xem trước thay đổi lịch"><p className="teaching-eyebrow">Xem trước 30 ngày</p><h3>{preview.start} – {preview.end}</h3><div className="teaching-preview-stats"><span><small>Lịch hiện tại</small><strong>{preview.projectedOld} buổi</strong></span><span><small>Lịch sau thay đổi</small><strong>{preview.projectedNew} buổi</strong></span><span><small>Thay đổi dự kiến</small><strong>−{preview.removed} / +{preview.added}</strong></span></div><p>{preview.existingSessions} buổi định kỳ đã tạo trong khoảng này. {preview.overrides} buổi đã sửa riêng sẽ được giữ nguyên.</p><div className="teaching-inline-confirm"><strong>Xác nhận ngày hiệu lực {preview.start}</strong><small>Buổi đã hoàn thành, đã hủy và ngoại lệ riêng không bị thay đổi.</small><button type="button" onClick={() => setPreview(null)}>Tiếp tục chỉnh sửa</button><button type="button" className="demo-primary" disabled={busy} onClick={() => void persist(draft, false)}>Xác nhận thay đổi lịch</button></div></section>}
+        {scheduleConflicts?.length ? <div className="teaching-conflict-panel" role="alert"><strong>Các khung giờ bị trùng</strong><ul>{scheduleConflicts.map((conflict, index) => <li key={index}>{weekdayLabels[conflict.first.dayOfWeek]}: {conflict.first.startTime} ({conflict.first.durationMinutes} phút) chồng với {conflict.second.startTime} ({conflict.second.durationMinutes} phút)</li>)}</ul><div><button type="button" onClick={() => setScheduleConflicts(undefined)}>Chỉnh lại lịch</button><button type="button" className="demo-primary" disabled={busy} onClick={() => void persist(draft, true)}>Vẫn lưu lịch bị trùng</button></div></div> : null}<button type="button" className="teaching-tab-next" onClick={() => setActiveTab('profile')}>Quay lại thông tin <ArrowRight size={16}/></button></div>}
+        {error && <p role="alert" className="demo-alert">{error}</p>}{confirmDiscard && <div className="teaching-inline-confirm" role="alertdialog" aria-label="Xác nhận bỏ thay đổi"><p>Bạn có thay đổi chưa lưu. Bỏ các thay đổi này?</p><button type="button" onClick={() => setConfirmDiscard(false)}>Tiếp tục chỉnh sửa</button><button type="button" className="teaching-danger-button" onClick={() => { setDraft(null); setBaseDraft(null); setConfirmDiscard(false) }}>Bỏ thay đổi</button></div>}
+        <div className="demo-form-actions"><button type="button" disabled={busy} onClick={closeRequest}>Hủy</button><button className="demo-primary" disabled={busy || previewLoading || !!preview}>{busy ? 'Đang lưu…' : preview ? 'Xác nhận ở phần xem trước' : 'Lưu học viên'}</button></div>
+      </form>}
+    </dialog>
+  </>
+}

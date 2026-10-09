@@ -1,0 +1,15 @@
+{
+  "id": "/demo/ai-task/",
+  "name": "Quản lý dạy thêm",
+  "short_name": "Dạy thêm",
+  "description": "Quản lý học viên, lịch dạy và học phí offline trên thiết bị.",
+  "start_url": "/demo/ai-task/",
+  "scope": "/demo/ai-task/",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#0f766e",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

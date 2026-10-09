@@ -1,2 +1,3 @@
-import Tasks from '../_components/Tasks'
-export default function Page() { return <Tasks /> }
+import TeachingSessions from '../_components/TeachingSessions'
+
+export default function Page() { return <TeachingSessions /> }
