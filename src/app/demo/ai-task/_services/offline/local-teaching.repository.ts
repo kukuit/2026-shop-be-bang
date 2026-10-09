@@ -1,6 +1,6 @@
 import {
-  calculateSessionFee, DEFAULT_BILLING_CYCLE_CUTOFF_DAY, DEFAULT_HOURLY_RATE, DEFAULT_PRICING_MODE, DEFAULT_SESSION_RATE,
-  goalCompletionRate, resolveStudentPricing, shiftVietnamDate, toVietnamDateTimeLocal, vietnamBillingPeriod,
+  calculateSessionFee, carryStudentBalanceToPeriod, DEFAULT_BILLING_CYCLE_CUTOFF_DAY, DEFAULT_HOURLY_RATE, DEFAULT_PRICING_MODE, DEFAULT_SESSION_RATE,
+  goalCompletionRate, resolveStudentPricing, shiftVietnamDate, studentBillingAnchor, toVietnamDateTimeLocal, vietnamBillingPeriod,
   vietnamDateTime, vietnamDayOfWeek, vietnamMonthRange, vietnamTodayKey,
   type PricingMode, type SessionGoal, type Student, type TeachingBillingPeriod, type TeachingSession,
   type TeachingSessionView, type TeachingSettings, type TeachingStudentBillingRow, type WeeklySchedule,
@@ -19,7 +19,7 @@ type StoredSettings = Scoped<TeachingSettings>
 type ScheduleInput = { seriesId?: string; dayOfWeek: number; startTime: string; durationMinutes: number }
 type StudentInput = {
   id?: string; name: string; hourlyRate: number | null; pricingMode?: PricingMode | null; sessionRate?: number | null
-  status: 'ACTIVE' | 'INACTIVE'; note: string | null; weeklySchedules?: ScheduleInput[]; scheduleEffectiveFrom?: string
+  status: 'ACTIVE' | 'INACTIVE'; note: string | null; openingBalance?: Student['openingBalance']; weeklySchedules?: ScheduleInput[]; scheduleEffectiveFrom?: string
 }
 type SessionInput = {
   id?: string; studentId: string; title: string; subject: string | null; startAt: string; scheduledDurationMinutes: number
@@ -39,7 +39,8 @@ const defaultSettings = (workspaceId: string): TeachingSettings => ({ id: 'defau
 const normalizeStudent = (student: Partial<Student> & { id: string; userId?: string }, workspaceId: string): Student => ({
   id: student.id, userId: workspaceId, name: student.name || 'Học viên', pricingMode: student.pricingMode ?? null,
   sessionRate: student.sessionRate ?? null, hourlyRate: student.hourlyRate ?? null, status: student.status || 'ACTIVE',
-  note: student.note ?? null, createdAt: student.createdAt || nowIso(), updatedAt: student.updatedAt || nowIso(),
+  note: student.note ?? null, openingBalance: student.openingBalance ?? null, billingPayments: student.billingPayments || [],
+  createdAt: student.createdAt || nowIso(), updatedAt: student.updatedAt || nowIso(),
 })
 
 async function transaction<T>(stores: LocalStoreName[], mode: IDBTransactionMode, work: (tx: IDBTransaction) => Promise<T>): Promise<T> {
@@ -218,6 +219,8 @@ export async function localSaveStudent(workspaceId: string, rawInput: StudentInp
       pricingMode: input.pricingMode === undefined ? oldStudent?.pricingMode ?? null : input.pricingMode,
       sessionRate: input.sessionRate === undefined ? oldStudent?.sessionRate ?? null : input.sessionRate,
       hourlyRate: input.hourlyRate === undefined ? oldStudent?.hourlyRate ?? null : input.hourlyRate,
+      openingBalance: input.openingBalance === undefined ? oldStudent?.openingBalance ?? null : input.openingBalance,
+      billingPayments: oldStudent?.billingPayments || [],
       status: input.status, note: input.note, createdAt: stored?.createdAt || nowIso(), updatedAt: nowIso(),
     }, workspaceId)
     const pricingChanged = !oldStudent || oldStudent.pricingMode !== nextStudent.pricingMode || oldStudent.sessionRate !== nextStudent.sessionRate || oldStudent.hourlyRate !== nextStudent.hourlyRate
@@ -261,6 +264,26 @@ export async function localSaveStudent(workspaceId: string, rawInput: StudentInp
   if (input.id && result.pricingChanged) await syncFuturePricing(workspaceId, id)
   const schedules = await localListWeeklySchedules(workspaceId, id)
   return { ...result.student, weeklySchedules: schedules }
+}
+
+export async function localRecordStudentPayment(workspaceId: string, input: { studentId: string; paymentId: string; amount: number }) {
+  const settings = await localGetSettings(workspaceId)
+  const period = vietnamBillingPeriod(settings.billingCycleCutoffDay)
+  return transaction(['students', 'syncOperations'], 'readwrite', async tx => {
+    const store = tx.objectStore('students')
+    const stored = await requestResult(store.get(compoundKey(workspaceId, input.studentId))) as StoredStudent | undefined
+    if (!stored || stored.deletedAt) throw new Error('Không tìm thấy học viên này.')
+    const student = normalizeStudent(stored, workspaceId)
+    if ((student.billingPayments || []).some(payment => payment.id === input.paymentId)) return { student, period }
+    const updated = normalizeStudent({
+      ...student,
+      billingPayments: [...(student.billingPayments || []), { id: input.paymentId, periodStartDate: period.startDate, amount: input.amount, paidAt: nowIso() }],
+      updatedAt: nowIso(),
+    }, workspaceId)
+    store.put({ ...updated, workspaceId, deletedAt: null } satisfies StoredStudent)
+    recordSyncOperation(tx, workspaceId, 'student', input.studentId, 'UPDATE')
+    return { student: updated, period }
+  })
 }
 
 export class LocalTeachingError extends Error {
@@ -523,22 +546,31 @@ export async function localCompleteSession(workspaceId: string, rawInput: { sess
 export async function localStudentBillingSummary(workspaceId: string, now = new Date()) {
   const settings = await localGetSettings(workspaceId)
   const period = vietnamBillingPeriod(settings.billingCycleCutoffDay, now)
-  const from = vietnamDateTime(period.startDate, '00:00'), to = vietnamDateTime(shiftVietnamDate(period.endDate, 1), '00:00')
   const [students, sessions] = await transaction(['students', 'lessons'], 'readonly', async tx => Promise.all([
     byWorkspace<StoredStudent>(tx.objectStore('students'), workspaceId), byWorkspace<StoredLesson>(tx.objectStore('lessons'), workspaceId),
   ]))
+  const activeStudents = students.filter(item => !item.deletedAt)
+  const anchorDates = activeStudents.map(student => studentBillingAnchor(student, settings.billingCycleCutoffDay, now).periodStartDate).filter(date => date <= period.startDate)
+  const firstTrackedDate = anchorDates.length ? anchorDates.sort()[0] : period.startDate
+  const from = vietnamDateTime(firstTrackedDate, '00:00'), to = vietnamDateTime(shiftVietnamDate(period.endDate, 1), '00:00')
   type Total = { completedSessions: number; actualDurationMinutes: number; perSessionCompletedSessions: number; perHourDurationMinutes: number; billingModes: Set<PricingMode>; feeAmount: number; overdueItems: TeachingStudentBillingRow['overdueUnconfirmedItems'] }
   const totals = new Map<string, Total>()
-  for (const student of students.filter(item => !item.deletedAt)) totals.set(student.id, { completedSessions: 0, actualDurationMinutes: 0, perSessionCompletedSessions: 0, perHourDurationMinutes: 0, billingModes: new Set(), feeAmount: 0, overdueItems: [] })
+  const feesByStudent = new Map<string, Map<string, number>>()
+  for (const student of activeStudents) { totals.set(student.id, { completedSessions: 0, actualDurationMinutes: 0, perSessionCompletedSessions: 0, perHourDurationMinutes: 0, billingModes: new Set(), feeAmount: 0, overdueItems: [] }); feesByStudent.set(student.id, new Map()) }
   for (const session of sessions) {
     if (session.status !== 'COMPLETED' || session.lifecycleStatus === 'SUPERSEDED' || session.startAt < from || session.startAt >= to) continue
     const total = totals.get(session.studentId)
     if (!total) continue
     const duration = session.actualDurationMinutes ?? 0
+    const fee = session.feeAmount ?? calculateSessionFee(session.pricingModeSnapshot, session.unitRateSnapshot ?? 0, duration)
+    const sessionPeriod = vietnamBillingPeriod(settings.billingCycleCutoffDay, new Date(session.startAt))
+    const feesByPeriod = feesByStudent.get(session.studentId)!
+    feesByPeriod.set(sessionPeriod.startDate, (feesByPeriod.get(sessionPeriod.startDate) || 0) + fee)
+    if (sessionPeriod.startDate !== period.startDate) continue
     total.completedSessions++; total.actualDurationMinutes += duration; total.billingModes.add(session.pricingModeSnapshot)
     if (session.pricingModeSnapshot === 'PER_SESSION') total.perSessionCompletedSessions++
     else total.perHourDurationMinutes += duration
-    total.feeAmount += session.feeAmount ?? calculateSessionFee(session.pricingModeSnapshot, session.unitRateSnapshot ?? 0, duration)
+    total.feeAmount += fee
   }
   for (const session of sessions) {
     if (session.status !== 'SCHEDULED' || session.lifecycleStatus === 'SUPERSEDED' || Date.parse(session.startAt) + session.scheduledDurationMinutes * 60_000 >= now.getTime()) continue
@@ -546,12 +578,20 @@ export async function localStudentBillingSummary(workspaceId: string, now = new 
     if (!total) continue
     total.overdueItems.push({ sessionId: session.id, occurrenceDate: session.occurrenceDate || vietnamTodayKey(new Date(Date.parse(session.startAt))), startAt: session.startAt, title: session.title, scheduledDurationMinutes: session.scheduledDurationMinutes })
   }
-  const rows: TeachingStudentBillingRow[] = Array.from(totals, ([studentId, total]) => ({
-    studentId, completedSessions: total.completedSessions, actualDurationMinutes: total.actualDurationMinutes,
-    perSessionCompletedSessions: total.perSessionCompletedSessions, perHourDurationMinutes: total.perHourDurationMinutes,
-    billingModes: Array.from(total.billingModes), feeAmount: total.feeAmount, overdueUnconfirmedSessions: total.overdueItems.length,
-    overdueUnconfirmedItems: total.overdueItems.sort((a, b) => b.startAt.localeCompare(a.startAt)),
-  }))
+  const studentById = new Map(activeStudents.map(student => [student.id, student]))
+  const rows: TeachingStudentBillingRow[] = Array.from(totals, ([studentId, total]) => {
+    const student = studentById.get(studentId)!
+    const openingBalanceAmount = carryStudentBalanceToPeriod(student, settings.billingCycleCutoffDay, period, feesByStudent.get(studentId) || new Map())
+    const paidAmount = (student.billingPayments || []).filter(payment => payment.periodStartDate === period.startDate).reduce((sum, payment) => sum + payment.amount, 0)
+    const amountDue = openingBalanceAmount + total.feeAmount
+    return {
+      studentId, completedSessions: total.completedSessions, actualDurationMinutes: total.actualDurationMinutes,
+      perSessionCompletedSessions: total.perSessionCompletedSessions, perHourDurationMinutes: total.perHourDurationMinutes,
+      billingModes: Array.from(total.billingModes), feeAmount: total.feeAmount, openingBalanceAmount, paidAmount, amountDue,
+      remainingAmount: amountDue - paidAmount, overdueUnconfirmedSessions: total.overdueItems.length,
+      overdueUnconfirmedItems: total.overdueItems.sort((a, b) => b.startAt.localeCompare(a.startAt)),
+    }
+  })
   return { period, rows }
 }
 

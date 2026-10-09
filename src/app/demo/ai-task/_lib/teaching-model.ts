@@ -20,6 +20,17 @@ const localDateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(value => 
   return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value
 }, 'Ngày hiệu lực không hợp lệ.')
 
+export const studentOpeningBalanceSchema = z.object({
+  periodStartDate: localDateSchema,
+  amount: pricingRateSchema,
+}).strict()
+
+export const studentPaymentInputSchema = z.object({
+  studentId: z.string().min(1),
+  paymentId: z.string().min(1).max(160),
+  amount: pricingRateSchema.refine(value => value > 0, 'Số tiền thanh toán phải lớn hơn 0.'),
+}).strict()
+
 export const studentInputSchema = z.object({
   id: z.string().min(1).optional(),
   name: z.string().trim().min(1, 'Hãy nhập tên học viên.').max(160),
@@ -28,6 +39,7 @@ export const studentInputSchema = z.object({
   sessionRate: pricingRateSchema.nullable().optional(),
   status: z.enum(teachingStudentStatuses),
   note: z.string().trim().max(2000).nullable(),
+  openingBalance: studentOpeningBalanceSchema.nullable().optional(),
   weeklySchedules: z.array(weeklyScheduleInputSchema).max(50).optional(),
   scheduleEffectiveFrom: localDateSchema.optional(),
 }).strict()
@@ -104,10 +116,14 @@ export type Student = {
   hourlyRate: number | null
   status: StudentStatus
   note: string | null
+  openingBalance?: StudentOpeningBalance | null
+  billingPayments?: StudentBillingPayment[]
   createdAt: string
   updatedAt: string
   weeklySchedules?: WeeklySchedule[]
 }
+export type StudentOpeningBalance = { periodStartDate: string; amount: number }
+export type StudentBillingPayment = { id: string; periodStartDate: string; amount: number; paidAt: string }
 export type WeeklySchedule = {
   id: string
   userId: string
@@ -144,6 +160,10 @@ export type TeachingStudentBillingRow = {
   perHourDurationMinutes: number
   billingModes: PricingMode[]
   feeAmount: number
+  openingBalanceAmount: number
+  paidAmount: number
+  amountDue: number
+  remainingAmount: number
   overdueUnconfirmedSessions: number
   overdueUnconfirmedItems: { sessionId: string; occurrenceDate: string; startAt: string; title: string; scheduledDurationMinutes: number }[]
 }
@@ -245,6 +265,35 @@ export function vietnamBillingPeriod(cutoffDay: number, now = new Date()): Teach
 export function shiftVietnamDate(date: string, amount: number) {
   const [year, month, day] = date.split('-').map(Number)
   return new Date(Date.UTC(year, month - 1, day + amount, 12)).toISOString().slice(0, 10)
+}
+export function vietnamBillingPeriodForDate(cutoffDay: number, date: string) {
+  return vietnamBillingPeriod(cutoffDay, new Date(`${date}T12:00:00+07:00`))
+}
+export function studentBillingAnchor(student: Student, cutoffDay: number, now = new Date()): StudentOpeningBalance {
+  if (student.openingBalance) return student.openingBalance
+  const createdAt = Date.parse(student.createdAt || '')
+  const anchorDate = Number.isFinite(createdAt) ? vietnamTodayKey(new Date(createdAt)) : vietnamTodayKey(now)
+  return { periodStartDate: vietnamBillingPeriodForDate(cutoffDay, anchorDate).startDate, amount: 0 }
+}
+export function carryStudentBalanceToPeriod(
+  student: Student,
+  cutoffDay: number,
+  targetPeriod: TeachingBillingPeriod,
+  feeByPeriod: Map<string, number>,
+): number {
+  const anchor = studentBillingAnchor(student, cutoffDay)
+  let balance = anchor.amount
+  let periodStart = anchor.periodStartDate
+  if (periodStart > targetPeriod.startDate) return 0
+  const paymentsByPeriod = new Map<string, number>()
+  for (const payment of student.billingPayments || []) paymentsByPeriod.set(payment.periodStartDate, (paymentsByPeriod.get(payment.periodStartDate) || 0) + payment.amount)
+  while (periodStart < targetPeriod.startDate) {
+    balance += feeByPeriod.get(periodStart) || 0
+    balance -= paymentsByPeriod.get(periodStart) || 0
+    const period = vietnamBillingPeriodForDate(cutoffDay, periodStart)
+    periodStart = shiftVietnamDate(period.endDate, 1)
+  }
+  return balance
 }
 export function vietnamDayOfWeek(date: string) {
   const [year, month, day] = date.split('-').map(Number)

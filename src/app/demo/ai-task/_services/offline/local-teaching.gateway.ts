@@ -1,11 +1,11 @@
 'use client'
 
 import { z } from 'zod'
-import { attendanceConfirmationInputSchema, completionInputSchema, sessionInputSchema, sessionListFiltersSchema, studentInputSchema, teachingSettingsSchema } from '../../_lib/teaching-model'
+import { attendanceConfirmationInputSchema, completionInputSchema, sessionInputSchema, sessionListFiltersSchema, studentInputSchema, studentPaymentInputSchema, teachingSettingsSchema } from '../../_lib/teaching-model'
 import {
   localCompleteSession, localConfirmAttendance, localDashboard, localGetSession, localGetSettings, localListSessions,
   localListStudents, localListWeeklySchedules, localMaterializeRecurringSessions, localMonthOverview,
-  localOverviewPageData, localReviewCount, localSaveSession, localSaveSettings, localSaveStudent, localSetSessionCancelled,
+  localOverviewPageData, localRecordStudentPayment, localReviewCount, localSaveSession, localSaveSettings, localSaveStudent, localSetSessionCancelled,
   localStudentBillingSummary, LocalTeachingError,
 } from './local-teaching.repository'
 import { getLocalWorkspace } from './workspaces'
@@ -89,6 +89,10 @@ export async function localTeachingPost<T>(rawBody: unknown): Promise<T> {
       case 'saveStudent': {
         const input = z.object({ operation: z.literal('saveStudent'), data: studentInputSchema, allowScheduleOverlap: z.boolean().optional() }).strict().parse(rawBody)
         return { student: await localSaveStudent(workspaceId, input.data, input.allowScheduleOverlap) } as T
+      }
+      case 'recordStudentPayment': {
+        const input = z.object({ operation: z.literal('recordStudentPayment'), data: studentPaymentInputSchema }).strict().parse(rawBody)
+        return await localRecordStudentPayment(workspaceId, input.data) as T
       }
       case 'saveSettings': {
         const input = z.object({ operation: z.literal('saveSettings'), data: teachingSettingsSchema }).strict().parse(rawBody)

@@ -99,7 +99,7 @@ export function TeachingSessionForm({ students, settings, initial, initialStartA
     <fieldset className="teaching-pricing-summary"><legend>Học phí</legend>
       <p>Hình thức: <strong>{modeName(displayedMode)}</strong></p>
       <p>Đơn giá: <strong>{formatVnd(displayedRate)}/{pricingUnitLabel(displayedMode).replace('đ/', '')}</strong></p>
-      {initial && <label className="teaching-checkbox-option"><input type="checkbox" checked={draft.pricingOverride} onChange={event => setPricingOverride(event.target.checked)} />Chỉnh học phí riêng cho buổi này</label>}
+      {initial && <label className="teaching-checkbox-option"><input type="checkbox" checked={draft.pricingOverride} onChange={event => setPricingOverride(event.target.checked)} /><span>Chỉnh học phí riêng cho buổi này</span></label>}
       {initial && draft.pricingOverride && <label>Đơn giá riêng (VND/{pricingUnitLabel(displayedMode).replace('đ/', '')})<input type="number" min={0} max={100_000_000} step={1} required value={draft.unitRateSnapshot} onChange={event => setDraft({ ...draft, unitRateSnapshot: event.target.value })} /></label>}
       {confirmResetPricing && <div className="teaching-inline-confirm" role="group" aria-label="Xác nhận bỏ giá riêng"><p>Bỏ đơn giá riêng và dùng giá hiện tại của học viên?</p><button type="button" onClick={() => setConfirmResetPricing(false)}>Giữ giá riêng</button><button className="demo-primary" type="button" onClick={() => { setDraft(old => ({ ...old, pricingOverride: false, unitRateSnapshot: String(resolvedPricing.unitRate) })); setConfirmResetPricing(false) }}>Dùng giá học viên</button></div>}
       {!initial && <small>Đơn giá sẽ được lưu cùng buổi học. Buổi học theo giờ dùng thời lượng thực tế khi hoàn thành.</small>}
@@ -181,7 +181,7 @@ export function SessionReviewForm({ session, students, settings, onSave, onCance
     <fieldset className="teaching-pricing-summary"><legend>Học phí</legend>
       <p>Hình thức: <strong>{modeName(pricingMode)}</strong></p>
       <p>Đơn giá: <strong>{formatVnd(effectiveRate)}/{pricingUnitLabel(pricingMode).replace('đ/', '')}</strong></p>
-      <label className="teaching-checkbox-option"><input type="checkbox" checked={pricingOverride} onChange={event => toggleOverride(event.target.checked)} />Chỉnh học phí riêng cho buổi này</label>
+      <label className="teaching-checkbox-option"><input type="checkbox" checked={pricingOverride} onChange={event => toggleOverride(event.target.checked)} /><span>Chỉnh học phí riêng cho buổi này</span></label>
       {pricingOverride && <label>Đơn giá riêng (VND/{pricingUnitLabel(session.pricingModeSnapshot).replace('đ/', '')})<input type="number" required min={0} max={100_000_000} step={1} value={unitRate} onChange={event => setUnitRate(event.target.value)} /></label>}
       {confirmResetPricing && <div className="teaching-inline-confirm" role="group" aria-label="Xác nhận bỏ giá riêng"><p>Bỏ đơn giá riêng và dùng giá hiện tại của học viên?</p><button type="button" onClick={() => setConfirmResetPricing(false)}>Giữ giá riêng</button><button className="demo-primary" type="button" onClick={() => { setPricingOverride(false); setUnitRate(String(currentPricing.unitRate)); setConfirmResetPricing(false) }}>Dùng giá học viên</button></div>}
       <div className="teaching-fee-preview"><span>Thành tiền{pricingMode === 'PER_HOUR' ? ` · ${Number(actualDuration) || 0} phút` : ''}</span><strong>{formatVnd(fee)}</strong></div>

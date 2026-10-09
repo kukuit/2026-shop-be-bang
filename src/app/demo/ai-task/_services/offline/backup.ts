@@ -5,6 +5,8 @@ import { type LocalWorkspace } from './workspaces'
 const studentSchema = z.object({
   id: z.string().min(1), name: z.string().min(1), pricingMode: z.enum(['PER_SESSION', 'PER_HOUR']).nullable().optional(),
   sessionRate: z.number().int().nonnegative().nullable().optional(), hourlyRate: z.number().int().nonnegative().nullable().optional(),
+  openingBalance: z.object({ periodStartDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), amount: z.number().int().nonnegative() }).strict().nullable().optional(),
+  billingPayments: z.array(z.object({ id: z.string().min(1), periodStartDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), amount: z.number().int().positive(), paidAt: z.string().datetime({ offset: true }) }).strict()).optional(),
   status: z.enum(['ACTIVE', 'INACTIVE']), note: z.string().nullable().optional(), createdAt: z.string(), updatedAt: z.string(),
 }).passthrough()
 const scheduleSchema = z.object({ id: z.string().min(1), studentId: z.string().min(1), seriesId: z.string().min(1), dayOfWeek: z.number().int().min(0).max(6), startTime: z.string().regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/), durationMinutes: z.number().int().min(1).max(1440), effectiveFrom: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), effectiveTo: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable(), createdAt: z.string(), updatedAt: z.string() }).passthrough()

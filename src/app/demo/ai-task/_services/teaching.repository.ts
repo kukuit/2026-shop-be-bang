@@ -8,6 +8,7 @@ import {
   DEFAULT_PRICING_MODE,
   DEFAULT_SESSION_RATE,
   calculateSessionFee,
+  carryStudentBalanceToPeriod,
   goalCompletionRate,
   resolveStudentPricing,
   vietnamMonthKey,
@@ -17,6 +18,7 @@ import {
   vietnamDayOfWeek,
   vietnamTodayKey,
   shiftVietnamDate,
+  studentBillingAnchor,
   toVietnamDateTimeLocal,
   type PricingMode,
   type SessionGoal,
@@ -52,6 +54,8 @@ function normalizeStudent(value: Partial<Student>): Student {
     pricingMode: Object.hasOwn(value, 'pricingMode') ? value.pricingMode ?? null : 'PER_HOUR',
     sessionRate: value.sessionRate ?? null,
     hourlyRate: value.hourlyRate ?? null,
+    openingBalance: value.openingBalance ?? null,
+    billingPayments: value.billingPayments || [],
   } as Student
 }
 function studentRecord(doc: FirebaseFirestore.DocumentSnapshot): Student {
@@ -252,6 +256,7 @@ type SaveStudentInput = {
   sessionRate?: number | null
   status: 'ACTIVE' | 'INACTIVE'
   note: string | null
+  openingBalance?: Student['openingBalance']
   weeklySchedules?: WeeklyScheduleInput[]
   scheduleEffectiveFrom?: string
   allowScheduleOverlap?: boolean
@@ -335,6 +340,7 @@ export async function saveStudent(userId: string, input: SaveStudentInput) {
     const pricingMode = input.pricingMode === undefined ? oldStudent?.pricingMode ?? null : input.pricingMode
     const sessionRate = input.sessionRate === undefined ? oldStudent?.sessionRate ?? null : input.sessionRate
     const hourlyRate = input.hourlyRate === undefined ? oldStudent?.hourlyRate ?? null : input.hourlyRate
+    const openingBalance = input.openingBalance === undefined ? oldStudent?.openingBalance ?? null : input.openingBalance
     const statusChanged = !current.exists || current.get('status') !== input.status
     const pricingChanged = !oldStudent || oldStudent.pricingMode !== pricingMode || oldStudent.sessionRate !== sessionRate || oldStudent.hourlyRate !== hourlyRate
     tx.set(ref, {
@@ -343,6 +349,8 @@ export async function saveStudent(userId: string, input: SaveStudentInput) {
       pricingMode,
       sessionRate,
       hourlyRate,
+      openingBalance,
+      billingPayments: oldStudent?.billingPayments || [],
       status: input.status,
       note: input.note,
       createdAt: current.exists ? current.get('createdAt') : now,
@@ -355,6 +363,25 @@ export async function saveStudent(userId: string, input: SaveStudentInput) {
   if (input.id && reconciliation.pricingChanged) await synchronizeFutureSessionPricing(userId, ref.id)
   const student = studentRecord(await ref.get())
   return { ...student, weeklySchedules: await listActiveWeeklySchedules(userId, ref.id) }
+}
+
+export async function recordStudentPayment(userId: string, input: { studentId: string; paymentId: string; amount: number }) {
+  const ref = studentsRef(userId).doc(input.studentId)
+  const settings = await getTeachingSettings(userId)
+  const period = vietnamBillingPeriod(settings.billingCycleCutoffDay)
+  const now = new Date().toISOString()
+  await getAdminDb().runTransaction(async tx => {
+    const current = await tx.get(ref)
+    if (!current.exists) throw new Error('Không tìm thấy học viên này.')
+    const student = normalizeStudent(current.data() as Partial<Student>)
+    const payments = student.billingPayments || []
+    if (payments.some(payment => payment.id === input.paymentId)) return
+    tx.update(ref, {
+      billingPayments: [...payments, { id: input.paymentId, periodStartDate: period.startDate, amount: input.amount, paidAt: now }],
+      updatedAt: FieldValue.serverTimestamp(),
+    })
+  })
+  return { student: studentRecord(await ref.get()), period }
 }
 
 export async function listActiveWeeklySchedules(userId: string, studentId: string, date = vietnamTodayKey()): Promise<WeeklySchedule[]> {
@@ -846,26 +873,34 @@ export async function completeTeachingSession(userId: string, input: {
 export async function teachingStudentBillingSummary(userId: string, now = new Date()) {
   const settings = await getTeachingSettings(userId)
   const period = vietnamBillingPeriod(settings.billingCycleCutoffDay, now)
-  const from = vietnamDateTime(period.startDate, '00:00')
+  const students = await scan<Student>(studentsRef(userId))
+  const anchorDates = students.map(student => studentBillingAnchor(normalizeStudent(student), settings.billingCycleCutoffDay, now).periodStartDate).filter(date => date <= period.startDate)
+  const firstTrackedDate = anchorDates.length ? anchorDates.sort()[0] : period.startDate
+  const from = vietnamDateTime(firstTrackedDate, '00:00')
   const to = vietnamDateTime(shiftVietnamDate(period.endDate, 1), '00:00')
-  const [students, sessions, scheduledSessions] = await Promise.all([
-    scan<Student>(studentsRef(userId)),
+  const [sessions, scheduledSessions] = await Promise.all([
     scanSessions(userId, { from, to }),
     scanSessions(userId, { to: now.toISOString(), status: 'SCHEDULED' }),
   ])
   const totals = new Map<string, { completedSessions: number; actualDurationMinutes: number; perSessionCompletedSessions: number; perHourDurationMinutes: number; billingModes: Set<PricingMode>; feeAmount: number; overdueItems: TeachingStudentBillingRow['overdueUnconfirmedItems'] }>()
-  for (const student of students) totals.set(student.id, { completedSessions: 0, actualDurationMinutes: 0, perSessionCompletedSessions: 0, perHourDurationMinutes: 0, billingModes: new Set(), feeAmount: 0, overdueItems: [] })
+  const feesByStudent = new Map<string, Map<string, number>>()
+  for (const student of students) { totals.set(student.id, { completedSessions: 0, actualDurationMinutes: 0, perSessionCompletedSessions: 0, perHourDurationMinutes: 0, billingModes: new Set(), feeAmount: 0, overdueItems: [] }); feesByStudent.set(student.id, new Map()) }
   for (const session of sessions) {
     if (session.status !== 'COMPLETED' || session.lifecycleStatus === 'SUPERSEDED') continue
     const total = totals.get(session.studentId)
     if (!total) continue
     const actualDurationMinutes = session.actualDurationMinutes ?? 0
+    const fee = session.feeAmount ?? calculateSessionFee(session.pricingModeSnapshot, session.unitRateSnapshot ?? 0, actualDurationMinutes)
+    const sessionPeriod = vietnamBillingPeriod(settings.billingCycleCutoffDay, new Date(session.startAt))
+    const feesByPeriod = feesByStudent.get(session.studentId)!
+    feesByPeriod.set(sessionPeriod.startDate, (feesByPeriod.get(sessionPeriod.startDate) || 0) + fee)
+    if (sessionPeriod.startDate !== period.startDate) continue
     total.completedSessions += 1
     total.actualDurationMinutes += actualDurationMinutes
     total.billingModes.add(session.pricingModeSnapshot)
     if (session.pricingModeSnapshot === 'PER_SESSION') total.perSessionCompletedSessions += 1
     else total.perHourDurationMinutes += actualDurationMinutes
-    total.feeAmount += session.feeAmount ?? calculateSessionFee(session.pricingModeSnapshot, session.unitRateSnapshot ?? 0, actualDurationMinutes)
+    total.feeAmount += fee
   }
   for (const session of scheduledSessions) {
     if (session.lifecycleStatus === 'SUPERSEDED' || Date.parse(session.startAt) + session.scheduledDurationMinutes * 60_000 >= now.getTime()) continue
@@ -879,17 +914,20 @@ export async function teachingStudentBillingSummary(userId: string, now = new Da
       scheduledDurationMinutes: session.scheduledDurationMinutes,
     })
   }
-  const rows: TeachingStudentBillingRow[] = Array.from(totals, ([studentId, total]) => ({
-    studentId,
-    completedSessions: total.completedSessions,
-    actualDurationMinutes: total.actualDurationMinutes,
-    perSessionCompletedSessions: total.perSessionCompletedSessions,
-    perHourDurationMinutes: total.perHourDurationMinutes,
-    billingModes: Array.from(total.billingModes),
-    feeAmount: total.feeAmount,
-    overdueUnconfirmedSessions: total.overdueItems.length,
-    overdueUnconfirmedItems: total.overdueItems.sort((a, b) => b.startAt.localeCompare(a.startAt)),
-  }))
+  const studentById = new Map(students.map(student => [student.id, normalizeStudent(student)]))
+  const rows: TeachingStudentBillingRow[] = Array.from(totals, ([studentId, total]) => {
+    const student = studentById.get(studentId)!
+    const openingBalanceAmount = carryStudentBalanceToPeriod(student, settings.billingCycleCutoffDay, period, feesByStudent.get(studentId) || new Map())
+    const paidAmount = (student.billingPayments || []).filter(payment => payment.periodStartDate === period.startDate).reduce((sum, payment) => sum + payment.amount, 0)
+    const amountDue = openingBalanceAmount + total.feeAmount
+    return {
+      studentId, completedSessions: total.completedSessions, actualDurationMinutes: total.actualDurationMinutes,
+      perSessionCompletedSessions: total.perSessionCompletedSessions, perHourDurationMinutes: total.perHourDurationMinutes,
+      billingModes: Array.from(total.billingModes), feeAmount: total.feeAmount, openingBalanceAmount, paidAmount, amountDue,
+      remainingAmount: amountDue - paidAmount, overdueUnconfirmedSessions: total.overdueItems.length,
+      overdueUnconfirmedItems: total.overdueItems.sort((a, b) => b.startAt.localeCompare(a.startAt)),
+    }
+  })
   return { period, rows }
 }
 

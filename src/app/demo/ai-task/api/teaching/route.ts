@@ -9,6 +9,7 @@ import {
   sessionListFiltersSchema,
   scheduleListInputSchema,
   studentInputSchema,
+  studentPaymentInputSchema,
   teachingSettingsSchema,
   type Student,
   type TeachingSettings,
@@ -25,6 +26,7 @@ import {
   listActiveWeeklySchedules,
   materializeRecurringSessions,
   saveStudent,
+  recordStudentPayment,
   saveTeachingSession,
   saveTeachingSettings,
   setSessionCancelled,
@@ -41,6 +43,7 @@ export const dynamic = 'force-dynamic'
 const json = (body: unknown, status = 200) => NextResponse.json(body, { status, headers: { 'Cache-Control': 'private, no-store' } })
 const mutationSchema = z.discriminatedUnion('operation', [
   z.object({ operation: z.literal('saveStudent'), data: studentInputSchema, allowScheduleOverlap: z.boolean().optional() }).strict(),
+  z.object({ operation: z.literal('recordStudentPayment'), data: studentPaymentInputSchema }).strict(),
   z.object({ operation: z.literal('saveSettings'), data: teachingSettingsSchema }).strict(),
   z.object({ operation: z.literal('saveSession'), data: sessionInputSchema, allowOverlap: z.boolean().optional() }).strict(),
   z.object({ operation: z.literal('sessionStatus'), sessionId: z.string().min(1), action: z.enum(['cancel', 'restore']), reason: z.string().trim().max(1000).nullable().optional() }).strict(),
@@ -137,6 +140,7 @@ export async function POST(req: NextRequest) {
         if (scheduleConflicts.length && !input.allowScheduleOverlap) return json({ error: 'Lịch tuần của học viên có khung giờ bị trùng.', scheduleConflicts }, 409)
         return json({ student: await saveStudent(userId, { ...input.data, allowScheduleOverlap: input.allowScheduleOverlap }) })
       }
+      case 'recordStudentPayment': return json(await recordStudentPayment(userId, input.data))
       case 'saveSettings': return json({ settings: await saveTeachingSettings(userId, input.data) })
       case 'saveSession': {
         const conflicts = await findSessionConflicts(userId, input.data)
