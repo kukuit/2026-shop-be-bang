@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'ai-task-local-shell-'
-const CACHE_NAME = `${CACHE_PREFIX}v7`
+const CACHE_NAME = `${CACHE_PREFIX}v8`
 const OFFLINE_URL = '/demo/ai-task/offline.html'
 const LOCAL_MODE_KEY = new URL('/__ai_task_local_mode__', self.location.origin).href
 let localModeEnabled = false
@@ -26,7 +26,22 @@ self.addEventListener('fetch', event => {
   if (url.origin !== self.location.origin) return
   if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/demo/ai-task/api/') || request.headers.has('RSC') || url.searchParams.has('_rsc')) return
 
-  if (url.pathname.startsWith('/_next/static/') || url.pathname.startsWith('/fonts/') || url.pathname.startsWith('/games/') || /^\/(?:icon(?:-|\/)|favicon(?:\.|\/)|images\/)/.test(url.pathname)) {
+  if (url.pathname.startsWith('/_next/static/')) {
+    event.respondWith(caches.open(CACHE_NAME).then(async cache => {
+      try {
+        const response = await fetch(request, { cache: 'no-cache' })
+        if (response.ok && response.type === 'basic') await cache.put(request, response.clone())
+        return response
+      } catch {
+        return await cache.match(request) || Response.error()
+      }
+    }))
+    return
+  }
+
+  if (url.pathname.startsWith('/_next/')) return
+
+  if (url.pathname.startsWith('/fonts/') || url.pathname.startsWith('/games/') || /^\/(?:icon(?:-|\/)|favicon(?:\.|\/)|images\/)/.test(url.pathname)) {
     event.respondWith(caches.open(CACHE_NAME).then(async cache => {
       const cached = await cache.match(request)
       if (cached) return cached

@@ -31,6 +31,7 @@ function ShellContent({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(false)
   const [reviewCount, setReviewCount] = useState(0)
   const reviewCountFetchedAt = useRef(0)
+  const developmentCacheCleanupStarted = useRef(false)
   const [toast, setToast] = useState<{ message: string; kind: 'success' | 'error' } | null>(null)
   const isAssistant = pathname === '/demo/ai-task/chatbot'
   const isAssistantChat = isAssistant && workspace.active?.mode === 'CLOUD' && !!user
@@ -52,6 +53,23 @@ function ShellContent({ children }: { children: React.ReactNode }) {
   useEffect(() => { reviewCountFetchedAt.current = 0; setReviewCount(0) }, [user?.id, workspace.active?.id])
   useEffect(() => {
     if (!('serviceWorker' in navigator)) return
+    if (process.env.NODE_ENV !== 'production') {
+      if (developmentCacheCleanupStarted.current) return
+      developmentCacheCleanupStarted.current = true
+      void (async () => {
+        const wasControlled = !!navigator.serviceWorker.controller
+        const registration = await navigator.serviceWorker.getRegistration('/demo/ai-task/')
+        await registration?.unregister()
+        const cacheKeys = await caches.keys()
+        await Promise.all(cacheKeys.filter(key => key.startsWith('ai-task-local-shell-')).map(key => caches.delete(key)))
+        if (!wasControlled) return
+        const reloadKey = 'ai-task.sw-dev-cache-cleared'
+        if (window.sessionStorage.getItem(reloadKey) === 'v1') return
+        window.sessionStorage.setItem(reloadKey, 'v1')
+        window.location.reload()
+      })().catch(() => undefined)
+      return
+    }
     const enabled = workspace.active?.mode === 'LOCAL'
     const notifyWorker = (registration?: ServiceWorkerRegistration) => {
       const worker = navigator.serviceWorker.controller || registration?.active || registration?.waiting
@@ -61,15 +79,18 @@ function ShellContent({ children }: { children: React.ReactNode }) {
     const reloadForFirstControl = () => {
       if (!enabled) return
       try {
-        if (window.sessionStorage.getItem('ai-task.sw-shell-version') === 'v7') return
-        window.sessionStorage.setItem('ai-task.sw-shell-version', 'v7')
+        if (window.sessionStorage.getItem('ai-task.sw-shell-version') === 'v8') return
+        window.sessionStorage.setItem('ai-task.sw-shell-version', 'v8')
         window.location.reload()
       } catch { /* IndexedDB remains usable when session storage is restricted. */ }
     }
     if (enabled) navigator.serviceWorker.addEventListener('controllerchange', reloadForFirstControl)
     navigator.serviceWorker.addEventListener('controllerchange', onControllerChange)
     if (enabled) void navigator.serviceWorker.register('/demo/ai-task/sw.js', { scope: '/demo/ai-task/' }).then(registration => notifyWorker(registration)).catch(() => undefined)
-    else void navigator.serviceWorker.getRegistration('/demo/ai-task/').then(registration => notifyWorker(registration)).catch(() => undefined)
+    else void navigator.serviceWorker.getRegistration('/demo/ai-task/').then(registration => {
+      if (registration) void registration.update().catch(() => undefined)
+      notifyWorker(registration)
+    }).catch(() => undefined)
     return () => {
       navigator.serviceWorker.removeEventListener('controllerchange', onControllerChange)
       navigator.serviceWorker.removeEventListener('controllerchange', reloadForFirstControl)
