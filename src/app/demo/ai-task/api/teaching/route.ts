@@ -34,6 +34,7 @@ import {
   teachingMonthOverview,
   teachingOverviewPageData,
   teachingStudentBillingSummary,
+  teachingStudentBillingDetails,
   teachingReviewCount,
 } from '../../_services/teaching.repository'
 
@@ -81,6 +82,10 @@ export async function GET(req: NextRequest) {
         return json({ students, settings })
       }
       case 'billingSummary': return json(await teachingStudentBillingSummary(auth.user.id))
+      case 'studentBillingDetails': {
+        const studentId = z.string().min(1).parse(params.get('studentId'))
+        return json(await teachingStudentBillingDetails(auth.user.id, studentId))
+      }
       case 'weeklySchedules': {
         const input = scheduleListInputSchema.parse({ studentId: params.get('studentId'), date: params.get('date') || undefined })
         return json({ weeklySchedules: await listActiveWeeklySchedules(auth.user.id, input.studentId, input.date) })

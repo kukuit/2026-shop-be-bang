@@ -8,7 +8,6 @@ import {
   DEFAULT_PRICING_MODE,
   DEFAULT_SESSION_RATE,
   calculateSessionFee,
-  carryStudentBalanceToPeriod,
   goalCompletionRate,
   resolveStudentPricing,
   vietnamMonthKey,
@@ -18,7 +17,6 @@ import {
   vietnamDayOfWeek,
   vietnamTodayKey,
   shiftVietnamDate,
-  studentBillingAnchor,
   toVietnamDateTimeLocal,
   type PricingMode,
   type SessionGoal,
@@ -29,6 +27,7 @@ import {
   type TeachingStudentBillingRow,
   type WeeklySchedule,
 } from '../_lib/teaching-model'
+import { calculateStudentBilling, calculateStudentOpeningBalanceAmount, teachingSessionFee } from '../_lib/student-billing'
 import { idSchema } from '../_lib/model'
 
 const userRoot = (userId: string) => getAdminDb().collection('demo').doc('ai-task').collection('users').doc(idSchema.parse(userId))
@@ -874,12 +873,9 @@ export async function teachingStudentBillingSummary(userId: string, now = new Da
   const settings = await getTeachingSettings(userId)
   const period = vietnamBillingPeriod(settings.billingCycleCutoffDay, now)
   const students = await scan<Student>(studentsRef(userId))
-  const anchorDates = students.map(student => studentBillingAnchor(normalizeStudent(student), settings.billingCycleCutoffDay, now).periodStartDate).filter(date => date <= period.startDate)
-  const firstTrackedDate = anchorDates.length ? anchorDates.sort()[0] : period.startDate
-  const from = vietnamDateTime(firstTrackedDate, '00:00')
   const to = vietnamDateTime(shiftVietnamDate(period.endDate, 1), '00:00')
   const [sessions, scheduledSessions] = await Promise.all([
-    scanSessions(userId, { from, to }),
+    scanSessions(userId, { to }),
     scanSessions(userId, { to: now.toISOString(), status: 'SCHEDULED' }),
   ])
   const totals = new Map<string, { completedSessions: number; actualDurationMinutes: number; perSessionCompletedSessions: number; perHourDurationMinutes: number; billingModes: Set<PricingMode>; feeAmount: number; overdueItems: TeachingStudentBillingRow['overdueUnconfirmedItems'] }>()
@@ -890,7 +886,7 @@ export async function teachingStudentBillingSummary(userId: string, now = new Da
     const total = totals.get(session.studentId)
     if (!total) continue
     const actualDurationMinutes = session.actualDurationMinutes ?? 0
-    const fee = session.feeAmount ?? calculateSessionFee(session.pricingModeSnapshot, session.unitRateSnapshot ?? 0, actualDurationMinutes)
+    const fee = teachingSessionFee(session)
     const sessionPeriod = vietnamBillingPeriod(settings.billingCycleCutoffDay, new Date(session.startAt))
     const feesByPeriod = feesByStudent.get(session.studentId)!
     feesByPeriod.set(sessionPeriod.startDate, (feesByPeriod.get(sessionPeriod.startDate) || 0) + fee)
@@ -917,7 +913,7 @@ export async function teachingStudentBillingSummary(userId: string, now = new Da
   const studentById = new Map(students.map(student => [student.id, normalizeStudent(student)]))
   const rows: TeachingStudentBillingRow[] = Array.from(totals, ([studentId, total]) => {
     const student = studentById.get(studentId)!
-    const openingBalanceAmount = carryStudentBalanceToPeriod(student, settings.billingCycleCutoffDay, period, feesByStudent.get(studentId) || new Map())
+    const openingBalanceAmount = calculateStudentOpeningBalanceAmount(student, settings.billingCycleCutoffDay, period, feesByStudent.get(studentId) || new Map(), now)
     const paidAmount = (student.billingPayments || []).filter(payment => payment.periodStartDate === period.startDate).reduce((sum, payment) => sum + payment.amount, 0)
     const amountDue = openingBalanceAmount + total.feeAmount
     return {
@@ -929,6 +925,16 @@ export async function teachingStudentBillingSummary(userId: string, now = new Da
     }
   })
   return { period, rows }
+}
+
+export async function teachingStudentBillingDetails(userId: string, studentId: string, now = new Date()) {
+  const [settings, studentSnapshot] = await Promise.all([getTeachingSettings(userId), studentsRef(userId).doc(studentId).get()])
+  if (!studentSnapshot.exists) throw new Error('Không tìm thấy học viên này.')
+  const student = studentRecord(studentSnapshot)
+  const period = vietnamBillingPeriod(settings.billingCycleCutoffDay, now)
+  const to = vietnamDateTime(shiftVietnamDate(period.endDate, 1), '00:00')
+  const sessions = (await scanSessions(userId, { to })).filter(session => session.studentId === studentId)
+  return { period, row: calculateStudentBilling(student, settings.billingCycleCutoffDay, period, sessions, now) }
 }
 
 export async function teachingMonthOverview(userId: string, year: number, monthIndex: number) {

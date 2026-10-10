@@ -6,7 +6,7 @@ import {
   localCompleteSession, localConfirmAttendance, localDashboard, localGetSession, localGetSettings, localListSessions,
   localListStudents, localListWeeklySchedules, localMaterializeRecurringSessions, localMonthOverview,
   localOverviewPageData, localRecordStudentPayment, localReviewCount, localSaveSession, localSaveSettings, localSaveStudent, localSetSessionCancelled,
-  localStudentBillingSummary, LocalTeachingError,
+  localStudentBillingDetails, localStudentBillingSummary, LocalTeachingError,
 } from './local-teaching.repository'
 import { getLocalWorkspace } from './workspaces'
 import { getActiveTeachingWorkspace } from './workspace-runtime'
@@ -41,6 +41,10 @@ export async function localTeachingGet<T>(params: Record<string, string>): Promi
       return { students, settings } as T
     }
     case 'billingSummary': return await localStudentBillingSummary(workspaceId) as T
+    case 'studentBillingDetails': {
+      const studentId = z.string().min(1).parse(params.studentId)
+      return await localStudentBillingDetails(workspaceId, studentId) as T
+    }
     case 'weeklySchedules': {
       const input = z.object({ studentId: z.string().min(1), date: z.string().optional() }).strict().parse({ studentId: params.studentId, ...(params.date ? { date: params.date } : {}) })
       return { weeklySchedules: await localListWeeklySchedules(workspaceId, input.studentId, input.date) } as T
