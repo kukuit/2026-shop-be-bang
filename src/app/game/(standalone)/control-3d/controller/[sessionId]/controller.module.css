@@ -1,0 +1,291 @@
+.controller {
+  position: fixed;
+  inset: 0;
+  width: 100dvw;
+  height: 100dvh;
+  overflow: hidden;
+  overscroll-behavior: none;
+  color: #eef6fb;
+  background: radial-gradient(ellipse at 50% 115%, #244b68 0%, #172d43 52%, #0b1929 100%);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: none;
+}
+
+.controllerHeader {
+  position: absolute;
+  z-index: 5;
+  top: max(6px, env(safe-area-inset-top, 0px));
+  right: 0;
+  left: 0;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  min-height: 48px;
+  padding-right: max(12px, calc(env(safe-area-inset-right, 0px) + 12px));
+  padding-left: max(12px, calc(env(safe-area-inset-left, 0px) + 12px));
+  pointer-events: none;
+}
+
+.playerState {
+  display: inline-flex;
+  align-items: center;
+  justify-self: start;
+  gap: 9px;
+  min-height: 36px;
+  padding: 0 11px;
+  border: 1px solid #ffffff1d;
+  border-radius: 11px;
+  color: #dce9ef;
+  background: #0b1a2bbd;
+  font-size: 9px;
+  font-weight: 950;
+  letter-spacing: .1em;
+  white-space: nowrap;
+}
+
+.playerState strong {
+  color: #ffffff;
+  font-size: 10px;
+  letter-spacing: .08em;
+}
+
+.connectionDot {
+  width: 8px;
+  height: 8px;
+  flex: 0 0 8px;
+  border-radius: 50%;
+  background: #f0b75e;
+}
+
+.connected .connectionDot { background: #62e7a2; }
+.disconnected .connectionDot { background: #fa666d; }
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  justify-self: center;
+  gap: clamp(8px, 1.5vw, 12px);
+  pointer-events: auto;
+}
+
+.headerButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-width: 78px;
+  min-height: 46px;
+  padding: 0 12px;
+  border: 1px solid #ffffff2e;
+  border-radius: 12px;
+  color: #eaf3f8;
+  background: linear-gradient(180deg, #29455d, #1b334b);
+  box-shadow: 0 3px 0 #08152185;
+  font-size: 9px;
+  font-weight: 950;
+  letter-spacing: .1em;
+  touch-action: none;
+  user-select: none;
+}
+
+.menuButton { width: 82px; }
+.reloadButton { width: 100px; color: #ffe8aa; }
+.headerButton:active, .actionActive { transform: translateY(2px); filter: brightness(1.16); box-shadow: 0 1px 0 #08152185; }
+.headerButton:disabled { cursor: default; }
+
+.controllerDeck {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.stick {
+  position: absolute;
+  bottom: max(16px, calc(env(safe-area-inset-bottom, 0px) + 10px));
+  aspect-ratio: 1;
+  border-radius: 50%;
+  touch-action: none;
+  pointer-events: auto;
+}
+
+.moveStick {
+  left: max(16px, calc(env(safe-area-inset-left, 0px) + 12px));
+  width: clamp(112px, 34vh, 128px);
+}
+
+.aimStick {
+  right: calc(max(16px, env(safe-area-inset-right, 0px) + 12px) + clamp(68px, 18vh, 76px) + clamp(14px, 2.7vw, 22px));
+  width: clamp(112px, 34vh, 128px);
+}
+
+.stickGlow {
+  position: absolute;
+  inset: 3%;
+  border: 1px solid #93c4d348;
+  border-radius: 50%;
+  background: radial-gradient(circle, #8ac7d819 0%, #8ac7d807 57%, #0b1d2b00 75%);
+}
+
+.stickRing {
+  position: absolute;
+  inset: 14%;
+  border: 1px solid #c1dce847;
+  border-radius: 50%;
+  background: #10283b50;
+}
+
+.stickCrosshair {
+  position: absolute;
+  inset: 49.7% 18%;
+  height: 1px;
+  background: #d5e7ef31;
+}
+
+.stickCrosshair::after {
+  position: absolute;
+  top: -800%;
+  left: 50%;
+  width: 1px;
+  height: 1700%;
+  content: "";
+  background: #d5e7ef31;
+}
+
+.stickKnob {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: grid;
+  place-items: center;
+  width: 36%;
+  height: 36%;
+  border: 2px solid #d9eaf06e;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 25%, #a7d8e8, #598fa7 72%, #385f7c);
+  box-shadow: 0 5px 12px #03121e8a, inset 0 2px 2px #ffffff91;
+  will-change: transform;
+}
+
+.stickKnob svg { color: #f4fbff; stroke-width: 2.2; }
+
+.stickActive .stickRing { border-color: #bbecf5a8; background: #4b87972c; }
+.stickActive .stickKnob { border-color: #ffffffc9; filter: brightness(1.12); }
+
+.actionCluster {
+  position: absolute;
+  right: max(16px, calc(env(safe-area-inset-right, 0px) + 12px));
+  bottom: max(16px, calc(env(safe-area-inset-bottom, 0px) + 10px));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(8px, 2vh, 12px);
+  pointer-events: none;
+}
+
+.fireButton, .jumpButton {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  flex: 0 0 auto;
+  border: 1px solid #ffffff99;
+  color: #fffdf7;
+  font-weight: 1000;
+  letter-spacing: .1em;
+  touch-action: none;
+  user-select: none;
+  pointer-events: auto;
+}
+
+.fireButton {
+  width: clamp(68px, 18vh, 76px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 24%, #ff9c73, #e85c4d 65%, #ae3543);
+  box-shadow: 0 5px 0 #702d3b, inset 0 2px #ffffff88;
+  font-size: 9px;
+}
+
+.jumpButton {
+  width: clamp(54px, 14vh, 60px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 24%, #83e9a8, #36a86e 68%, #21724e);
+  box-shadow: 0 5px 0 #1c5b44, inset 0 2px #ffffff88;
+  font-size: 8px;
+}
+
+.fireButton:active, .jumpButton:active, .buttonPressed { transform: translateY(3px) scale(.97); filter: brightness(1.14); }
+.fireButton:disabled, .jumpButton:disabled { cursor: default; }
+
+.disabled {
+  opacity: .4;
+  filter: saturate(.45);
+  pointer-events: none;
+}
+
+.connectionNotice {
+  position: absolute;
+  z-index: 3;
+  top: 50%;
+  left: 50%;
+  max-width: min(80vw, 360px);
+  padding: 11px 15px;
+  transform: translate(-50%, -50%);
+  border: 1px solid #ffffff2b;
+  border-radius: 12px;
+  color: #e6eff4;
+  background: #0c1d2be8;
+  font-size: 10px;
+  font-weight: 850;
+  text-align: center;
+  pointer-events: none;
+}
+
+.portraitMessage { display: none; }
+
+@media (orientation: portrait) {
+  .controllerDeck { opacity: .12; pointer-events: none; }
+  .portraitMessage {
+    position: absolute;
+    z-index: 8;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: max(24px, env(safe-area-inset-top, 0px)) max(24px, env(safe-area-inset-right, 0px)) max(24px, env(safe-area-inset-bottom, 0px)) max(24px, env(safe-area-inset-left, 0px));
+    color: #fff0c4;
+    background: #081827e8;
+    font-size: 14px;
+    font-weight: 1000;
+    letter-spacing: .08em;
+    text-align: center;
+  }
+  .portraitMessage svg { transform: rotate(90deg); }
+}
+
+@media (max-height: 470px) and (orientation: landscape) {
+  .controllerHeader { top: max(3px, env(safe-area-inset-top, 0px)); min-height: 45px; }
+  .playerState { min-height: 33px; }
+  .headerButton { min-height: 44px; }
+  .moveStick { width: clamp(104px, 30vh, 118px); }
+  .aimStick {
+    right: calc(max(14px, env(safe-area-inset-right, 0px) + 10px) + clamp(64px, 17vh, 72px) + clamp(12px, 2.4vw, 19px));
+    width: clamp(104px, 30vh, 118px);
+  }
+  .actionCluster {
+    right: max(14px, calc(env(safe-area-inset-right, 0px) + 10px));
+    bottom: max(12px, calc(env(safe-area-inset-bottom, 0px) + 8px));
+    gap: clamp(7px, 1.8vh, 10px);
+  }
+  .fireButton { width: clamp(64px, 18vh, 72px); }
+  .jumpButton { width: clamp(52px, 14vh, 56px); }
+  .stick { bottom: max(12px, calc(env(safe-area-inset-bottom, 0px) + 8px)); }
+}

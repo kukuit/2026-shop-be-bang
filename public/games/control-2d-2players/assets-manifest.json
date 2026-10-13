@@ -1,0 +1,120 @@
+{
+  "logicalResolution": { "width": 1920, "height": 1080 },
+  "assets": {
+    "forestBackground": {
+      "path": "/games/control-2d-2players/forest-background.png",
+      "width": 1672,
+      "height": 941,
+      "anchor": [0.5, 0.5],
+      "source": "imagegen"
+    },
+    "playerBlue": {
+      "path": "/games/control-2d-2players/player-blue.png",
+      "width": 1371,
+      "height": 1147,
+      "anchor": [0.5, 1],
+      "source": "imagegen"
+    },
+    "playerPink": {
+      "path": "/games/control-2d-2players/player-pink.png",
+      "width": 1351,
+      "height": 1164,
+      "anchor": [0.5, 1],
+      "source": "imagegen"
+    },
+    "boar": {
+      "path": "/games/control-2d-2players/wild-boar.png",
+      "width": 1536,
+      "height": 1024,
+      "frameWidth": 384,
+      "frameHeight": 512,
+      "frameCount": 8,
+      "frameRate": 9,
+      "anchor": [0.5, 0.78],
+      "position": "ground",
+      "source": "user-provided-sprite-sheet"
+    },
+    "bat": {
+      "path": "/games/control-2d-2players/doi.png",
+      "width": 1448,
+      "height": 1086,
+      "frameWidth": 362,
+      "frameHeight": 543,
+      "frameCount": 8,
+      "frameRate": 12,
+      "anchor": [0.5, 0.5],
+      "position": "air",
+      "source": "user-provided-sprite-sheet"
+    },
+    "ca-sau": {
+      "path": "/games/control-2d-2players/ca-sau.png", "width": 1536, "height": 1024,
+      "frameWidth": 384, "frameHeight": 512, "frameCount": 8, "frameRate": 8,
+      "anchor": [0.5, 0.78], "position": "ground", "source": "user-provided-sprite-sheet"
+    },
+    "dai-bang": {
+      "path": "/games/control-2d-2players/dai-bang.png", "width": 1504, "height": 1086,
+      "frameWidth": 376, "frameHeight": 543, "frameCount": 8, "frameRate": 10,
+      "anchor": [0.5, 0.5], "position": "air", "source": "user-provided-sprite-sheet"
+    },
+    "hoa-an-thit": {
+      "path": "/games/control-2d-2players/hoa-an-thit.png", "width": 1448, "height": 1086,
+      "frameWidth": 362, "frameHeight": 543, "frameCount": 8, "frameRate": 6,
+      "anchor": [0.5, 0.78], "position": "ground", "source": "user-provided-sprite-sheet"
+    },
+    "nguoi-da": {
+      "path": "/games/control-2d-2players/nguoi-da.png", "width": 1680, "height": 1086,
+      "frameWidth": 420, "frameHeight": 543, "frameCount": 8, "frameRate": 7,
+      "anchor": [0.5, 0.78], "position": "ground", "source": "user-provided-sprite-sheet"
+    },
+    "nhen": {
+      "path": "/games/control-2d-2players/nhen.png", "width": 1448, "height": 1086,
+      "frameWidth": 362, "frameHeight": 543, "frameCount": 8, "frameRate": 9,
+      "anchor": [0.5, 0.78], "hangingAnchor": [0.5, 0.5], "position": "ground-or-hanging", "source": "user-provided-sprite-sheet"
+    },
+    "ong-bap-cai": {
+      "path": "/games/control-2d-2players/ong-bap-cai.png", "width": 1680, "height": 1024,
+      "frameWidth": 420, "frameHeight": 512, "frameCount": 8, "frameRate": 13,
+      "anchor": [0.5, 0.5], "position": "air", "source": "user-provided-sprite-sheet"
+    },
+    "qua": {
+      "path": "/games/control-2d-2players/qua.png", "width": 1680, "height": 1086,
+      "frameWidth": 420, "frameHeight": 543, "frameCount": 8, "frameRate": 11,
+      "anchor": [0.5, 0.5], "position": "air", "source": "user-provided-sprite-sheet"
+    },
+    "su-tu": {
+      "path": "/games/control-2d-2players/su-tu.png", "width": 1448, "height": 1086,
+      "frameRects": [
+        [22, 0, 364, 543], [399, 0, 315, 543], [734, 0, 371, 543], [1118, 0, 322, 543],
+        [23, 543, 370, 543], [393, 543, 351, 543], [754, 543, 356, 543], [1115, 543, 321, 543]
+      ],
+      "frameCount": 8, "frameRate": 9,
+      "anchor": [0.5, 0.78], "position": "ground", "source": "user-provided-sprite-sheet"
+    },
+    "tinh-tinh": {
+      "path": "/games/control-2d-2players/tinh-tinh.png", "width": 1640, "height": 1086,
+      "frameWidth": 410, "frameHeight": 543, "frameCount": 8, "frameRate": 8,
+      "anchor": [0.5, 0.78], "position": "ground", "source": "user-provided-sprite-sheet"
+    },
+    "yeu-tinh": {
+      "path": "/games/control-2d-2players/yeu-tinh.png", "width": 2000, "height": 1086,
+      "frameRects": [
+        [67, 0, 365, 543], [592, 0, 316, 543], [1067, 0, 366, 543], [1590, 0, 320, 543],
+        [65, 543, 370, 543], [572, 543, 356, 543], [1014, 543, 472, 543], [1599, 543, 302, 543]
+      ],
+      "frameCount": 8, "frameRate": 10,
+      "anchor": [0.5, 0.78], "position": "ground", "source": "user-provided-sprite-sheet"
+    },
+    "weaponCannon": {
+      "path": "/games/control-2d-2players/weapon-cannon.png", "width": 1536, "height": 1024,
+      "source": "imagegen"
+    },
+    "weaponIce": {
+      "path": "/games/control-2d-2players/weapon-ice.png", "width": 1536, "height": 1024,
+      "source": "imagegen"
+    }
+  },
+  "audio": {
+    "player1Bullet": "/games/control-2d-2players/voices/bullet-bomb.mp3",
+    "player2Bullet": "/games/control-2d-2players/voices/bullet-bubble.mp3"
+  }
+}

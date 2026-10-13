@@ -13,8 +13,9 @@ import styles from './demo.module.css'
 export type DemoWorldId = 'village' | 'tieng-viet' | 'tieng-anh'
 export type MathDepartureStage = 'boarding' | 'seated' | 'sailing' | 'transitioning' | 'returning' | null
 export type EnglishLaunchStage = 'boarding' | 'seated' | 'launching' | 'transitioning' | 'landing' | 'returning' | 'rocket-flight' | null
-type VillageArrival = 'tieng-viet-bridge' | 'math-dock' | 'english-launch' | null
+type VillageArrival = 'tieng-viet-bridge' | 'math-dock' | 'english-launch' | 'ocean-dive' | null
 const VILLAGE_ARRIVAL_KEY = 'demo-3d-village-arrival'
+export type OceanDiveStage = 'equipping' | 'splashing' | 'transitioning' | null
 
 function saveVillageArrival(arrival: VillageArrival) {
   if (typeof window === 'undefined') return
@@ -25,7 +26,7 @@ function saveVillageArrival(arrival: VillageArrival) {
 function readVillageArrival(): VillageArrival {
   if (typeof window === 'undefined') return null
   const value = window.sessionStorage.getItem(VILLAGE_ARRIVAL_KEY)
-  return value === 'tieng-viet-bridge' || value === 'math-dock' || value === 'english-launch' ? value : null
+  return value === 'tieng-viet-bridge' || value === 'math-dock' || value === 'english-launch' || value === 'ocean-dive' ? value : null
 }
 export type BridgeTransition = {
   from: DemoWorldId
@@ -54,6 +55,7 @@ type Demo3DContextValue = {
   transition: BridgeTransition | null
   mathDepartureStage: MathDepartureStage
   englishLaunchStage: EnglishLaunchStage
+  oceanDiveStage: OceanDiveStage
   beginBridgeTransition: (world: DemoWorldId) => void
   beginMathDeparture: () => void
   beginMathSeaExit: () => void
@@ -63,6 +65,9 @@ type Demo3DContextValue = {
   returnFromEnglishWorld: () => void
   englishWorldReady: () => void
   beginEnglishArrival: () => void
+  beginOceanDive: () => void
+  oceanWorldReady: () => void
+  returnFromOceanWorld: () => void
   resolveSpawn: (world: DemoWorldId) => { position: [number, number, number]; yaw: number }
   sceneReady: (world: DemoWorldId) => void
   isCovered: boolean
@@ -103,6 +108,7 @@ export default function Demo3DGameShell({ children }: { children: ReactNode }) {
   const [transition, setTransition] = useState<BridgeTransition | null>(null)
   const [mathDepartureStage, setMathDepartureStage] = useState<MathDepartureStage>(null)
   const [englishLaunchStage, setEnglishLaunchStage] = useState<EnglishLaunchStage>(null)
+  const [oceanDiveStage, setOceanDiveStage] = useState<OceanDiveStage>(null)
   const [isCovered, setIsCovered] = useState(false)
   const transitionRef = useRef<BridgeTransition | null>(null)
   const cameraDistance = useRef(CAMERA_PRESETS.normal.distance)
@@ -112,6 +118,7 @@ export default function Demo3DGameShell({ children }: { children: ReactNode }) {
   const timers = useRef<number[]>([])
   const inFlight = useRef(false)
   const englishArrivalStarted = useRef(false)
+  const oceanDiveStageRef = useRef<OceanDiveStage>(null)
   const pendingVillageSpawn = useRef<{ position: [number, number, number]; yaw: number } | null>(null)
   const schedule = useCallback((callback: () => void, delay: number) => {
     const timer = window.setTimeout(() => {
@@ -219,6 +226,52 @@ export default function Demo3DGameShell({ children }: { children: ReactNode }) {
     schedule(() => router.push('/game/demo-3d'), 920)
   }, [router, schedule, setMove])
 
+  const beginOceanDive = useCallback(() => {
+    if (inFlight.current || oceanDiveStageRef.current) return
+    inFlight.current = true
+    oceanDiveStageRef.current = 'equipping'
+    setOceanDiveStage('equipping')
+    setMove({ x: 0, z: 0 })
+    schedule(() => {
+      oceanDiveStageRef.current = 'splashing'
+      setOceanDiveStage('splashing')
+    }, 580)
+    schedule(() => {
+      oceanDiveStageRef.current = 'transitioning'
+      setOceanDiveStage('transitioning')
+      setIsCovered(true)
+    }, 1040)
+    schedule(() => router.push('/game/demo-3d/ocean'), 1380)
+    // If a navigation error occurs, release the world controls after the fade.
+    schedule(() => {
+      if (window.location.pathname !== '/game/demo-3d/ocean') {
+        oceanDiveStageRef.current = null
+        setOceanDiveStage(null)
+        setIsCovered(false)
+        inFlight.current = false
+      }
+    }, 5200)
+  }, [router, schedule, setMove])
+
+  const oceanWorldReady = useCallback(() => {
+    oceanDiveStageRef.current = null
+    inFlight.current = false
+    setOceanDiveStage(null)
+    setIsCovered(false)
+    setMove({ x: 0, z: 0 })
+  }, [setMove])
+
+  const returnFromOceanWorld = useCallback(() => {
+    if (inFlight.current) return
+    inFlight.current = true
+    saveVillageArrival('ocean-dive')
+    pendingVillageSpawn.current = { position: [14.4, 1.35, 20.8], yaw: Math.PI / 2 }
+    setMove({ x: 0, z: 0 })
+    setMoveState({ x: 0, z: 0 })
+    setIsCovered(true)
+    schedule(() => router.push('/game/demo-3d'), 320)
+  }, [router, schedule, setMove])
+
   const englishWorldReady = useCallback(() => {
     inFlight.current = false
     setEnglishLaunchStage(null)
@@ -258,6 +311,7 @@ export default function Demo3DGameShell({ children }: { children: ReactNode }) {
       if (arrival === 'tieng-viet-bridge') return { position: [0, 1.35, -18.5] as [number, number, number], yaw: 0 }
       if (arrival === 'math-dock') return { position: [19.8, 1.35, 2.5] as [number, number, number], yaw: -Math.PI / 2 }
       if (arrival === 'english-launch') return { position: [-5.3, 1.35, -4] as [number, number, number], yaw: -Math.PI / 2 }
+      if (arrival === 'ocean-dive') return { position: [14.4, 1.35, 20.8] as [number, number, number], yaw: Math.PI / 2 }
     }
     return world === 'village'
       ? { position: [0, 1.35, 8] as [number, number, number], yaw: Math.PI }
@@ -318,26 +372,30 @@ export default function Demo3DGameShell({ children }: { children: ReactNode }) {
   const contextValue = useMemo<Demo3DContextValue>(() => ({
     move, setMove, jumpVersion, jump, soundOn, setSoundOn, cameraMode, cycleCameraMode,
     cameraDistance, cameraYaw, cameraPitch, manualOrbitVersion, transition, mathDepartureStage, englishLaunchStage,
+    oceanDiveStage,
     beginBridgeTransition, beginMathDeparture, beginMathSeaExit, returnFromMathWorld, mathWorldReady,
-    beginEnglishLaunch, returnFromEnglishWorld, englishWorldReady, beginEnglishArrival, resolveSpawn, sceneReady, isCovered,
-  }), [move, setMove, jumpVersion, jump, soundOn, cameraMode, cycleCameraMode, transition, mathDepartureStage, englishLaunchStage, beginBridgeTransition, beginMathDeparture, beginMathSeaExit, returnFromMathWorld, mathWorldReady, beginEnglishLaunch, returnFromEnglishWorld, englishWorldReady, beginEnglishArrival, resolveSpawn, sceneReady, isCovered])
+    beginEnglishLaunch, returnFromEnglishWorld, englishWorldReady, beginEnglishArrival, beginOceanDive, oceanWorldReady, returnFromOceanWorld, resolveSpawn, sceneReady, isCovered,
+  }), [move, setMove, jumpVersion, jump, soundOn, cameraMode, cycleCameraMode, transition, mathDepartureStage, englishLaunchStage, oceanDiveStage, beginBridgeTransition, beginMathDeparture, beginMathSeaExit, returnFromMathWorld, mathWorldReady, beginEnglishLaunch, returnFromEnglishWorld, englishWorldReady, beginEnglishArrival, beginOceanDive, oceanWorldReady, returnFromOceanWorld, resolveSpawn, sceneReady, isCovered])
   const stableContextValue = useMemo<Demo3DStableContextValue>(() => ({
     moveRef, setMove, cameraMode, cameraDistance, returnFromMathWorld, mathWorldReady,
   }), [setMove, cameraMode, returnFromMathWorld, mathWorldReady])
-  const transitionMessage = englishLaunchStage === 'transitioning' ? 'Đang bay đến Vũ trụ Tiếng Anh...'
+  const transitionMessage = oceanDiveStage === 'transitioning' ? 'Cappy đang lặn xuống đại dương...'
+    : oceanDiveStage === 'splashing' ? 'Chuẩn bị lặn nhé!'
+    : englishLaunchStage === 'transitioning' ? 'Đang bay đến Vũ trụ Tiếng Anh...'
     : englishLaunchStage === 'returning' ? 'Đang bay về Cappy World...'
     : mathDepartureStage === 'transitioning' ? 'Đang ra khơi...'
     : mathDepartureStage === 'returning' ? 'Đang về Cappy World...'
       : transition?.to === 'village' ? 'Đang đến khu nhà...' : 'Đang đến Vùng đất Tiếng Việt...'
+  const oceanRoute = pathname === '/game/demo-3d/ocean'
 
   return <Demo3DStableContext.Provider value={stableContextValue}>
     <Demo3DContext.Provider value={contextValue}>
     <main className={styles.game} aria-label="Cappy World 3D" data-demo-world>
       {children}
-      <GameHUD soundOn={soundOn} onToggleSound={() => setSoundOn((value) => !value)} onCycleCamera={cycleCameraMode} rocketFlight={englishLaunchStage === 'rocket-flight'} />
-      <div className={styles.controlsHint}>{englishLaunchStage === 'rocket-flight' ? <><b>W / ↑</b><span>TĂNG TỐC</span><b>S / ↓</b><span>LÙI</span><b>A / D / ←→</b><span>QUAY</span><b>SPACE / SHIFT</b><span>NGẨNG / CÚI</span><span>Kéo chuột hoặc vuốt để ngắm hướng</span></> : pathname === '/game/demo-3d/toan' ? <>WASD / ↑↓←→ <span>LÁI THUYỀN</span><b>E</b> <span>CẬP BẾN</span></> : pathname === '/game/demo-3d/tieng-anh' ? <>WASD / ↑↓←→ <span>ĐI TRÊN TRẠM</span><b>SPACE</b> <span>NHẢY</span></> : mathDepartureStage === 'sailing' ? <>WASD / ↑↓←→ <span>CHÈO THUYỀN</span> <span>Ra biển để đến đảo Toán</span></> : <>WASD / ↑↓←→ <span>DI CHUYỂN</span><b>SPACE</b> <span>NHẢY / LÊN THUYỀN</span></>}</div>
-      <MobileJoystick onMove={setMove} onJump={jump} flightMode={englishLaunchStage === 'rocket-flight'} showJump={pathname !== '/game/demo-3d/toan' && mathDepartureStage !== 'sailing'} disabled={Boolean(transition) || Boolean(englishLaunchStage && englishLaunchStage !== 'rocket-flight') || Boolean(mathDepartureStage && mathDepartureStage !== 'sailing')} />
-      <div className={`${styles.worldTransition} ${isCovered ? styles.worldTransitionCovered : ''}`} data-camera-ignore aria-live="polite" aria-label={isCovered ? transitionMessage : undefined}>
+      <GameHUD soundOn={soundOn} onToggleSound={() => setSoundOn((value) => !value)} onCycleCamera={cycleCameraMode} rocketFlight={englishLaunchStage === 'rocket-flight'} showTools={!oceanRoute} subtitle={oceanRoute ? 'LẶN BIỂN' : undefined} />
+      {!oceanRoute && <div className={styles.controlsHint}>{englishLaunchStage === 'rocket-flight' ? <><b>W / ↑</b><span>TĂNG TỐC</span><b>S / ↓</b><span>LÙI</span><b>A / D / ←→</b><span>QUAY</span><b>SPACE / SHIFT</b><span>NGẨNG / CÚI</span><span>Kéo chuột hoặc vuốt để ngắm hướng</span></> : pathname === '/game/demo-3d/toan' ? <>WASD / ↑↓←→ <span>LÁI THUYỀN</span><b>E</b> <span>CẬP BẾN</span></> : pathname === '/game/demo-3d/tieng-anh' ? <>WASD / ↑↓←→ <span>ĐI TRÊN TRẠM</span><b>SPACE</b> <span>NHẢY</span></> : mathDepartureStage === 'sailing' ? <>WASD / ↑↓←→ <span>CHÈO THUYỀN</span> <span>Ra biển để đến đảo Toán</span></> : <>WASD / ↑↓←→ <span>DI CHUYỂN</span><b>SPACE</b> <span>NHẢY / LÊN THUYỀN</span></>}</div>}
+      {!oceanRoute && <MobileJoystick onMove={setMove} onJump={jump} flightMode={englishLaunchStage === 'rocket-flight'} showJump={pathname !== '/game/demo-3d/toan' && mathDepartureStage !== 'sailing'} disabled={Boolean(transition) || Boolean(englishLaunchStage && englishLaunchStage !== 'rocket-flight') || Boolean(mathDepartureStage && mathDepartureStage !== 'sailing') || Boolean(oceanDiveStage)} />}
+      <div className={`${styles.worldTransition} ${oceanRoute || oceanDiveStage ? styles.oceanTransition : ''} ${isCovered ? styles.worldTransitionCovered : ''}`} data-camera-ignore aria-live="polite" aria-label={isCovered ? transitionMessage : undefined}>
         {isCovered && <div className={styles.worldTransitionMessage}><span aria-hidden="true">🐹</span><strong>{transitionMessage}</strong></div>}
       </div>
     </main>

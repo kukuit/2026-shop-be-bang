@@ -8,7 +8,7 @@ import type { MutableRefObject } from 'react'
 import type { CameraMode } from './camera-config'
 import type { MoveInput, PortalInfo } from './types'
 import { PORTALS } from './types'
-import type { DemoWorldId, BridgeTransition, MathDepartureStage, EnglishLaunchStage } from './GameShell'
+import type { DemoWorldId, BridgeTransition, MathDepartureStage, EnglishLaunchStage, OceanDiveStage } from './GameShell'
 import CharacterRenderer from './character/CharacterRenderer'
 import { DEFAULT_PLAYER_SLOT, resolveCharacterSlot } from './character/slots'
 import type { CharacterMotionRef } from './character/types'
@@ -40,6 +40,7 @@ type Props = {
   transitionPhase: BridgeTransition['phase'] | null
   mathDepartureStage: MathDepartureStage
   englishLaunchStage: EnglishLaunchStage
+  oceanDiveStage: OceanDiveStage
   transitionDirectionZ: number
   spawn: { position: [number, number, number]; yaw: number }
   world: DemoWorldId
@@ -48,7 +49,7 @@ type Props = {
 }
 
 /** Owns the physics root and input-driven movement; its visual is a swappable character renderer. */
-export default function PlayerController({ playerRef, move, jumpVersion, cameraMode, cameraDistance, cameraYaw, cameraPitch, manualOrbitVersion, transitionPhase, mathDepartureStage, englishLaunchStage, transitionDirectionZ, spawn, world, onBridgeReach, onPortalChange }: Props) {
+export default function PlayerController({ playerRef, move, jumpVersion, cameraMode, cameraDistance, cameraYaw, cameraPitch, manualOrbitVersion, transitionPhase, mathDepartureStage, englishLaunchStage, oceanDiveStage, transitionDirectionZ, spawn, world, onBridgeReach, onPortalChange }: Props) {
   const [spawnX, , spawnZ] = spawn.position
   const { character, skin } = resolveCharacterSlot(DEFAULT_PLAYER_SLOT)
   const keys = useRef(new Set<string>())
@@ -101,7 +102,7 @@ export default function PlayerController({ playerRef, move, jumpVersion, cameraM
     const body = playerRef.current
     if (!body) return
 
-    if ((mathDepartureStage || englishLaunchStage) && englishLaunchStage !== 'rocket-flight') {
+    if ((mathDepartureStage || englishLaunchStage || oceanDiveStage) && englishLaunchStage !== 'rocket-flight') {
       body.setLinvel({ x: 0, y: 0, z: 0 }, true)
       pendingJump.current = false
       motion.current.speed = mathDepartureStage === 'boarding' || englishLaunchStage === 'boarding' ? 3.8 : 0
@@ -275,6 +276,6 @@ export default function PlayerController({ playerRef, move, jumpVersion, cameraM
 
   return <RigidBody ref={playerRef} colliders={false} position={spawn.position} rotation={[0, spawn.yaw, 0]} enabledRotations={[false, false, false]} gravityScale={englishLaunchStage === 'rocket-flight' ? 0 : 1} linearDamping={englishLaunchStage === 'rocket-flight' ? 0 : 0.8}>
     <CapsuleCollider args={[character.collider.halfHeight, character.collider.radius]} friction={0} />
-    <CharacterRenderer character={character} skin={skin} motion={motion} hidden={cameraMode === 'firstPerson' || mathDepartureStage === 'seated' || mathDepartureStage === 'sailing' || mathDepartureStage === 'transitioning' || englishLaunchStage === 'seated' || englishLaunchStage === 'launching' || englishLaunchStage === 'transitioning' || englishLaunchStage === 'landing' || englishLaunchStage === 'returning' || englishLaunchStage === 'rocket-flight'} cameraDistance={cameraDistance} />
+    <CharacterRenderer character={character} skin={skin} motion={motion} hidden={cameraMode === 'firstPerson' || mathDepartureStage === 'seated' || mathDepartureStage === 'sailing' || mathDepartureStage === 'transitioning' || englishLaunchStage === 'seated' || englishLaunchStage === 'launching' || englishLaunchStage === 'transitioning' || englishLaunchStage === 'landing' || englishLaunchStage === 'returning' || englishLaunchStage === 'rocket-flight'} cameraDistance={cameraDistance} scubaGear={Boolean(oceanDiveStage)} />
   </RigidBody>
 }
