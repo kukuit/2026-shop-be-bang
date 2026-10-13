@@ -18,9 +18,10 @@ type Props = {
   motion: CharacterMotionRef
   boatPose?: boolean
   rowing?: boolean
+  scubaGear?: boolean
 }
 
-export default function CharacterModel({ character, skin, modelUrl, motion, boatPose = false, rowing = false }: Props) {
+export default function CharacterModel({ character, skin, modelUrl, motion, boatPose = false, rowing = false, scubaGear = false }: Props) {
   const { scene, animations } = useGLTF(modelUrl)
   const model = useMemo(() => clone(scene), [scene])
   const placement = useMemo(() => getCharacterModelPlacement(model, character), [model, character])
@@ -101,5 +102,31 @@ export default function CharacterModel({ character, skin, modelUrl, motion, boat
 
   return <group position-y={character.visual.rootOffsetY}>
     <primitive object={model} scale={placement.scale} position-y={placement.groundOffsetY} />
+    {scubaGear && <DivingGear />}
+  </group>
+}
+
+function DivingGear() {
+  return <group position-y={1.225}>
+    <mesh position={[0, 1.84, 0.43]}>
+      <boxGeometry args={[0.48, 0.21, 0.12]} />
+      <meshStandardMaterial color="#247f9c" roughness={0.4} />
+    </mesh>
+    <mesh position={[0, 1.84, 0.5]}>
+      <boxGeometry args={[0.34, 0.13, 0.035]} />
+      <meshStandardMaterial color="#a5f0f4" transparent opacity={0.7} roughness={0.18} />
+    </mesh>
+    <mesh position={[0, 1.3, -0.38]} castShadow>
+      <cylinderGeometry args={[0.19, 0.22, 0.76, 8]} />
+      <meshStandardMaterial color="#2da9bb" roughness={0.45} flatShading />
+    </mesh>
+    <mesh position={[0, 1.7, -0.38]}>
+      <cylinderGeometry args={[0.09, 0.09, 0.1, 8]} />
+      <meshStandardMaterial color="#f2cb62" metalness={0.32} roughness={0.42} />
+    </mesh>
+    {[-1, 1].map((side) => <mesh key={side} position={[side * 0.2, 0.16, -0.27]} rotation={[0, side * -0.08, 0]}>
+      <boxGeometry args={[0.22, 0.08, 0.56]} />
+      <meshStandardMaterial color="#f2c75d" roughness={0.76} flatShading />
+    </mesh>)}
   </group>
 }

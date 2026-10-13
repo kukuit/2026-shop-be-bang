@@ -1,4 +1,5 @@
 const nextConfig = {
+  devIndicators: { buildActivity: false },
   async redirects() {
     return [
       {

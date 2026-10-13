@@ -23,9 +23,13 @@ export function getFenceOutlineScale(angle: number) {
 // The visible fence and its Rapier colliders share this opening.
 const EAST_GATE_HALF_ANGLE = 0.075
 const GARDEN_GATE_HALF_ANGLE = 0.105
+// The dive path leaves the east-south side of the village, to Cappy's right
+// when facing away from the front door (the house faces -Z).
+export const OCEAN_GATE = { centerAngle: 0.89, halfAngle: 0.085 } as const
 
 export const FENCE_SEGMENTS = [
-  { id: 'south-garden', startAngle: EAST_GATE_HALF_ANGLE, endAngle: Math.PI - GARDEN_GATE_HALF_ANGLE },
+  { id: 'south-garden-east', startAngle: EAST_GATE_HALF_ANGLE, endAngle: OCEAN_GATE.centerAngle - OCEAN_GATE.halfAngle },
+  { id: 'south-garden-west', startAngle: OCEAN_GATE.centerAngle + OCEAN_GATE.halfAngle, endAngle: Math.PI - GARDEN_GATE_HALF_ANGLE },
   { id: 'gate-west', startAngle: Math.PI - GARDEN_GATE_HALF_ANGLE, endAngle: Math.PI + GARDEN_GATE_HALF_ANGLE },
   { id: 'west-garden', startAngle: Math.PI + GARDEN_GATE_HALF_ANGLE, endAngle: Math.PI * 1.5 - GARDEN_GATE_HALF_ANGLE },
   { id: 'east-garden', startAngle: Math.PI * 1.5 + GARDEN_GATE_HALF_ANGLE, endAngle: Math.PI * 2 - EAST_GATE_HALF_ANGLE },

@@ -9,6 +9,7 @@ import { EXPANSION_POINTS, FENCE_SEGMENTS, getFenceOutlineScale, getOrganicOutli
 import type { RapierRigidBody } from '@react-three/rapier'
 import type { MutableRefObject } from 'react'
 import CappyHouse from './CappyHouse'
+import OceanDiveStation from './OceanDiveStation'
 
 const FENCE_POST_GEOMETRY = new THREE.BoxGeometry(0.18, 0.9, 0.18)
 const FENCE_RAIL_GEOMETRY = new THREE.BoxGeometry(1.2, 0.12, 0.12)
@@ -28,9 +29,10 @@ const CLOUD_MATERIAL = new THREE.MeshStandardMaterial({ color: 'white', roughnes
 type TreeTransform = { position: [number, number, number]; scale: number; yaw: number }
 type MountainTransform = { position: [number, number, number]; scale: [number, number, number]; color: THREE.Color }
 
-function WorldEnvironment({ playerRef, onHousePorchChange }: {
+function WorldEnvironment({ playerRef, onHousePorchChange, onOceanDiveChange }: {
   playerRef: MutableRefObject<RapierRigidBody | null>
   onHousePorchChange: (inside: boolean) => void
+  onOceanDiveChange?: (inside: boolean) => void
 }) {
   const hubGeometry = useMemo(() => createOrganicDiscGeometry(WORLD_CONFIG.hub.radiusX, WORLD_CONFIG.hub.radiusZ), [])
   const bufferGeometry = useMemo(() => createOrganicRingGeometry(WORLD_CONFIG.fence.radiusX, WORLD_CONFIG.fence.radiusZ, WORLD_CONFIG.buffer.radiusX, WORLD_CONFIG.buffer.radiusZ), [])
@@ -53,6 +55,7 @@ function WorldEnvironment({ playerRef, onHousePorchChange }: {
     <FenceBoundary />
     <TreeCluster />
     <ExpansionLandmarks playerRef={playerRef} onHousePorchChange={onHousePorchChange} />
+    <OceanDiveStation playerRef={playerRef} onInteractionChange={onOceanDiveChange} />
     <Cloud position={[-43, 15, -35]} scale={1.4} />
     <Cloud position={[38, 13, -46]} scale={1.1} />
     <Cloud position={[49, 17, 24]} scale={0.9} />
@@ -80,6 +83,7 @@ function Paths() {
     <PathRibbon points={[[0, 4], [-2, 2], [-4, -1], [-6, -3.4]]} width={1.6} />
     <PathRibbon points={[[0, 5], [2, 4.5], [4, 3.1], [6.5, 1.2], [8, 0], [11, 0.7], [14, 2.2], [17, 2.5]]} />
     <PathRibbon points={[[0, 7], [-0.8, 8.5], [0.5, 10.5], [0.1, 12.5], [0, 15]]} width={1.45} />
+    <PathRibbon points={[[0, 15], [2.4, 14.9], [5.3, 16.1], [8.7, 18.1], [11.8, 19.8], [13.6, 20.6], [15.1, 21.2]]} width={1.65} />
     <PathRibbon points={[[0, -33], [0.3, -38], [4, -43], [8, -47]]} width={1.8} />
     <PathRibbon points={[[-32, 2.5], [-37, 1], [-43, 4], [-48, 7]]} width={1.8} />
   </>
@@ -154,7 +158,7 @@ function makeFenceTransforms(startAngle: number, endAngle: number) {
 }
 
 function TreeCluster() {
-  const hubTrees = useMemo(makeHubTrees, [])
+  const hubTrees = useMemo(makeHubTreesWithDiveApproachTrees, [])
   const outerTrees = useMemo(makeOuterTrees, [])
   return <>
     <TreeInstances trees={hubTrees} castShadow />
@@ -174,6 +178,7 @@ const PROTECTED_PATHS: [number, number][][] = [
   [[0, 5], [2, 4.5], [4, 3.1], [6.5, 1.2], [8, 0]],
   [[8, 0], [11, 0.7], [14, 2.2], [17, 2.5]],
   [[0, 7], [-0.8, 8.5], [0.5, 10.5], [0.1, 12.5], [0, 15]],
+  [[0, 15], [2.4, 14.9], [5.3, 16.1], [8.7, 18.1], [11.8, 19.8], [13.6, 20.6], [15.1, 21.2]],
   [[-4, -4], [-8, -4], [-12, -4], [-16, -4], [-19, -4]],
 ]
 
@@ -203,6 +208,34 @@ function makeHubTrees(): TreeTransform[] {
     if (PROTECTED_PATHS.some((path) => path.some((point, index) => index < path.length - 1 && distanceToSegment(x, z, point, path[index + 1]) < 2.6))) continue
     if (trees.some(({ position: [px, , pz] }) => Math.hypot(x - px, z - pz) < 4.2)) continue
     trees.push({ position: [x, 0, z], scale: 0.68 + random() * 0.5, yaw: random() * Math.PI * 2 })
+  }
+  return trees
+}
+
+function makeHubTreesWithDiveApproachTrees(): TreeTransform[] {
+  const trees = makeHubTrees()
+  // Frame the curved approach with two trees. Reuse nearby seeded trees where
+  // possible so they are moved clear of the path instead of duplicated.
+  const approachTrees: TreeTransform[] = [
+    { position: [5.3, 0, 20.2], scale: 0.72, yaw: 0.35 },
+    { position: [9.8, 0, 23.0], scale: 0.66, yaw: 1.1 },
+  ]
+  const claimed = new Set<number>()
+  for (const target of approachTrees) {
+    const [targetX, , targetZ] = target.position
+    let closest = -1
+    let closestDistance = 5.1
+    trees.forEach(({ position: [x, , z] }, index) => {
+      if (claimed.has(index)) return
+      const distance = Math.hypot(x - targetX, z - targetZ)
+      if (distance < closestDistance) { closest = index; closestDistance = distance }
+    })
+    if (closest >= 0) {
+      trees[closest] = { ...trees[closest], position: target.position }
+      claimed.add(closest)
+    } else {
+      trees.push(target)
+    }
   }
   return trees
 }

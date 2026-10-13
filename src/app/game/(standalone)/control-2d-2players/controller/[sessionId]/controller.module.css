@@ -1,0 +1,75 @@
+.controller { position: fixed; inset: 0; overflow: hidden; padding: max(12px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(12px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left)); color: #fff; font-family: Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif; user-select: none; touch-action: none; background: radial-gradient(ellipse at 20% 95%,#1d7c9e 0%,transparent 40%),linear-gradient(135deg,#0e2744,#111a33 58%,#211535); }
+.playerTwo { background: radial-gradient(ellipse at 20% 95%,#963d71 0%,transparent 40%),linear-gradient(135deg,#3b183c,#211b38 58%,#32172f); }
+.header { position: relative; z-index: 2; display: flex; align-items: center; justify-content: space-between; min-height: 52px; padding: 0 13px; border: 1px solid #ffffff26; border-radius: 15px; background: #071321b5; box-shadow: 0 8px 22px #03091680; }
+.playerTag { display: flex; align-items: center; gap: 9px; }
+.playerTag strong { color: #74e6ff; font-size: 22px; font-weight: 1000; }
+.playerTwo .playerTag strong { color: #ff80b8; }
+.playerTag b { color: #daebf3; font-size: 10px; letter-spacing: .12em; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: #eab05b; box-shadow: 0 0 0 4px #eab05b24; }
+.phoneStatus { display: flex; align-items: center; gap: 13px; color: #e8f3f3; font-size: 13px; font-weight: 900; }
+.phoneStatus span { display: flex; align-items: center; gap: 5px; }
+.phoneStatus span:first-child svg { color: #ff747d; }
+.phoneStatus span:last-child svg { color: #ffe17c; }
+.playDeck { position: absolute; inset: 64px 18px 53px; display: flex; align-items: center; justify-content: space-between; gap: 18px; }
+.stick { position: relative; display: grid; place-items: center; width: min(40vw,43vh); height: min(40vw,43vh); min-width: 205px; min-height: 205px; max-width: 390px; max-height: 390px; border: 2px solid #83dff44f; border-radius: 50%; background: radial-gradient(circle,#1b455d91 0%,#18365079 58%,#12263a52 72%); box-shadow: inset 0 0 48px #45d6ff23,0 0 0 9px #ffffff08; touch-action: none; }
+.stickActive { border-color: #9ff2ffad; box-shadow: inset 0 0 55px #45d6ff49,0 0 0 10px #5be6ff16,0 0 26px #69e8ff2a; }
+.stickRing { position: absolute; display: grid; place-items: center; width: 39%; height: 39%; border: 1px dashed #c5f2f466; border-radius: 50%; color: #d8f7fba3; }
+.knob { position: absolute; z-index: 1; width: 36%; height: 36%; border: 3px solid #d3f7ffad; border-radius: 50%; background: radial-gradient(circle at 35% 27%,#83efffe8,#237ea4e8 62%,#105071); box-shadow: 0 8px 20px #030a1b83,inset 0 2px #ffffff9c; pointer-events: none; }
+.stick > b { position: absolute; bottom: -40px; color: #a9d8e4; font-size: 11px; letter-spacing: .24em; }
+.fireButton { position: relative; display: grid; place-items: center; gap: 7px; width: min(39vh,330px); height: min(39vh,330px); min-width: 200px; min-height: 200px; border: 3px solid #ffc4ce; border-radius: 50%; color: #fff; background: radial-gradient(circle at 36% 28%,#ff9d9d,#ec404e 58%,#8d192f); box-shadow: 0 13px 0 #67192e,0 20px 32px #03081590,inset 0 5px 12px #ffffff83; touch-action: none; cursor: pointer; transition: transform .08s,filter .08s; }
+.playerTwo .fireButton { border-color: #ffcee0; background: radial-gradient(circle at 36% 28%,#ff9dbd,#e53f83 58%,#751a58); box-shadow: 0 13px 0 #581544,0 20px 32px #03081590,inset 0 5px 12px #ffffff83; }
+.fireButton:active, .fireActive { transform: translateY(9px) scale(.98); filter: brightness(1.14); box-shadow: 0 4px 0 #67192e,0 10px 20px #03081580,inset 0 5px 12px #ffffff83; }
+.fireButton:disabled { filter: grayscale(.75); opacity: .55; cursor: default; }
+.fireCore { display: grid; place-items: center; width: 102px; height: 102px; border: 2px solid #ffe5dfb0; border-radius: 50%; color: #fff9e9; background: #91273b72; box-shadow: inset 0 2px 14px #490f2d7d,0 4px 12px #64172a7a; }
+.playerTwo .fireCore { background: #8a275c78; }
+.fireButton strong { margin-top: -2px; font-size: 25px; font-weight: 1000; letter-spacing: .18em; text-shadow: 0 2px 5px #6a1926; }
+.fireButton small { margin-top: -6px; color: #ffe9e6d9; font-size: 8px; font-weight: 900; letter-spacing: .13em; }
+.skillButtons { position: absolute; bottom: 8px; left: 50%; display: flex; gap: 9px; transform: translateX(-50%); }
+.skillButton { display: grid; grid-template-columns: 1fr auto; align-items: center; justify-items: center; gap: 1px 5px; width: 56px; height: 61px; padding: 5px; border: 2px solid #ffdd9d; border-radius: 15px; color: #fff5d9; background: radial-gradient(circle at 35% 25%,#ffb74d,#df5428 62%,#72243a); box-shadow: 0 4px 0 #562235,0 8px 18px #03081588,inset 0 1px #ffffff77; touch-action: none; }
+.skillFreeze { border-color: #b9eaff; color: #e7f9ff; background: radial-gradient(circle at 35% 25%,#81e7ff,#287de3 62%,#282d87); box-shadow: 0 4px 0 #20255e,0 8px 18px #03081588,inset 0 1px #ffffff77; }
+.skillButton b { font-size: 17px; font-weight: 1000; }
+.skillButton small { grid-column: 1 / -1; font-size: 7px; font-weight: 950; letter-spacing: .08em; }
+.skillButton:active, .skillActive { transform: translateY(3px); filter: brightness(1.18); box-shadow: 0 1px 0 #562235,0 4px 10px #03081580,inset 0 1px #ffffff77; }
+.skillButton:disabled { opacity: .45; filter: grayscale(.6); }
+.weaponButtons { position: absolute; bottom: 81px; left: 50%; display: flex; gap: 8px; transform: translateX(-50%); }
+.weaponButton { display: grid; justify-items: center; align-content: center; gap: 0; width: 66px; height: 62px; padding: 3px; border: 2px solid #ffcf79; border-radius: 13px; color: #fff3d8; background: linear-gradient(145deg,#884525,#33202a); box-shadow: 0 4px 0 #351d21,0 8px 16px #03081588; touch-action: manipulation; }
+.weaponButton img { display: block; width: 53px; height: 39px; object-fit: contain; }
+.weaponButton small { font-size: 8px; font-weight: 1000; letter-spacing: .08em; }
+.iceButton { border-color: #a9edff; background: linear-gradient(145deg,#286eaa,#202a58); }
+.weaponButton:disabled { opacity: .45; filter: grayscale(.6); }
+.phoneStatus span:last-child svg { color: #ffe17c; }
+.disabled { opacity: .45; filter: saturate(.4); }
+.notice { position: absolute; z-index: 4; top: 50%; left: 50%; max-width: 80vw; padding: 12px 18px; transform: translate(-50%,-50%); border: 1px solid #fff5; border-radius: 11px; color: #fff; background: #381624e8; font-size: 12px; font-weight: 800; text-align: center; }
+.landscapeNotice { display: none; }
+.footer { position: absolute; right: 12px; bottom: max(8px,env(safe-area-inset-bottom)); left: 12px; display: flex; align-items: center; justify-content: center; gap: 6px; color: #b7d3dc9c; font-size: 9px; font-weight: 750; letter-spacing: .08em; }
+.footer svg { color: #78d5e6; }
+
+@media (orientation:portrait) {
+  .playDeck { inset: 66px 14px 45px; opacity: .18; filter: blur(1px); }
+  .stick { min-width: 125px; min-height: 125px; width: 38vw; height: 38vw; }
+  .fireButton { min-width: 125px; min-height: 125px; width: 38vw; height: 38vw; }
+  .skillButtons { bottom: 6px; }
+  .weaponButtons { bottom: 68px; }
+  .weaponButton { width: 54px; height: 51px; border-radius: 10px; }
+  .weaponButton img { width: 43px; height: 31px; }
+  .weaponButton small { font-size: 7px; }
+  .skillButton { width: 48px; height: 53px; }
+  .fireCore { width: 66px; height: 66px; }
+  .fireCore svg { width: 28px; }
+  .fireButton strong { font-size: 17px; }
+  .fireButton small { font-size: 6px; }
+  .landscapeNotice { position: absolute; z-index: 5; inset: 0; display: flex; align-items: center; justify-content: center; gap: 11px; padding: 22px; color: #fff; background: #081526c9; font-size: 15px; font-weight: 900; text-align: center; }
+  .landscapeNotice svg { transform: rotate(90deg); }
+}
+@media (orientation:landscape) and (max-height:500px) {
+  .header { min-height: 40px; }
+  .playDeck { inset: 50px 18px 38px; }
+  .weaponButtons { bottom: 70px; }
+  .weaponButton { height: 48px; }
+  .stick { min-width: 160px; min-height: 160px; }
+  .fireButton { min-width: 160px; min-height: 160px; }
+  .fireCore { width: 73px; height: 73px; }
+  .fireCore svg { width: 31px; }
+  .fireButton strong { font-size: 18px; }
+  .footer { font-size: 7px; }
+}

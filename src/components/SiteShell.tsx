@@ -15,7 +15,7 @@ export default function SiteShell({ children }: { children: React.ReactNode }) {
     /\/(bubble-shooter|drag-drop|gold-mining|racing|egg-hunt)(\/|$)/.test(pathname) ||
     /^\/game\/lop-1\/toan\/luyen-tap\/cong-den-10\/?$/.test(pathname)
   )
-  const hasGameChat = isGameRoute && !isGameplayRoute && !pathname.startsWith('/game/lop-')
+  const hasGameChat = isGameRoute && !isGameplayRoute && !pathname.startsWith('/game/lop-') && !pathname.startsWith('/game/control-3d') && !pathname.startsWith('/game/control-2d-2players')
   const isAdminRoute = pathname.startsWith('/admin/')
 
   if (pathname === '/game/demo-3d' || pathname.startsWith('/game/demo-3d/')) return <>{children}</>

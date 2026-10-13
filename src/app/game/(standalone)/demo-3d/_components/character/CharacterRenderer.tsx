@@ -16,10 +16,11 @@ type Props = {
   cameraDistance: MutableRefObject<number>
   boatPose?: boolean
   rowing?: boolean
+  scubaGear?: boolean
 }
 
 /** Visual child of the physics player root. Replace the proxy branch with the GLB renderer when available. */
-export default function CharacterRenderer({ character, skin, motion, hidden, cameraDistance, boatPose = false, rowing = false }: Props) {
+export default function CharacterRenderer({ character, skin, motion, hidden, cameraDistance, boatPose = false, rowing = false, scubaGear = false }: Props) {
   const root = useRef<THREE.Group>(null)
   useFrame(() => {
     if (!root.current) return
@@ -32,7 +33,7 @@ export default function CharacterRenderer({ character, skin, motion, hidden, cam
   const modelUrl = skin.modelUrl ?? character.modelUrl
   if (modelUrl) {
     return <group ref={root} visible={!hidden}>
-      <CharacterModel character={character} skin={skin} modelUrl={modelUrl} motion={motion} boatPose={boatPose} rowing={rowing} />
+      <CharacterModel character={character} skin={skin} modelUrl={modelUrl} motion={motion} boatPose={boatPose} rowing={rowing} scubaGear={scubaGear} />
     </group>
   }
   if (character.visual.temporaryRenderer !== 'cappy-proxy') return null
@@ -44,6 +45,7 @@ export default function CharacterRenderer({ character, skin, motion, hidden, cam
     <mesh castShadow position={[0, 1.85, 0]}><icosahedronGeometry args={[0.57, 2]} /><meshStandardMaterial color={skin.materials?.muzzle ?? '#d89555'} flatShading /></mesh>
     <mesh castShadow position={[-0.47, 2.05, 0]} rotation={[0, 0, 0.2]}><coneGeometry args={[0.18, 0.62, 6]} /><meshStandardMaterial color={skin.materials?.muzzle ?? '#d89555'} /></mesh>
     <mesh castShadow position={[0.47, 2.05, 0]} rotation={[0, 0, -0.2]}><coneGeometry args={[0.18, 0.62, 6]} /><meshStandardMaterial color={skin.materials?.muzzle ?? '#d89555'} /></mesh>
+    {scubaGear && <ProxyDivingGear />}
     <mesh position={[-0.2, 1.9, 0.49]}><sphereGeometry args={[0.075, 8, 8]} /><meshStandardMaterial color="#2b2525" /></mesh>
     <mesh position={[0.2, 1.9, 0.49]}><sphereGeometry args={[0.075, 8, 8]} /><meshStandardMaterial color="#2b2525" /></mesh>
     <mesh castShadow position={[-0.57, 1.06, 0]} rotation={[0, 0, -0.35]}><capsuleGeometry args={[0.15, 0.53, 3, 6]} /><meshStandardMaterial color={skin.materials?.muzzle ?? '#d89555'} /></mesh>
@@ -51,5 +53,14 @@ export default function CharacterRenderer({ character, skin, motion, hidden, cam
     <mesh castShadow position={[-0.24, 0.22, 0.06]}><capsuleGeometry args={[0.17, 0.35, 3, 6]} /><meshStandardMaterial color={skin.materials?.accent ?? '#664532'} /></mesh>
     <mesh castShadow position={[0.24, 0.22, 0.06]}><capsuleGeometry args={[0.17, 0.35, 3, 6]} /><meshStandardMaterial color={skin.materials?.accent ?? '#664532'} /></mesh>
     </group>
+  </group>
+}
+
+function ProxyDivingGear() {
+  return <group position-y={1.225}>
+    <mesh position={[0, 1.86, 0.44]}><boxGeometry args={[0.45, 0.2, 0.1]} /><meshStandardMaterial color="#247f9c" roughness={0.4} /></mesh>
+    <mesh position={[0, 1.86, 0.505]}><boxGeometry args={[0.33, 0.12, 0.035]} /><meshStandardMaterial color="#a5f0f4" transparent opacity={0.72} roughness={0.18} /></mesh>
+    <mesh position={[0, 1.29, -0.35]}><cylinderGeometry args={[0.19, 0.22, 0.72, 8]} /><meshStandardMaterial color="#2da9bb" roughness={0.45} flatShading /></mesh>
+    {[-1, 1].map((side) => <mesh key={side} position={[side * 0.2, 0.16, -0.28]} rotation={[0, side * -0.08, 0]}><boxGeometry args={[0.22, 0.08, 0.55]} /><meshStandardMaterial color="#f2c75d" roughness={0.76} flatShading /></mesh>)}
   </group>
 }

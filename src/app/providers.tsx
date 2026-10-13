@@ -1,7 +1,6 @@
 'use client'
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { useState } from 'react'
 import { AuthProvider } from '@/components/auth/AuthProvider'
 import ProgressCacheSync from '@/components/game/me/ProgressCacheSync'
@@ -26,7 +25,6 @@ export default function Providers({ children }: { children: React.ReactNode }) {
     <AuthProvider><QueryClientProvider client={queryClient}>
       <ProgressCacheSync />
       {children}
-      {process.env.NODE_ENV !== 'production' && <ReactQueryDevtools />}
     </QueryClientProvider></AuthProvider>
   )
 }

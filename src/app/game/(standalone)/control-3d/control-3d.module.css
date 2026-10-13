@@ -1,0 +1,127 @@
+.game {
+  position: fixed;
+  z-index: 0;
+  inset: 0;
+  overflow: hidden;
+  color: #f9fbff;
+  background: #91b5bd;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  user-select: none;
+}
+
+.world { position: absolute; inset: 0; }
+.world > div { position: absolute !important; inset: 0 !important; }
+.worldLoading { position: absolute; inset: 0; display: grid; place-items: center; color: #fff; font-weight: 900; letter-spacing: .08em; background: #507f72; }
+.hud { position: absolute; z-index: 4; top: max(14px, env(safe-area-inset-top)); left: 18px; right: 18px; display: grid; grid-template-columns: minmax(190px, 260px) minmax(180px, 1fr) minmax(150px, 220px) auto; align-items: start; gap: 12px; pointer-events: none; }
+.healthPanel, .levelPanel, .scorePanel { min-height: 58px; padding: 10px 14px; border: 1px solid #ffffff30; border-radius: 15px; background: #112a3bdd; box-shadow: 0 9px 24px #102b3b30; backdrop-filter: blur(9px); }
+.healthPanel { display: flex; align-items: center; gap: 10px; }
+.heartIcon { display: grid; place-items: center; width: 35px; height: 35px; flex: 0 0 35px; color: #ff7283; border-radius: 11px; background: #ff728325; }
+.healthText { min-width: 0; flex: 1; }
+.healthText strong { font-size: 16px; font-weight: 950; letter-spacing: .02em; }
+.healthText small { color: #b4c5d2; font-size: 10px; }
+.healthTrack { height: 7px; margin-top: 5px; overflow: hidden; border-radius: 99px; background: #ffffff22; }
+.healthTrack i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #ff627c, #ffd06c); transition: width .2s ease; }
+.levelPanel { text-align: center; }
+.levelPanel span, .levelPanel strong { display: block; }
+.levelPanel span { color: #a9c9db; font-size: 10px; font-weight: 900; letter-spacing: .2em; }
+.levelPanel strong { margin-top: 5px; font-size: 13px; font-weight: 950; letter-spacing: .07em; }
+.scorePanel { display: flex; justify-content: space-around; gap: 10px; }
+.scorePanel div { display: grid; grid-template-columns: auto auto; align-items: center; column-gap: 5px; }
+.scorePanel svg { color: #ffe278; }
+.scorePanel div + div svg { color: #ffa17f; }
+.scorePanel b { font-size: 16px; }
+.scorePanel small { grid-column: 1 / -1; margin-top: 2px; color: #a9c9db; font-size: 9px; font-weight: 900; letter-spacing: .14em; }
+.headerActions { display: flex; align-items: center; justify-content: flex-end; gap: 7px; pointer-events: auto; }
+.controllerPill, .qrButton, .pauseButton { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 42px; padding: 0 12px; border: 1px solid #ffffff35; border-radius: 12px; color: #e9f5ff; background: #112a3bdd; font-size: 10px; font-weight: 950; letter-spacing: .06em; box-shadow: 0 7px 19px #102b3b30; backdrop-filter: blur(8px); }
+.controllerPill { color: #dce9ef; }
+.connected { color: #9cf5bd; border-color: #78edaa80; }
+.qrButton { color: #172d46; border-color: #ffe594; background: linear-gradient(180deg,#fff0b0,#ffd967); cursor: pointer; }
+.pauseButton { width: 42px; padding: 0; cursor: pointer; }
+.weaponHud { position: absolute; z-index: 3; right: 22px; bottom: 78px; display: flex; align-items: center; gap: 9px; min-height: 46px; padding: 6px 10px; border: 1px solid #ffffff28; border-radius: 13px; background: #122b3cbd; box-shadow: 0 9px 24px #102b3b35; backdrop-filter: blur(8px); }
+.weaponIcon { display: grid; place-items: center; width: 31px; height: 31px; border-radius: 9px; color: #ffd66d; background: #ffd66d22; }
+.weaponHud b { min-width: 54px; font-size: 14px; font-variant-numeric: tabular-nums; }
+.weaponHud button { display: flex; align-items: center; gap: 4px; padding: 6px 7px; border: 1px solid #ffffff2a; border-radius: 7px; color: #bfd3de; background: #ffffff0d; font-size: 9px; font-weight: 900; cursor: pointer; }
+.weaponHud button:disabled { opacity: .45; cursor: default; }
+.crosshair { position: absolute; z-index: 20; top: 50%; left: 50%; width: 26px; height: 26px; transform: translate(-50%, -50%); pointer-events: none; }
+.crosshair i { position: absolute; display: block; background: #fff4ae; box-shadow: 0 0 5px #15283c; }
+.crosshair i:first-child { top: 12px; left: 0; width: 26px; height: 2px; }
+.crosshair i:nth-child(2) { top: 0; left: 12px; width: 2px; height: 26px; }
+.crosshair b { position: absolute; top: 10px; left: 10px; width: 6px; height: 6px; border: 1px solid #fff; border-radius: 50%; background: #f4cd55; }
+.banner { position: absolute; z-index: 3; top: 19%; left: 50%; display: flex; align-items: center; gap: 9px; max-width: min(80vw, 560px); padding: 12px 19px; transform: translateX(-50%); border: 1px solid #ffffff38; border-radius: 13px; color: #fff; background: #14374be8; box-shadow: 0 12px 28px #102b3b43; font-size: 13px; font-weight: 950; letter-spacing: .11em; text-align: center; animation: banner-in .25s ease-out; }
+.banner span { display: inline-flex; color: #ffe483; }
+.bannerOpen { color: #173447; border-color: #bfffe0; background: #bdffdfee; }
+.bannerOpen span { color: #329f73; }
+.instructions { position: absolute; z-index: 2; bottom: 17px; left: 50%; display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 15px; width: min(860px, calc(100% - 24px)); transform: translateX(-50%); color: #e4f0f4; opacity: .9; font-size: 9px; font-weight: 850; letter-spacing: .06em; text-shadow: 0 2px 5px #14344b; pointer-events: none; }
+.instructions b { color: #fff2b0; }
+.overlay { position: absolute; z-index: 7; inset: 0; display: grid; place-items: center; padding: 84px 18px 72px; background: linear-gradient(90deg,#071a2a73,#09203440 52%,#071a2a75); backdrop-filter: blur(3px); }
+.menuCard, .dialogCard { width: min(455px, 100%); padding: 32px 36px 26px; border: 1px solid #ffffff67; border-radius: 25px; color: #173047; background: linear-gradient(148deg,#fffffffa,#eaf5f6f7); box-shadow: 0 28px 90px #08182970, inset 0 1px #fff; text-align: center; animation: card-in .3s cubic-bezier(.2,.8,.2,1); }
+.eyebrow { display: block; color: #548399; font-size: 9px; font-weight: 950; letter-spacing: .23em; }
+.menuCard h1 { margin: 15px 0 8px; color: #1c3950; font-size: clamp(35px, 6vh, 54px); font-weight: 1000; letter-spacing: -.045em; line-height: .98; }
+.menuCard h1 em { color: #e5784e; font-style: normal; }
+.menuCard p, .dialogCard p { margin: 10px auto; max-width: 330px; color: #667d8a; font-size: 13px; line-height: 1.5; }
+.menuStats { display: flex; flex-wrap: wrap; justify-content: center; gap: 7px; margin: 21px 0 18px; }
+.menuStats span { display: flex; align-items: center; gap: 5px; padding: 7px 9px; border: 1px solid #d5e4e8; border-radius: 9px; color: #456174; background: #f3fafb; font-size: 9px; font-weight: 950; }
+.menuStats svg { color: #e57865; }
+.primaryButton, .secondaryButton { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 48px; margin-top: 10px; border: 0; border-radius: 12px; font-size: 12px; font-weight: 1000; letter-spacing: .08em; cursor: pointer; transition: transform .15s, filter .15s; }
+.primaryButton:hover, .secondaryButton:hover { filter: brightness(1.04); transform: translateY(-1px); }
+.primaryButton:disabled { cursor: wait; opacity: .72; filter: none; transform: none; }
+.primaryButton { color: #fff; background: linear-gradient(135deg,#ee8b56,#ed644f); box-shadow: 0 5px 0 #b84e42, 0 11px 20px #e06c5060; }
+.secondaryButton { color: #29455a; border: 1px solid #cddfe5; background: #f8fcfc; }
+.bestScore { display: block; margin-top: 19px; color: #8295a0; font-size: 9px; font-weight: 900; letter-spacing: .15em; }
+.bestScore b { margin-left: 6px; color: #dc9d3c; font-size: 13px; }
+.dialogCard { width: min(390px, 100%); padding: 28px 34px 24px; }
+.dialogCard h2 { margin: 11px 0 5px; color: #1d3950; font-size: 27px; font-weight: 1000; letter-spacing: .06em; }
+.dialogIcon { display: grid; place-items: center; width: 56px; height: 56px; margin: 0 auto; border-radius: 17px; color: #516b8b; background: #e0edf6; }
+.danger { color: #d65e65; background: #ffe5e3; }
+.victory { color: #ce9b36; background: #fff1c4; }
+.textButton { margin-top: 14px; border: 0; color: #718596; background: transparent; font-size: 10px; font-weight: 950; cursor: pointer; }
+.resultScore { margin: 12px auto; color: #df9840; font-size: 36px; font-weight: 1000; }
+.resultScore small { display: block; color: #77909f; font-size: 9px; letter-spacing: .18em; }
+.pairingShade { position: absolute; z-index: 9; inset: 0; display: grid; place-items: center; padding: 18px; background: #081b2c68; backdrop-filter: blur(4px); }
+.pairingCard { width: min(610px, 100%); padding: 20px; border: 1px solid #ffffff8a; border-radius: 19px; color: #1b3549; background: #f5fbfc; box-shadow: 0 25px 90px #0617266e; }
+.pairingHead { display: flex; align-items: flex-start; justify-content: space-between; gap: 15px; }
+.pairingHead h2 { margin: 4px 0 0; font-size: 20px; font-weight: 1000; letter-spacing: .05em; }
+.pairingHead button { display: grid; place-items: center; width: 34px; height: 34px; border: 1px solid #d5e3e8; border-radius: 10px; color: #577181; background: white; cursor: pointer; }
+.qrContent { display: grid; grid-template-columns: 200px 1fr; align-items: center; gap: 22px; margin-top: 12px; }
+.qrImageWrap { display: grid; place-items: center; width: 196px; height: 196px; padding: 9px; border: 1px solid #d8e3e7; border-radius: 15px; background: #fff; }
+.qrImageWrap img { width: 176px; height: 176px; image-rendering: pixelated; }
+.qrInstructions p { margin: 7px 0; color: #536b7a; font-size: 11px; font-weight: 700; line-height: 1.4; }
+.qrInstructions label { display: block; margin-top: 12px; color: #617987; font-size: 10px; font-weight: 900; }
+.qrInstructions select { display: block; width: 100%; margin-top: 5px; padding: 8px 9px; border: 1px solid #cbdce2; border-radius: 8px; color: #264357; background: #fff; font: inherit; font-size: 11px; }
+.qrInstructions code, .pairingUnavailable code { display: inline-block; margin-top: 9px; padding: 6px 8px; border-radius: 7px; color: #467080; background: #e8f2f4; font-size: 10px; }
+.pairingUnavailable { display: grid; justify-items: center; gap: 10px; padding: 27px 8px 20px; color: #647d8d; text-align: center; }
+.pairingUnavailable p { margin: 0; font-size: 12px; }
+.pairingUnavailable .primaryButton { max-width: 240px; }
+.pairingError { margin: 9px 0 0; color: #ba514c; font-size: 11px; font-weight: 800; }
+.pairingFooter { display: flex; align-items: center; gap: 7px; margin-top: 17px; padding-top: 14px; border-top: 1px solid #dce8eb; color: #718896; font-size: 9px; font-weight: 950; letter-spacing: .1em; }
+.pairingFooter button { display: flex; align-items: center; gap: 5px; margin-left: auto; border: 0; color: #577386; background: transparent; font-size: 10px; font-weight: 900; cursor: pointer; }
+.connectionLight { width: 8px; height: 8px; border-radius: 50%; background: #e49a55; box-shadow: 0 0 0 4px #e49a5520; }
+.connectionLightOn { background: #38be82; box-shadow: 0 0 0 4px #38be8220; }
+
+@keyframes card-in { from { opacity: 0; transform: translateY(10px) scale(.98); } to { opacity: 1; transform: none; } }
+@keyframes banner-in { from { opacity: 0; margin-top: -5px; } to { opacity: 1; margin-top: 0; } }
+
+@media (max-width: 900px) {
+  .hud { grid-template-columns: minmax(160px, 230px) 1fr minmax(125px, 175px); }
+  .headerActions { grid-column: 1 / -1; grid-row: 2; justify-content: flex-end; }
+  .instructions { display: none; }
+  .weaponHud { bottom: 20px; }
+}
+@media (max-width: 560px) {
+  .hud { top: max(7px, env(safe-area-inset-top)); left: 7px; right: 7px; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .healthPanel, .levelPanel, .scorePanel { min-height: 47px; padding: 7px 9px; border-radius: 11px; }
+  .levelPanel { grid-column: 2; grid-row: 1; }
+  .scorePanel { grid-column: 1; grid-row: 2; }
+  .headerActions { grid-column: 2; grid-row: 2; }
+  .controllerPill { min-height: 35px; padding: 0 7px; font-size: 8px; }
+  .qrButton { min-height: 35px; padding: 0 8px; font-size: 8px; }
+  .pauseButton { width: 35px; min-height: 35px; }
+  .weaponHud { right: 8px; bottom: 9px; }
+  .banner { top: 25%; width: max-content; font-size: 10px; }
+  .menuCard, .dialogCard { padding: 25px 20px 21px; }
+  .pairingCard { padding: 15px; }
+  .qrContent { grid-template-columns: 135px 1fr; gap: 12px; }
+  .qrImageWrap { width: 132px; height: 132px; padding: 6px; }
+  .qrImageWrap img { width: 118px; height: 118px; }
+  .qrInstructions p { font-size: 9px; }
+}

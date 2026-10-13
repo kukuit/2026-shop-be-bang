@@ -10,9 +10,9 @@ import MathDock from './MathDock'
 import EnglishLaunch from './EnglishLaunch'
 import { WORLD_CONFIG } from './worldConfig'
 
-function VillageEnvironment({ playerRef, onHousePorchChange, onMathDockChange, onEnglishRocketChange }: { playerRef: MutableRefObject<RapierRigidBody | null>; onHousePorchChange: (inside: boolean) => void; onMathDockChange?: (inside: boolean) => void; onEnglishRocketChange?: (inside: boolean) => void }) {
+function VillageEnvironment({ playerRef, onHousePorchChange, onMathDockChange, onEnglishRocketChange, onOceanDiveChange }: { playerRef: MutableRefObject<RapierRigidBody | null>; onHousePorchChange: (inside: boolean) => void; onMathDockChange?: (inside: boolean) => void; onEnglishRocketChange?: (inside: boolean) => void; onOceanDiveChange?: (inside: boolean) => void }) {
   return <>
-    <WorldEnvironment playerRef={playerRef} onHousePorchChange={onHousePorchChange} />
+    <WorldEnvironment playerRef={playerRef} onHousePorchChange={onHousePorchChange} onOceanDiveChange={onOceanDiveChange} />
     <RigidBody type="fixed" colliders={false}>
       <CuboidCollider args={[WORLD_CONFIG.background.radius, 0.3, WORLD_CONFIG.background.radius]} position={[0, -0.3, 0]} friction={1} />
       <IslandBoundary />
