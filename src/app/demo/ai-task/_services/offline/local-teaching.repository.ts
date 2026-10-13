@@ -387,10 +387,9 @@ export async function localGetSession(workspaceId: string, id: string): Promise<
 export async function localListSessions(workspaceId: string, rawFilters: Record<string, string | undefined> = {}, includeGoals = false): Promise<TeachingSessionView[]> {
   const filters = sessionListFiltersSchema.parse(Object.fromEntries(Object.entries(rawFilters).filter(([, value]) => value !== undefined)))
   const now = Date.now()
-  const reviewWindowStart = now - 24 * 60 * 60_000
   const defaultFrom = now - 100 * 24 * 60 * 60_000
   const defaultTo = now + 180 * 24 * 60 * 60_000
-  const from = filters.needsReview ? Math.max(filters.from ? Date.parse(filters.from) : 0, reviewWindowStart) : filters.from ? Date.parse(filters.from) : defaultFrom
+  const from = filters.needsReview ? (filters.from ? Date.parse(filters.from) : 0) : filters.from ? Date.parse(filters.from) : defaultFrom
   const to = filters.to ? Date.parse(filters.to) : filters.needsReview ? now : defaultTo
   const query = (filters.query || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('vi')
   return transaction(['lessons', 'students'], 'readonly', async tx => {
@@ -656,8 +655,7 @@ export async function localOverviewPageData(workspaceId: string, now = new Date(
     const start = Date.parse(session.startAt)
     return start >= Date.parse(todayStart) && start < Date.parse(todayEnd) && session.lifecycleStatus !== 'SUPERSEDED'
   })
-  const reviewFrom = now.getTime() - 24 * 60 * 60_000
-  const overdue = lessons.filter(session => session.status === 'SCHEDULED' && session.lifecycleStatus !== 'SUPERSEDED' && Date.parse(session.startAt) >= reviewFrom && Date.parse(session.startAt) < now.getTime() && Date.parse(session.startAt) + session.scheduledDurationMinutes * 60_000 < now.getTime()).sort((a, b) => Date.parse(a.startAt) - Date.parse(b.startAt))
+  const overdue = lessons.filter(session => session.status === 'SCHEDULED' && session.lifecycleStatus !== 'SUPERSEDED' && Date.parse(session.startAt) < now.getTime() && Date.parse(session.startAt) + session.scheduledDurationMinutes * 60_000 < now.getTime()).sort((a, b) => Date.parse(a.startAt) - Date.parse(b.startAt))
   const dashboard = { today, todaySessions: todaySessions.map(session => viewOf(session, studentById.get(session.studentId), true)), reviewCount: overdue.length, overdueSessions: overdue.slice(0, 5).map(session => viewOf(session, studentById.get(session.studentId), true)) }
   return { period, dashboard }
 }
@@ -672,14 +670,12 @@ export async function localDashboard(workspaceId: string, now = new Date()) {
   const studentById = new Map(students.map(student => [student.id, student]))
   const active = lessons.filter(session => !session.deletedAt && session.lifecycleStatus !== 'SUPERSEDED')
   const todaySessions = active.filter(session => Date.parse(session.startAt) >= Date.parse(todayStart) && Date.parse(session.startAt) < Date.parse(todayEnd)).sort((a, b) => Date.parse(a.startAt) - Date.parse(b.startAt)).map(session => viewOf(session, studentById.get(session.studentId), true))
-  const overdue = active.filter(session => session.status === 'SCHEDULED' && Date.parse(session.startAt) > now.getTime() - 24 * 60 * 60_000 && Date.parse(session.startAt) < now.getTime() && Date.parse(session.startAt) + session.scheduledDurationMinutes * 60_000 < now.getTime()).sort((a, b) => Date.parse(b.startAt) - Date.parse(a.startAt)).slice(0, 5).map(session => viewOf(session, studentById.get(session.studentId), true))
-  const reviewFrom = now.getTime() - 24 * 60 * 60_000
-  const reviewCount = active.filter(session => session.status === 'SCHEDULED' && Date.parse(session.startAt) >= reviewFrom && Date.parse(session.startAt) < now.getTime() && Date.parse(session.startAt) + session.scheduledDurationMinutes * 60_000 < now.getTime()).length
-  return { today, todaySessions, reviewCount, overdueSessions: overdue }
+  const allOverdue = active.filter(session => session.status === 'SCHEDULED' && Date.parse(session.startAt) < now.getTime() && Date.parse(session.startAt) + session.scheduledDurationMinutes * 60_000 < now.getTime()).sort((a, b) => Date.parse(b.startAt) - Date.parse(a.startAt))
+  const overdueSessions = allOverdue.slice(0, 5).map(session => viewOf(session, studentById.get(session.studentId), true))
+  return { today, todaySessions, reviewCount: allOverdue.length, overdueSessions }
 }
 
 export async function localReviewCount(workspaceId: string, now = new Date()) {
   const [sessions] = await transaction(['lessons'], 'readonly', async tx => Promise.all([byWorkspace<StoredLesson>(tx.objectStore('lessons'), workspaceId)]))
-  const from = now.getTime() - 24 * 60 * 60_000
-  return sessions.filter(session => session.status === 'SCHEDULED' && session.lifecycleStatus !== 'SUPERSEDED' && Date.parse(session.startAt) >= from && Date.parse(session.startAt) < now.getTime() && Date.parse(session.startAt) + session.scheduledDurationMinutes * 60_000 < now.getTime()).length
+  return sessions.filter(session => session.status === 'SCHEDULED' && session.lifecycleStatus !== 'SUPERSEDED' && Date.parse(session.startAt) < now.getTime() && Date.parse(session.startAt) + session.scheduledDurationMinutes * 60_000 < now.getTime()).length
 }

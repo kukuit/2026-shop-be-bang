@@ -573,8 +573,7 @@ async function readSessionWindow(userId: string, from: string, to: string, statu
 
 export async function listTeachingSessions(userId: string, filters: { studentId?: string; status?: string; needsReview?: boolean; from?: string; to?: string; query?: string } = {}, options: { students?: Student[]; includeGoals?: boolean; materializedSessions?: { items: TeachingSession[]; from: string; to: string } } = {}): Promise<TeachingSessionView[]> {
   const now = new Date()
-  const reviewWindowStart = new Date(now.getTime() - 24 * 60 * 60_000).toISOString()
-  const reviewFrom = filters.from && filters.from > reviewWindowStart ? filters.from : reviewWindowStart
+  const reviewFrom = filters.from || new Date(0).toISOString()
   const defaultFrom = new Date(now.getTime() - 100 * 24 * 60 * 60_000).toISOString()
   const defaultTo = new Date(now.getTime() + 180 * 24 * 60 * 60_000).toISOString()
   const [sessions, students] = await Promise.all([
@@ -619,11 +618,10 @@ export async function teachingDashboard(userId: string, now = new Date()) {
   const todayStart = vietnamDateTime(today, '00:00')
   const todayEnd = vietnamDateTime(tomorrow, '00:00')
   const nowIso = now.toISOString()
-  const reviewWindowStart = new Date(now.getTime() - 24 * 60 * 60_000).toISOString()
   const prepared = await materializeRecurringSessions(userId, todayStart, todayEnd)
   const [todaySessions, scheduledBeforeNow, students] = await Promise.all([
     scanSessions(userId, { from: todayStart, to: todayEnd }),
-    scanSessions(userId, { from: reviewWindowStart, to: nowIso, status: 'SCHEDULED' }),
+    scanSessions(userId, { to: nowIso, status: 'SCHEDULED' }),
     Promise.resolve(prepared.students),
   ])
   const studentById = new Map(students.map(student => [student.id, student]))
@@ -639,7 +637,7 @@ export async function teachingDashboard(userId: string, now = new Date()) {
 }
 
 export async function teachingReviewCount(userId: string, now = new Date()) {
-  const scheduled = await scanSessions(userId, { from: new Date(now.getTime() - 24 * 60 * 60_000).toISOString(), to: now.toISOString(), status: 'SCHEDULED' })
+  const scheduled = await scanSessions(userId, { to: now.toISOString(), status: 'SCHEDULED' })
   return scheduled.filter(session => session.lifecycleStatus !== 'SUPERSEDED' && Date.parse(session.startAt) + session.scheduledDurationMinutes * 60_000 < now.getTime()).length
 }
 
@@ -968,11 +966,9 @@ export async function teachingOverviewPageData(userId: string, now = new Date())
   const todayStart = vietnamDateTime(today, '00:00')
   const todayEnd = vietnamDateTime(shiftVietnamDate(today, 1), '00:00')
   const nowIso = now.toISOString()
-  const reviewWindowStart = new Date(now.getTime() - 24 * 60 * 60_000).toISOString()
   const prepared = await materializeRecurringSessions(userId, todayStart, todayEnd)
-  const materializedSessions = { items: prepared.sessions, from: prepared.sessionsFrom, to: prepared.sessionsTo }
-  const [recentScheduled, billing] = await Promise.all([
-    readSessionWindow(userId, reviewWindowStart, nowIso, 'SCHEDULED', materializedSessions),
+  const [scheduledBeforeNow, billing] = await Promise.all([
+    scanSessions(userId, { to: nowIso, status: 'SCHEDULED' }),
     teachingStudentBillingSummary(userId, now),
   ])
   const students = prepared.students
@@ -981,7 +977,7 @@ export async function teachingOverviewPageData(userId: string, now = new Date())
     const start = Date.parse(session.startAt)
     return start >= Date.parse(todayStart) && start < Date.parse(todayEnd) && session.lifecycleStatus !== 'SUPERSEDED'
   })
-  const overdue = recentScheduled.filter(session => session.lifecycleStatus !== 'SUPERSEDED' && Date.parse(session.startAt) + session.scheduledDurationMinutes * 60_000 < now.getTime()).sort((a, b) => Date.parse(a.startAt) - Date.parse(b.startAt))
+  const overdue = scheduledBeforeNow.filter(session => session.lifecycleStatus !== 'SUPERSEDED' && Date.parse(session.startAt) + session.scheduledDurationMinutes * 60_000 < now.getTime()).sort((a, b) => Date.parse(a.startAt) - Date.parse(b.startAt))
   const periodRows = billing.rows.map(row => {
     const student = studentById.get(row.studentId)
     if (!student) return null
