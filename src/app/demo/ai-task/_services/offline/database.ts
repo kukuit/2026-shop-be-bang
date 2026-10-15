@@ -1,5 +1,5 @@
 const DATABASE_NAME = 'ai-task-teaching-local'
-export const DATABASE_VERSION = 1
+export const DATABASE_VERSION = 2
 
 export const LOCAL_STORES = [
   'workspaces',
@@ -9,6 +9,7 @@ export const LOCAL_STORES = [
   'settings',
   'syncOperations',
   'syncMetadata',
+  'activities',
 ] as const
 
 export type LocalStoreName = typeof LOCAL_STORES[number]
@@ -75,6 +76,12 @@ export function openTeachingDatabase(): Promise<IDBDatabase> {
         ? transaction.objectStore('syncMetadata')
         : db.createObjectStore('syncMetadata', { keyPath: ['workspaceId', 'key'] })
       createIndex(syncMetadata, 'by-workspace', 'workspaceId')
+
+      const activities = db.objectStoreNames.contains('activities')
+        ? transaction.objectStore('activities')
+        : db.createObjectStore('activities', { keyPath: ['workspaceId', 'id'] })
+      createIndex(activities, 'by-workspace', 'workspaceId')
+      createIndex(activities, 'by-workspace-created', ['workspaceId', 'createdAt'])
     }
     request.onsuccess = () => {
       const db = request.result

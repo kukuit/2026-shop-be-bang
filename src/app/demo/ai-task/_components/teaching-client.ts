@@ -24,10 +24,16 @@ export async function teachingGet<T>(params: Record<string, string>): Promise<T>
 }
 export async function teachingPost<T>(body: unknown): Promise<T> {
   if (getActiveTeachingWorkspace()?.mode === 'LOCAL') {
-    try { return await localTeachingPost<T>(body) }
+    try {
+      const result = await localTeachingPost<T>(body)
+      if (typeof window !== 'undefined') window.dispatchEvent(new Event('teaching:activity-changed'))
+      return result
+    }
     catch (error) { throw asTeachingRequestError(error) }
   }
-  return request<T>('/demo/ai-task/api/teaching', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+  const result = await request<T>('/demo/ai-task/api/teaching', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event('teaching:activity-changed'))
+  return result
 }
 function asTeachingRequestError(error: unknown) {
   if (error instanceof TeachingRequestError) return error

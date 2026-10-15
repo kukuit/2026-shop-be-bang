@@ -3,7 +3,7 @@
   min-width: 0;
 }
 .timezone {
-  font-size: 11px;
+  font-size: 14px;
   color: #70847a;
 }
 .toolbar,
@@ -22,7 +22,7 @@
   gap: 4px;
 }
 .period h2 {
-  font-size: 17px;
+  font-size: 19px;
   font-weight: 650;
   min-width: 200px;
   text-align: center;
@@ -91,11 +91,11 @@
   gap: 4px;
   justify-items: center;
   padding: 13px 3px;
-  font-size: 13px;
+  font-size: 15px;
 }
 .dayHeaders small {
   color: #70847a;
-  font-size: 10px;
+  font-size: 14px;
 }
 .calendar button.today {
   background: #e2f0e8;
@@ -107,7 +107,7 @@
   border-bottom: 1px solid #dce6df;
 }
 .allDay h3 {
-  font-size: 11px;
+  font-size: 14px;
   color: #70847a;
   font-weight: 500;
   margin: 0 0 9px;
@@ -122,7 +122,7 @@
   min-width: 0;
 }
 .quiet {
-  font-size: 12px;
+  font-size: 15px;
   color: #70847a;
   grid-column: 1/-1;
   padding: 8px 0;
@@ -140,7 +140,7 @@
   text-align: left;
   padding: 6px 7px;
   overflow: hidden;
-  font-size: 11px;
+  font-size: 14px;
   line-height: 1.4;
   cursor: pointer;
   transition: box-shadow 0.15s;
@@ -150,7 +150,7 @@
   z-index: 3;
 }
 .event strong {
-  font-size: 12px;
+  font-size: 15px;
   font-weight: 600;
   display: block;
   overflow: hidden;
@@ -167,7 +167,7 @@
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
-  font-size: 10px;
+  font-size: 14px;
   color: #52675c;
   margin-top: 2px;
 }
@@ -185,7 +185,7 @@
   opacity: 0.48;
 }
 .clock {
-  font-size: 10px;
+  font-size: 14px;
   font-weight: 400;
 }
 .timelineScroll {
@@ -207,7 +207,7 @@
 .hours span {
   position: absolute;
   right: 8px;
-  font-size: 10px;
+  font-size: 14px;
   color: #84958c;
   line-height: 18px;
 }
@@ -252,7 +252,7 @@
   gap: 8px 16px;
   padding: 13px 15px;
   border-top: 1px solid #e5ede8;
-  font-size: 10px;
+  font-size: 14px;
   color: #70847a;
 }
 .legend span {
@@ -273,7 +273,7 @@
   background: #f9fbfa;
 }
 .unscheduled h2 {
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 650;
   display: flex;
   justify-content: space-between;
@@ -281,13 +281,13 @@
   gap: 8px;
 }
 .unscheduled h2 span {
-  font-size: 11px;
+  font-size: 14px;
   background: #e8efeb;
   padding: 2px 7px;
   border-radius: 8px;
 }
 .unscheduled > p {
-  font-size: 11px;
+  font-size: 14px;
   color: #70847a;
   margin: 9px 0 18px;
   line-height: 1.6;
@@ -308,7 +308,7 @@
   justify-content: center;
   gap: 10px;
   padding: 22px;
-  font-size: 13px;
+  font-size: 15px;
   color: #70847a;
   line-height: 1.6;
 }
@@ -320,7 +320,7 @@
   grid-template-columns: repeat(7, minmax(0, 1fr));
   text-align: center;
   padding: 12px 0;
-  font-size: 11px;
+  font-size: 14px;
   color: #70847a;
   border-bottom: 1px solid #dce6df;
 }
@@ -339,7 +339,7 @@
 .calendar .monthCell > button {
   border: 0;
   background: transparent;
-  font-size: 11px;
+  font-size: 14px;
   padding: 4px 8px;
   min-height: 28px;
 }
@@ -365,7 +365,7 @@
   border: 0;
   background: transparent;
   color: #17705d;
-  font-size: 11px;
+  font-size: 14px;
   padding: 3px 5px;
   text-align: left;
 }
@@ -376,7 +376,7 @@
   gap: 18px;
 }
 .detailHeading h2 {
-  font-size: 23px;
+  font-size: 25px;
   line-height: 1.4;
   overflow-wrap: anywhere;
   margin-top: 0;
@@ -388,7 +388,7 @@
   flex-shrink: 0;
 }
 .parent {
-  font-size: 12px;
+  font-size: 15px;
   color: #70847a;
   margin-top: 8px;
   line-height: 1.6;
@@ -402,7 +402,7 @@
   margin: 24px 0;
   background: #f4f8f5;
   border-radius: 10px;
-  font-size: 13px;
+  font-size: 15px;
   line-height: 1.8;
 }
 .detailTime svg {
@@ -415,24 +415,24 @@
   gap: 18px;
 }
 .facts dt {
-  font-size: 11px;
+  font-size: 14px;
   color: #70847a;
 }
 .facts dd {
-  font-size: 13px;
+  font-size: 15px;
   margin: 6px 0;
 }
 .notes {
   margin: 24px 0;
 }
 .notes h3 {
-  font-size: 12px;
+  font-size: 15px;
   font-weight: 600;
 }
 .notes p {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
-  font-size: 13px;
+  font-size: 15px;
   line-height: 1.7;
   margin-top: 8px;
 }
@@ -466,7 +466,7 @@
     justify-content: space-between;
   }
   .period h2 {
-    font-size: 14px;
+    font-size: 16px;
     min-width: 0;
   }
   .controls {
@@ -483,11 +483,11 @@
     max-height: 520px;
   }
   .detailHeading h2 {
-    font-size: 20px;
+    font-size: 22px;
   }
   .empty {
     padding: 16px;
-    font-size: 12px;
+    font-size: 15px;
   }
   .layout {
     gap: 14px;
