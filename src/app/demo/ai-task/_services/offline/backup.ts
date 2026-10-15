@@ -13,31 +13,34 @@ const scheduleSchema = z.object({ id: z.string().min(1), studentId: z.string().m
 const goalSchema = z.object({ id: z.string().min(1), sessionId: z.string().min(1), title: z.string(), isCompleted: z.boolean(), note: z.string().nullable(), sortOrder: z.number().int(), createdAt: z.string(), updatedAt: z.string() }).passthrough()
 const lessonSchema = z.object({ id: z.string().min(1), studentId: z.string().min(1), title: z.string().min(1), subject: z.string().nullable(), startAt: z.string().datetime({ offset: true }), scheduledDurationMinutes: z.number().int().positive(), actualDurationMinutes: z.number().int().positive().nullable(), status: z.enum(['SCHEDULED', 'COMPLETED', 'CANCELLED']), progressPercent: z.number().int().min(0).max(100).nullable(), evaluationNote: z.string().nullable(), pricingModeSnapshot: z.enum(['PER_SESSION', 'PER_HOUR']), unitRateSnapshot: z.number().int().nonnegative().nullable(), pricingOverride: z.boolean(), feeAmount: z.number().int().nonnegative().nullable(), completedAt: z.string().nullable(), source: z.enum(['RECURRING', 'MANUAL']), weeklyScheduleId: z.string().nullable(), occurrenceDate: z.string().nullable(), seriesId: z.string().nullable(), isOverride: z.boolean(), lifecycleStatus: z.enum(['ACTIVE', 'SUPERSEDED']), createdAt: z.string(), updatedAt: z.string(), goals: z.array(goalSchema) }).passthrough()
 const settingsSchema = z.object({ id: z.string().min(1), defaultPricingMode: z.enum(['PER_SESSION', 'PER_HOUR']), defaultSessionRate: z.number().int().nonnegative(), defaultHourlyRate: z.number().int().nonnegative(), billingCycleCutoffDay: z.number().int().min(1).max(31), createdAt: z.string(), updatedAt: z.string() }).passthrough()
-const backupSchema = z.object({ schemaVersion: z.number().int(), exportedAt: z.string().datetime({ offset: true }), app: z.literal('teaching-management'), workspace: z.object({ name: z.string().min(1).max(100) }).passthrough(), data: z.object({ students: z.array(studentSchema), weeklySchedules: z.array(scheduleSchema), lessons: z.array(lessonSchema), settings: settingsSchema, syncOperations: z.array(z.record(z.string(), z.unknown())).optional(), syncMetadata: z.array(z.record(z.string(), z.unknown())).optional() }).strict() }).strict()
+const activitySnapshotSchema = z.object({ store: z.enum(['students', 'weeklySchedules', 'lessons', 'settings']), id: z.string().min(1), data: z.record(z.string(), z.unknown()) }).strict()
+const activitySchema = z.object({ workspaceId: z.string().min(1), id: z.string().min(1), operation: z.string(), entityId: z.string(), label: z.string(), createdAt: z.string().datetime({ offset: true }), undone: z.boolean(), undoable: z.boolean(), undoUnavailableReason: z.string().optional(), before: z.array(activitySnapshotSchema), after: z.array(activitySnapshotSchema), undoneAt: z.string().datetime({ offset: true }).optional() }).strict()
+const backupSchema = z.object({ schemaVersion: z.number().int(), exportedAt: z.string().datetime({ offset: true }), app: z.literal('teaching-management'), workspace: z.object({ name: z.string().min(1).max(100) }).passthrough(), data: z.object({ students: z.array(studentSchema), weeklySchedules: z.array(scheduleSchema), lessons: z.array(lessonSchema), settings: settingsSchema, syncOperations: z.array(z.record(z.string(), z.unknown())).optional(), syncMetadata: z.array(z.record(z.string(), z.unknown())).optional(), activities: z.array(activitySchema).optional() }).strict() }).strict()
 
 type ParsedBackup = z.infer<typeof backupSchema>
 const id = () => `local_${globalThis.crypto?.randomUUID?.() || `${Date.now().toString(36)}_${Math.random().toString(36).slice(2)}`}`
 
 export async function exportLocalWorkspace(workspaceId: string) {
   const db = await openTeachingDatabase()
-  const tx = db.transaction(['workspaces', 'students', 'weeklySchedules', 'lessons', 'settings', 'syncOperations', 'syncMetadata'], 'readonly')
+  const tx = db.transaction(['workspaces', 'students', 'weeklySchedules', 'lessons', 'settings', 'syncOperations', 'syncMetadata', 'activities'], 'readonly')
   const done = transactionDone(tx)
   const workspace = await requestResult(tx.objectStore('workspaces').get(workspaceId)) as LocalWorkspace | undefined
   if (!workspace || workspace.mode !== 'LOCAL') { tx.abort(); await done.catch(() => undefined); throw new Error('Không tìm thấy dữ liệu offline để sao lưu.') }
-  const [students, weeklySchedules, lessons, settings, syncOperations, syncMetadata] = await Promise.all([
+  const [students, weeklySchedules, lessons, settings, syncOperations, syncMetadata, activities] = await Promise.all([
     requestResult(tx.objectStore('students').index('by-workspace').getAll(workspaceKeyRange(workspaceId))),
     requestResult(tx.objectStore('weeklySchedules').index('by-workspace').getAll(workspaceKeyRange(workspaceId))),
     requestResult(tx.objectStore('lessons').index('by-workspace').getAll(workspaceKeyRange(workspaceId))),
     requestResult(tx.objectStore('settings').index('by-workspace').getAll(workspaceKeyRange(workspaceId))),
     requestResult(tx.objectStore('syncOperations').index('by-workspace').getAll(workspaceKeyRange(workspaceId))),
     requestResult(tx.objectStore('syncMetadata').index('by-workspace').getAll(workspaceKeyRange(workspaceId))),
+    requestResult(tx.objectStore('activities').index('by-workspace').getAll(workspaceKeyRange(workspaceId))),
   ])
   await done
   const setting = (settings as Record<string, unknown>[]).find(item => item.id === 'default')
   const backup = {
     schemaVersion: 1, exportedAt: new Date().toISOString(), app: 'teaching-management' as const,
     workspace: { name: workspace.name },
-    data: { students, weeklySchedules, lessons, settings: setting, syncOperations, syncMetadata },
+    data: { students, weeklySchedules, lessons, settings: setting, syncOperations, syncMetadata, activities },
   }
   const checked = backupSchema.parse(backup)
   validateRelationships(checked)
@@ -81,7 +84,7 @@ export async function importLocalWorkspace(backup: ParsedBackup): Promise<LocalW
   const now = Date.now()
   const workspace: LocalWorkspace = { id: id(), name: checked.workspace.name, mode: 'LOCAL', ownerId: null, cloudWorkspaceId: null, createdAt: now, updatedAt: now, lastOpenedAt: null, lastSyncedAt: null }
   const db = await openTeachingDatabase()
-  const tx = db.transaction(['workspaces', 'students', 'weeklySchedules', 'lessons', 'settings', 'syncOperations', 'syncMetadata'], 'readwrite')
+  const tx = db.transaction(['workspaces', 'students', 'weeklySchedules', 'lessons', 'settings', 'syncOperations', 'syncMetadata', 'activities'], 'readwrite')
   const done = transactionDone(tx)
   try {
     tx.objectStore('workspaces').add(workspace)
@@ -91,6 +94,18 @@ export async function importLocalWorkspace(backup: ParsedBackup): Promise<LocalW
     tx.objectStore('settings').add({ ...checked.data.settings, workspaceId: workspace.id, userId: workspace.id, id: 'default' })
     for (const operation of checked.data.syncOperations || []) tx.objectStore('syncOperations').add({ ...operation, id: id(), workspaceId: workspace.id, status: 'PENDING', attemptCount: 0, createdAt: now })
     for (const metadata of checked.data.syncMetadata || []) tx.objectStore('syncMetadata').add({ ...metadata, workspaceId: workspace.id })
+    for (const activity of checked.data.activities || []) {
+      const remapSnapshot = (item: z.infer<typeof activitySnapshotSchema>) => ({
+        ...item,
+        data: { ...item.data, workspaceId: workspace.id, userId: workspace.id },
+      })
+      tx.objectStore('activities').add({
+        ...activity,
+        workspaceId: workspace.id,
+        before: activity.before.map(remapSnapshot),
+        after: activity.after.map(remapSnapshot),
+      })
+    }
     for (const student of checked.data.students) tx.objectStore('syncOperations').add({ id: id(), workspaceId: workspace.id, entityType: 'student', entityId: student.id, operation: 'CREATE', createdAt: now, status: 'PENDING', attemptCount: 0 })
     for (const schedule of checked.data.weeklySchedules) tx.objectStore('syncOperations').add({ id: id(), workspaceId: workspace.id, entityType: 'weeklySchedule', entityId: schedule.id, operation: 'CREATE', createdAt: now, status: 'PENDING', attemptCount: 0 })
     for (const lesson of checked.data.lessons) tx.objectStore('syncOperations').add({ id: id(), workspaceId: workspace.id, entityType: 'lesson', entityId: lesson.id, operation: 'CREATE', createdAt: now, status: 'PENDING', attemptCount: 0 })

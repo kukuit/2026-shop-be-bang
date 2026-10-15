@@ -36,6 +36,10 @@ import {
   teachingStudentBillingSummary,
   teachingStudentBillingDetails,
   teachingReviewCount,
+  captureTeachingActionState,
+  listTeachingActivities,
+  saveTeachingActivity,
+  undoTeachingActivity,
 } from '../../_services/teaching.repository'
 
 export const runtime = 'nodejs'
@@ -50,6 +54,7 @@ const mutationSchema = z.discriminatedUnion('operation', [
   z.object({ operation: z.literal('sessionStatus'), sessionId: z.string().min(1), action: z.enum(['cancel', 'restore']), reason: z.string().trim().max(1000).nullable().optional() }).strict(),
   z.object({ operation: z.literal('completeSession'), data: completionInputSchema }).strict(),
   z.object({ operation: z.literal('confirmAttendance'), data: attendanceConfirmationInputSchema }).strict(),
+  z.object({ operation: z.literal('undoActivity'), activityId: z.string().min(1).max(128).regex(/^[A-Za-z0-9_-]+$/) }).strict(),
 ])
 
 function failure(error: unknown) {
@@ -64,6 +69,8 @@ function failure(error: unknown) {
     'Không tìm thấy', 'Chỉ có thể', 'Hãy khôi phục', 'Buổi học này không',
     'Buổi học chưa', 'Một mục tiêu', 'Danh sách mục tiêu', 'Chỉ chọn học viên',
     'Ngày hiệu lực', 'Một lịch tuần', 'Lịch tuần',
+    'Chưa có hoạt động', 'Dữ liệu đã thay đổi', 'Dữ liệu của thao tác này', 'Lịch hoặc buổi học',
+    'Thao tác gần nhất', 'Thao tác quá lớn', 'Hoạt động này', 'Hoạt động thiếu',
   ].some(prefix => message.startsWith(prefix))
   if (!safe) console.error('[ai-task-teaching]', message || 'Request failed')
   return json({ error: safe ? message : 'Không thể xử lý yêu cầu. Vui lòng thử lại.' }, 400)
@@ -122,6 +129,7 @@ export async function GET(req: NextRequest) {
       case 'overviewPageData': {
         return json(await teachingOverviewPageData(auth.user.id))
       }
+      case 'activities': return json(await listTeachingActivities(auth.user.id))
       default: return json({ error: 'Không tìm thấy tài nguyên.' }, 404)
     }
   } catch (error) { return failure(error) }
@@ -137,22 +145,30 @@ export async function POST(req: NextRequest) {
     if (raw.length > 100_000) return json({ error: 'Yêu cầu quá lớn.' }, 413)
     const input = mutationSchema.parse(JSON.parse(raw))
     const userId = auth.user.id
+    const withActivity = async <T,>(operation: string, values: unknown, execute: () => Promise<T>) => {
+      if (operation === 'saveStudent') await materializeRecurringSessions(userId)
+      const before = await captureTeachingActionState(userId, operation, values)
+      const result = await execute()
+      await saveTeachingActivity(userId, operation, values, result, before)
+      return result
+    }
     switch (input.operation) {
       case 'saveStudent': {
         const scheduleConflicts = input.data.weeklySchedules ? findWeeklyScheduleConflicts(input.data.weeklySchedules) : []
         if (scheduleConflicts.length && !input.allowScheduleOverlap) return json({ error: 'Lịch tuần của học viên có khung giờ bị trùng.', scheduleConflicts }, 409)
-        return json({ student: await saveStudent(userId, { ...input.data, allowScheduleOverlap: input.allowScheduleOverlap }) })
+        return json(await withActivity(input.operation, input, async () => ({ student: await saveStudent(userId, { ...input.data, allowScheduleOverlap: input.allowScheduleOverlap }) })))
       }
-      case 'recordStudentPayment': return json(await recordStudentPayment(userId, input.data))
-      case 'saveSettings': return json({ settings: await saveTeachingSettings(userId, input.data) })
+      case 'recordStudentPayment': return json(await withActivity(input.operation, input, () => recordStudentPayment(userId, input.data)))
+      case 'saveSettings': return json(await withActivity(input.operation, input, async () => ({ settings: await saveTeachingSettings(userId, input.data) })))
       case 'saveSession': {
         const conflicts = await findSessionConflicts(userId, input.data)
         if (conflicts.length && !input.allowOverlap) return json({ error: 'Học viên đã có buổi học trùng thời gian.', conflicts }, 409)
-        return json({ session: await saveTeachingSession(userId, input.data) })
+        return json(await withActivity(input.operation, input, async () => ({ session: await saveTeachingSession(userId, input.data) })))
       }
-      case 'sessionStatus': return json({ session: await setSessionCancelled(userId, input.sessionId, input.action === 'cancel', input.reason || null) })
-      case 'completeSession': return json({ session: await completeTeachingSession(userId, input.data) })
-      case 'confirmAttendance': return json({ session: await confirmTeachingAttendance(userId, input.data.sessionId) })
+      case 'sessionStatus': return json(await withActivity(input.operation, input, async () => ({ session: await setSessionCancelled(userId, input.sessionId, input.action === 'cancel', input.reason || null) })))
+      case 'completeSession': return json(await withActivity(input.operation, input, async () => ({ session: await completeTeachingSession(userId, input.data) })))
+      case 'confirmAttendance': return json(await withActivity(input.operation, input, async () => ({ session: await confirmTeachingAttendance(userId, input.data.sessionId) })))
+      case 'undoActivity': return json(await undoTeachingActivity(userId, input.activityId))
     }
   } catch (error) { return failure(error) }
 }

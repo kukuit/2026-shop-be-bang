@@ -4,9 +4,10 @@ import { z } from 'zod'
 import { attendanceConfirmationInputSchema, completionInputSchema, sessionInputSchema, sessionListFiltersSchema, studentInputSchema, studentPaymentInputSchema, teachingSettingsSchema } from '../../_lib/teaching-model'
 import {
   localCompleteSession, localConfirmAttendance, localDashboard, localGetSession, localGetSettings, localListSessions,
-  localListStudents, localListWeeklySchedules, localMaterializeRecurringSessions, localMonthOverview,
+  localListStudents, localListTeachingActivities, localListWeeklySchedules, localMaterializeRecurringSessions, localMonthOverview,
   localOverviewPageData, localRecordStudentPayment, localReviewCount, localSaveSession, localSaveSettings, localSaveStudent, localSetSessionCancelled,
-  localStudentBillingDetails, localStudentBillingSummary, LocalTeachingError,
+  localStudentBillingDetails, localStudentBillingSummary, localCaptureTeachingActionState, localSaveTeachingActivity,
+  localUndoTeachingActivity, LocalTeachingError,
 } from './local-teaching.repository'
 import { getLocalWorkspace } from './workspaces'
 import { getActiveTeachingWorkspace } from './workspace-runtime'
@@ -79,6 +80,7 @@ export async function localTeachingGet<T>(params: Record<string, string>): Promi
     case 'overviewPageData': {
       return await localOverviewPageData(workspaceId) as T
     }
+    case 'activities': return await localListTeachingActivities(workspaceId) as T
     default: throw new Error('Không tìm thấy tài nguyên.')
   }
 }
@@ -87,34 +89,45 @@ export async function localTeachingPost<T>(rawBody: unknown): Promise<T> {
   const workspaceId = await requireLocalWorkspace()
   const operation = z.object({ operation: z.string().min(1) }).passthrough().parse(rawBody)
   try {
+    const withActivity = async <R,>(execute: () => Promise<R>): Promise<R> => {
+      if (operation.operation === 'saveStudent') await localMaterializeRecurringSessions(workspaceId)
+      const before = await localCaptureTeachingActionState(workspaceId, operation.operation, rawBody)
+      const result = await execute()
+      await localSaveTeachingActivity(workspaceId, operation.operation, rawBody, result, before)
+      return result
+    }
     switch (operation.operation) {
       case 'saveStudent': {
         const input = z.object({ operation: z.literal('saveStudent'), data: studentInputSchema, allowScheduleOverlap: z.boolean().optional() }).strict().parse(rawBody)
-        return { student: await localSaveStudent(workspaceId, input.data, input.allowScheduleOverlap) } as T
+        return await withActivity(async () => ({ student: await localSaveStudent(workspaceId, input.data, input.allowScheduleOverlap) })) as T
       }
       case 'recordStudentPayment': {
         const input = z.object({ operation: z.literal('recordStudentPayment'), data: studentPaymentInputSchema }).strict().parse(rawBody)
-        return await localRecordStudentPayment(workspaceId, input.data) as T
+        return await withActivity(() => localRecordStudentPayment(workspaceId, input.data)) as T
       }
       case 'saveSettings': {
         const input = z.object({ operation: z.literal('saveSettings'), data: teachingSettingsSchema }).strict().parse(rawBody)
-        return { settings: await localSaveSettings(workspaceId, input.data) } as T
+        return await withActivity(async () => ({ settings: await localSaveSettings(workspaceId, input.data) })) as T
       }
       case 'saveSession': {
         const input = z.object({ operation: z.literal('saveSession'), data: sessionInputSchema, allowOverlap: z.boolean().optional() }).strict().parse(rawBody)
-        return { session: await localSaveSession(workspaceId, input.data, input.allowOverlap) } as T
+        return await withActivity(async () => ({ session: await localSaveSession(workspaceId, input.data, input.allowOverlap) })) as T
       }
       case 'sessionStatus': {
         const input = z.object({ operation: z.literal('sessionStatus'), sessionId: z.string().min(1), action: z.enum(['cancel', 'restore']), reason: z.string().trim().max(1000).nullable().optional() }).strict().parse(rawBody)
-        return { session: await localSetSessionCancelled(workspaceId, input.sessionId, input.action === 'cancel', input.reason || null) } as T
+        return await withActivity(async () => ({ session: await localSetSessionCancelled(workspaceId, input.sessionId, input.action === 'cancel', input.reason || null) })) as T
       }
       case 'completeSession': {
         const input = z.object({ operation: z.literal('completeSession'), data: completionInputSchema }).strict().parse(rawBody)
-        return { session: await localCompleteSession(workspaceId, input.data) } as T
+        return await withActivity(async () => ({ session: await localCompleteSession(workspaceId, input.data) })) as T
       }
       case 'confirmAttendance': {
         const input = z.object({ operation: z.literal('confirmAttendance'), data: attendanceConfirmationInputSchema }).strict().parse(rawBody)
-        return { session: await localConfirmAttendance(workspaceId, input.data.sessionId) } as T
+        return await withActivity(async () => ({ session: await localConfirmAttendance(workspaceId, input.data.sessionId) })) as T
+      }
+      case 'undoActivity': {
+        const input = z.object({ operation: z.literal('undoActivity'), activityId: z.string().min(1).max(128).regex(/^[A-Za-z0-9_-]+$/) }).strict().parse(rawBody)
+        return await localUndoTeachingActivity(workspaceId, input.activityId) as T
       }
       default: throw new Error('Không tìm thấy thao tác.')
     }

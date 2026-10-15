@@ -59,6 +59,150 @@ async function transaction<T>(stores: LocalStoreName[], mode: IDBTransactionMode
   }
 }
 
+type ActivityStore = 'students' | 'weeklySchedules' | 'lessons' | 'settings'
+type LocalSnapshot = { store: ActivityStore; id: string; data: Record<string, unknown> }[]
+type LocalActivity = {
+  workspaceId: string; id: string; operation: string; entityId: string; label: string; createdAt: string
+  undone: boolean; undoable: boolean; undoUnavailableReason?: string; before: LocalSnapshot; after: LocalSnapshot; undoneAt?: string
+}
+const activityStores: ActivityStore[] = ['students', 'weeklySchedules', 'lessons', 'settings']
+const activityId = (operation: string, input: any, result?: any) => {
+  if (operation === 'saveStudent') return input?.data?.id || result?.student?.id || ''
+  if (operation === 'recordStudentPayment') return input?.data?.studentId || ''
+  if (operation === 'saveSettings') return 'default'
+  if (operation === 'saveSession') return input?.data?.id || result?.session?.id || ''
+  if (operation === 'sessionStatus') return input?.sessionId || ''
+  if (operation === 'completeSession' || operation === 'confirmAttendance') return input?.data?.sessionId || ''
+  return ''
+}
+async function captureLocalActivityState(workspaceId: string, operation: string, input: any, result?: any): Promise<LocalSnapshot> {
+  const id = activityId(operation, input, result)
+  if (!id) return []
+  return transaction(activityStores, 'readonly', async tx => {
+    const snapshots: LocalSnapshot = []
+    const add = (store: ActivityStore, data: Record<string, unknown> | undefined) => {
+      if (data) snapshots.push({ store, id: String(data.id), data })
+    }
+    if (operation === 'saveStudent' || operation === 'recordStudentPayment') {
+      add('students', await requestResult(tx.objectStore('students').get(compoundKey(workspaceId, id))) as Record<string, unknown> | undefined)
+      if (operation === 'saveStudent') {
+        const [schedules, lessons] = await Promise.all([
+          byWorkspace<StoredSchedule>(tx.objectStore('weeklySchedules'), workspaceId),
+          byWorkspace<StoredLesson>(tx.objectStore('lessons'), workspaceId),
+        ])
+        schedules.filter(item => item.studentId === id).forEach(item => add('weeklySchedules', item as unknown as Record<string, unknown>))
+        lessons.filter(item => item.studentId === id).forEach(item => add('lessons', item as unknown as Record<string, unknown>))
+      }
+    } else if (operation === 'saveSettings') {
+      add('settings', await requestResult(tx.objectStore('settings').get(compoundKey(workspaceId, 'default'))) as Record<string, unknown> | undefined)
+      const lessons = await byWorkspace<StoredLesson>(tx.objectStore('lessons'), workspaceId)
+      lessons.filter(item => item.status === 'SCHEDULED').forEach(item => add('lessons', item as unknown as Record<string, unknown>))
+    } else if (['saveSession', 'sessionStatus', 'completeSession', 'confirmAttendance'].includes(operation)) {
+      add('lessons', await requestResult(tx.objectStore('lessons').get(compoundKey(workspaceId, id))) as Record<string, unknown> | undefined)
+    }
+    return snapshots.sort((a, b) => a.store.localeCompare(b.store) || a.id.localeCompare(b.id))
+  })
+}
+function activityStableValue(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(activityStableValue)
+  if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).sort(([a], [b]) => a.localeCompare(b)).map(([key, item]) => [key, activityStableValue(item)]))
+  return value
+}
+function localActivityLabel(operation: string, input: any, result: any, before: LocalSnapshot, after: LocalSnapshot) {
+  const studentId = activityId(operation, input, result)
+  const studentName = result?.student?.name || result?.session?.studentName
+    || [...after, ...before].find(item => item.store === 'students' && item.id === studentId)?.data.name || 'học viên'
+  const session = result?.session || [...after, ...before].find(item => item.store === 'lessons' && item.id === studentId)?.data
+  const sessionTitle = session?.title || 'buổi học'
+  const hadStudent = operation === 'saveStudent' && before.some(item => item.store === 'students' && item.id === studentId)
+  const hadSession = operation === 'saveSession' && before.some(item => item.store === 'lessons' && item.id === studentId)
+  switch (operation) {
+    case 'saveStudent': return `${hadStudent ? 'Cập nhật' : 'Tạo'} học viên: ${studentName}`
+    case 'recordStudentPayment': return `Thu học phí ${new Intl.NumberFormat('vi-VN').format(input.data.amount)}đ · ${studentName}`
+    case 'saveSettings': return 'Cập nhật cài đặt học phí'
+    case 'saveSession': return `${hadSession ? 'Sửa' : 'Tạo'} buổi học: ${sessionTitle} · ${studentName}`
+    case 'sessionStatus': return input.reason === 'Không học' ? `Xác nhận không học: ${sessionTitle} · ${studentName}` : input.action === 'restore' ? `Khôi phục buổi học: ${sessionTitle} · ${studentName}` : `Hủy buổi học: ${sessionTitle} · ${studentName}`
+    case 'completeSession': return `Đánh giá buổi học: ${sessionTitle} · ${studentName}`
+    case 'confirmAttendance': return `Xác nhận đã học: ${sessionTitle} · ${studentName}`
+    default: return 'Cập nhật dữ liệu dạy học'
+  }
+}
+export async function localCaptureTeachingActionState(workspaceId: string, operation: string, input: any, result?: any) {
+  return captureLocalActivityState(workspaceId, operation, input, result)
+}
+export async function localSaveTeachingActivity(workspaceId: string, operation: string, input: any, result: any, before: LocalSnapshot) {
+  const after = await captureLocalActivityState(workspaceId, operation, input, result)
+  const undoable = before.length + after.length <= 448
+  let activity!: LocalActivity
+  await transaction(['activities'], 'readwrite', async tx => {
+    const existing = await byWorkspace<LocalActivity>(tx.objectStore('activities'), workspaceId)
+    const lastCreatedAt = existing.reduce((latest, item) => Math.max(latest, Date.parse(item.createdAt) || 0), 0)
+    const createdAt = new Date(Math.max(Date.now(), lastCreatedAt + 1)).toISOString()
+    activity = {
+      workspaceId, id: newId(), operation, entityId: activityId(operation, input, result), label: localActivityLabel(operation, input, result, before, after), createdAt,
+      undone: false, undoable, before: undoable ? before : [], after: undoable ? after : [],
+      ...(undoable ? {} : { undoUnavailableReason: 'Dữ liệu của thao tác này quá lớn để lưu bản hoàn tác.' }),
+    }
+    tx.objectStore('activities').put(activity)
+  })
+  return { id: activity.id, label: activity.label, undoable }
+}
+export async function localListTeachingActivities(workspaceId: string) {
+  const activities = await transaction(['activities'], 'readonly', async tx => byWorkspace<LocalActivity>(tx.objectStore('activities'), workspaceId))
+  activities.sort((a, b) => b.createdAt.localeCompare(a.createdAt) || b.id.localeCompare(a.id))
+  const recent = activities.slice(0, 100)
+  return {
+    activities: recent.map(({ before: _before, after: _after, ...activity }) => activity),
+  }
+}
+export async function localUndoTeachingActivity(workspaceId: string, activityId: string) {
+  return transaction(['activities', ...activityStores, 'syncOperations'], 'readwrite', async tx => {
+    const store = tx.objectStore('activities')
+    const activity = await requestResult(store.get(compoundKey(workspaceId, activityId))) as LocalActivity | undefined
+    if (!activity) throw new Error('Không tìm thấy hoạt động để hoàn tác.')
+    if (activity.undone) throw new Error('Hoạt động này đã được hoàn tác.')
+    if (!activity.undoable) throw new Error(activity.undoUnavailableReason || 'Hoạt động này chỉ được lưu lịch sử và chưa thể hoàn tác.')
+    const before = new Map(activity.before.map(item => [`${item.store}:${item.id}`, item]))
+    const after = new Map(activity.after.map(item => [`${item.store}:${item.id}`, item]))
+    const keys = Array.from(new Set([...before.keys(), ...after.keys()]))
+    const current = await Promise.all(keys.map(key => {
+      const item = after.get(key) || before.get(key)!
+      return requestResult(tx.objectStore(item.store).get(compoundKey(workspaceId, item.id)))
+    }))
+    if (activity.operation === 'saveStudent' || activity.operation === 'saveSettings') {
+      if (activity.operation === 'saveStudent' && !activity.entityId) throw new Error('Hoạt động thiếu thông tin học viên nên không thể hoàn tác an toàn.')
+      const [schedules, lessons] = await Promise.all([
+        byWorkspace<StoredSchedule>(tx.objectStore('weeklySchedules'), workspaceId),
+        byWorkspace<StoredLesson>(tx.objectStore('lessons'), workspaceId),
+      ])
+      const generatedSinceAction = activity.operation === 'saveStudent'
+        ? [
+          ...schedules.filter(item => item.studentId === activity.entityId).map(item => `weeklySchedules:${item.id}`),
+          ...lessons.filter(item => item.studentId === activity.entityId).map(item => `lessons:${item.id}`),
+        ]
+        : lessons.filter(item => item.status === 'SCHEDULED').map(item => `lessons:${item.id}`)
+      if (generatedSinceAction.some(key => !after.has(key))) throw new Error('Lịch hoặc buổi học liên quan đã phát sinh sau thao tác này. Hãy hoàn tác hoạt động mới hơn trước.')
+    }
+    for (let index = 0; index < keys.length; index++) {
+      const expected = after.get(keys[index])?.data
+      if (JSON.stringify(activityStableValue(current[index])) !== JSON.stringify(activityStableValue(expected))) {
+        throw new Error('Dữ liệu đã thay đổi sau thao tác này. Hãy hoàn tác hoạt động mới hơn trước.')
+      }
+    }
+    keys.forEach((key, index) => {
+      const previous = before.get(key)
+      const changed = after.get(key) || previous!
+      const entityType = changed.store === 'weeklySchedules' ? 'weeklySchedule' : changed.store === 'lessons' ? 'lesson' : changed.store === 'students' ? 'student' : 'settings'
+      if (previous) tx.objectStore(previous.store).put(previous.data)
+      else tx.objectStore(changed.store).delete(compoundKey(workspaceId, changed.id))
+      recordSyncOperation(tx, workspaceId, entityType, changed.id, previous ? 'UPDATE' : 'DELETE')
+    })
+    const undoneAt = nowIso()
+    store.put({ ...activity, undone: true, undoneAt })
+    return { activity: { id: activity.id, label: activity.label } }
+  })
+}
+
 function studentView(student: StoredStudent, schedules: StoredSchedule[], date = vietnamTodayKey()): Student {
   return {
     ...student,

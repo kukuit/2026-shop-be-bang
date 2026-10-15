@@ -35,13 +35,165 @@ const studentsRef = (userId: string) => userRoot(userId).collection('students')
 const sessionsRef = (userId: string) => userRoot(userId).collection('teachingSessions')
 const weeklySchedulesRef = (userId: string) => userRoot(userId).collection('weeklySchedules')
 const settingsRef = (userId: string) => userRoot(userId).collection('teachingSettings').doc('default')
+const teachingActivitiesRef = (userId: string) => userRoot(userId).collection('teachingActivities')
 const goalsRef = (userId: string, sessionId: string) => sessionsRef(userId).doc(sessionId).collection('goals')
+type TeachingActionSnapshot = { path: string; data: FirebaseFirestore.DocumentData }[]
+const MAX_ACTIVITY_SNAPSHOT_DOCUMENTS = 448
 
 function serialize(value: unknown): any {
   if (value instanceof Timestamp) return value.toDate().toISOString()
   if (Array.isArray(value)) return value.map(serialize)
   if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, serialize(item)]))
   return value
+}
+function stableValue(value: unknown): unknown {
+  const normalized = serialize(value)
+  if (Array.isArray(normalized)) return normalized.map(stableValue)
+  if (normalized && typeof normalized === 'object') return Object.fromEntries(Object.entries(normalized).sort(([left], [right]) => left.localeCompare(right)).map(([key, item]) => [key, stableValue(item)]))
+  return normalized
+}
+function actionEntityId(operation: string, input: any, result?: any) {
+  if (operation === 'saveStudent') return input?.data?.id || result?.student?.id || ''
+  if (operation === 'recordStudentPayment') return input?.data?.studentId || ''
+  if (operation === 'saveSettings') return 'default'
+  if (operation === 'saveSession') return input?.data?.id || result?.session?.id || ''
+  if (operation === 'sessionStatus') return input?.sessionId || ''
+  if (operation === 'completeSession' || operation === 'confirmAttendance') return input?.data?.sessionId || ''
+  return ''
+}
+async function readActionSnapshot(userId: string, operation: string, entityId: string): Promise<TeachingActionSnapshot> {
+  if (!entityId) return []
+  const snapshots: TeachingActionSnapshot = []
+  const add = (doc: FirebaseFirestore.DocumentSnapshot) => { if (doc.exists) snapshots.push({ path: doc.ref.path, data: doc.data()! }) }
+  if (operation === 'saveStudent' || operation === 'recordStudentPayment') {
+    const studentRef = studentsRef(userId).doc(entityId)
+    const student = await studentRef.get()
+    add(student)
+    if (operation === 'saveStudent') {
+      const [schedules, sessions] = await Promise.all([
+        weeklySchedulesRef(userId).where('studentId', '==', entityId).get(),
+        sessionsRef(userId).where('studentId', '==', entityId).get(),
+      ])
+      schedules.docs.forEach(add); sessions.docs.forEach(add)
+    }
+    return snapshots
+  }
+  if (operation === 'saveSettings') {
+    const [settings, sessions] = await Promise.all([
+      settingsRef(userId).get(),
+      sessionsRef(userId).where('status', '==', 'SCHEDULED').get(),
+    ])
+    add(settings); sessions.docs.forEach(add)
+    return snapshots
+  }
+  if (['saveSession', 'sessionStatus', 'completeSession', 'confirmAttendance'].includes(operation)) {
+    const sessionRef = sessionsRef(userId).doc(entityId)
+    const [session, goals] = await Promise.all([sessionRef.get(), goalsRef(userId, entityId).get()])
+    add(session); goals.docs.forEach(add)
+    return snapshots
+  }
+  return snapshots
+}
+export async function captureTeachingActionState(userId: string, operation: string, input: any, result?: any) {
+  return readActionSnapshot(userId, operation, actionEntityId(operation, input, result))
+}
+function teachingActivityLabel(operation: string, input: any, result: any, before: TeachingActionSnapshot) {
+  const studentName = result?.student?.name || result?.session?.studentName || 'học viên'
+  const sessionTitle = result?.session?.title || 'buổi học'
+  const hasStudentBefore = operation === 'saveStudent' && before.some(item => item.path.endsWith(`/students/${result?.student?.id || ''}`))
+  switch (operation) {
+    case 'saveStudent': return `${hasStudentBefore ? 'Cập nhật' : 'Tạo'} học viên: ${studentName}`
+    case 'recordStudentPayment': return `Thu học phí ${new Intl.NumberFormat('vi-VN').format(input.data.amount)}đ · ${studentName}`
+    case 'saveSettings': return 'Cập nhật cài đặt học phí'
+    case 'saveSession': return `${before.length ? 'Sửa' : 'Tạo'} buổi học: ${sessionTitle} · ${studentName}`
+    case 'sessionStatus': return input.reason === 'Không học' ? `Xác nhận không học: ${sessionTitle} · ${studentName}` : input.action === 'restore' ? `Khôi phục buổi học: ${sessionTitle} · ${studentName}` : `Hủy buổi học: ${sessionTitle} · ${studentName}`
+    case 'completeSession': return `Đánh giá buổi học: ${sessionTitle} · ${studentName}`
+    case 'confirmAttendance': return `Xác nhận đã học: ${sessionTitle} · ${studentName}`
+    default: return 'Cập nhật dữ liệu dạy học'
+  }
+}
+export async function saveTeachingActivity(userId: string, operation: string, input: any, result: any, before: TeachingActionSnapshot) {
+  const after = await captureTeachingActionState(userId, operation, input, result)
+  const snapshotCount = before.length + after.length
+  const undoable = snapshotCount <= MAX_ACTIVITY_SNAPSHOT_DOCUMENTS
+  const activityRef = teachingActivitiesRef(userId).doc()
+  const batch = getAdminDb().batch()
+  batch.set(activityRef, {
+    operation,
+    entityId: actionEntityId(operation, input, result),
+    label: teachingActivityLabel(operation, input, result, before),
+    createdAt: Timestamp.now(),
+    undone: false,
+    undoable,
+    ...(undoable ? {} : { undoUnavailableReason: 'Dữ liệu của thao tác này quá lớn để lưu bản hoàn tác.' }),
+  })
+  if (undoable) {
+    for (const [side, snapshot] of [['before', before], ['after', after]] as const) {
+      for (const item of snapshot) {
+        const snapshotId = `${side}_${createHash('sha1').update(item.path).digest('hex')}`
+        batch.set(activityRef.collection('snapshots').doc(snapshotId), { side, path: item.path, data: item.data })
+      }
+    }
+  }
+  await batch.commit()
+  return { id: activityRef.id, label: teachingActivityLabel(operation, input, result, before), undoable }
+}
+export async function listTeachingActivities(userId: string) {
+  const snapshot = await teachingActivitiesRef(userId).orderBy('createdAt', 'desc').limit(100).get()
+  const activities = snapshot.docs.map(doc => ({ id: doc.id, ...serialize(doc.data()) }))
+  return { activities }
+}
+export async function undoTeachingActivity(userId: string, activityId: string) {
+  const activity = await teachingActivitiesRef(userId).doc(activityId).get()
+  if (!activity.exists) throw new Error('Không tìm thấy hoạt động để hoàn tác.')
+  if (activity.get('undone') === true) throw new Error('Hoạt động này đã được hoàn tác.')
+  if (!activity.get('undoable')) throw new Error(String(activity.get('undoUnavailableReason') || 'Hoạt động này chỉ được lưu lịch sử và chưa thể hoàn tác.'))
+  const snapshots = await activity.ref.collection('snapshots').get()
+  const before = new Map<string, FirebaseFirestore.DocumentData>()
+  const after = new Map<string, FirebaseFirestore.DocumentData>()
+  for (const doc of snapshots.docs) {
+    const path = String(doc.get('path'))
+    if (!path.startsWith(`${userRoot(userId).path}/`)) throw new Error('Không thể hoàn tác dữ liệu ngoài workspace hiện tại.')
+    const target = doc.get('side') === 'before' ? before : after
+    target.set(path, doc.get('data') as FirebaseFirestore.DocumentData)
+  }
+  const paths = Array.from(new Set([...before.keys(), ...after.keys()]))
+  if (paths.length + 1 > 500) throw new Error('Thao tác quá lớn để hoàn tác an toàn.')
+  const refs = paths.map(path => getAdminDb().doc(path))
+  await getAdminDb().runTransaction(async tx => {
+    const [currentActivity, ...current] = await Promise.all([tx.get(activity.ref), ...refs.map(ref => tx.get(ref))])
+    if (!currentActivity.exists || currentActivity.get('undone') === true) throw new Error('Hoạt động này đã được hoàn tác.')
+    const operation = String(currentActivity.get('operation') || '')
+    const entityId = String(currentActivity.get('entityId') || '')
+    if (operation === 'saveStudent' || operation === 'saveSettings') {
+      if (operation === 'saveStudent' && !entityId) throw new Error('Hoạt động thiếu thông tin học viên nên không thể hoàn tác an toàn.')
+      const queries = operation === 'saveStudent'
+        ? await Promise.all([
+          tx.get(weeklySchedulesRef(userId).where('studentId', '==', entityId)),
+          tx.get(sessionsRef(userId).where('studentId', '==', entityId)),
+        ])
+        : [await tx.get(sessionsRef(userId).where('status', '==', 'SCHEDULED'))]
+      for (const querySnapshot of queries) {
+        for (const doc of querySnapshot.docs) {
+          if (!after.has(doc.ref.path)) throw new Error('Lịch hoặc buổi học liên quan đã phát sinh sau thao tác này. Hãy hoàn tác hoạt động mới hơn trước.')
+        }
+      }
+    }
+    for (let index = 0; index < refs.length; index++) {
+      const expected = after.get(refs[index].path)
+      const actual = current[index].exists ? current[index].data() : undefined
+      if (JSON.stringify(stableValue(actual)) !== JSON.stringify(stableValue(expected))) {
+        throw new Error('Dữ liệu đã thay đổi sau thao tác này. Hãy hoàn tác hoạt động mới hơn trước.')
+      }
+    }
+    for (const ref of refs) {
+      const previous = before.get(ref.path)
+      if (previous) tx.set(ref, previous)
+      else tx.delete(ref)
+    }
+    tx.update(activity.ref, { undone: true, undoneAt: Timestamp.now() })
+  })
+  return { activity: { id: activity.id, label: activity.get('label') } }
 }
 function record<T>(doc: FirebaseFirestore.DocumentSnapshot) {
   return { ...serialize(doc.data()), id: doc.id } as T

@@ -235,7 +235,7 @@ export default function Students() {
   const confirmNoAttendance = async (sessionId: string) => {
     setPendingBusy(true); setPendingActionId(sessionId); setPendingActionKind('absent'); setPendingError('')
     try {
-      await teachingPost({ operation: 'sessionStatus', sessionId, action: 'cancel' })
+      await teachingPost({ operation: 'sessionStatus', sessionId, action: 'cancel', reason: 'Không học' })
       setPendingError('')
       notifyTeachingDataChanged('Đã xác nhận buổi học không diễn ra.')
     } catch (reason) { const message = reason instanceof Error ? reason.message : 'Không lưu được xác nhận buổi học.'; setPendingError(message); setError(message) }
@@ -254,6 +254,12 @@ export default function Students() {
     <button type="button" className="demo-primary" disabled={pendingBusy || pendingLoading} onClick={() => reviewPendingQuick(student, sessionId)}>{pendingActionId === sessionId && pendingActionKind === 'review' ? 'Đang mở…' : 'Đánh giá'}</button>
     <button type="button" className="teaching-confirm-absent" disabled={pendingBusy || pendingLoading} onClick={() => void confirmNoAttendance(sessionId)}>{pendingActionId === sessionId && pendingActionKind === 'absent' ? 'Đang lưu…' : 'Không học'}</button>
   </div>
+  const renderStudentOverdue = (student: Student, billing: TeachingStudentBillingRow | undefined) => {
+    if (!billingSummary) return <span className="teaching-muted-cell">Chưa tải</span>
+    if (billing?.overdueUnconfirmedSessions === 1 && billing.overdueUnconfirmedItems[0]) return <div className="teaching-overdue-single"><div className="teaching-overdue-cell"><strong>1 buổi chưa xác nhận</strong><small>{shortDateTime(billing.overdueUnconfirmedItems[0].startAt)}</small></div>{renderPendingQuickActions(student, billing.overdueUnconfirmedItems[0].sessionId)}</div>
+    if (billing?.overdueUnconfirmedSessions) return <button type="button" className="teaching-overdue-cell teaching-overdue-trigger" aria-label={`Mở ${billing.overdueUnconfirmedSessions} buổi học chưa xác nhận của ${student.name}`} onClick={() => openPending(student)}><strong>{billing.overdueUnconfirmedSessions} buổi chưa xác nhận</strong><small>{billing.overdueUnconfirmedItems.slice(0, 3).map(item => <span key={item.sessionId}>{shortDateTime(item.startAt)}</span>)}{billing.overdueUnconfirmedSessions > 3 ? <span>+{billing.overdueUnconfirmedSessions - 3} buổi khác</span> : null}</small></button>
+    return <span className="teaching-no-overdue">Không có</span>
+  }
   const updateWeeklySchedule = (index: number, changes: Partial<ScheduleDraft>) => { setPreview(null); setDraft(old => old ? ({ ...old, weeklySchedules: old.weeklySchedules.map((item, i) => i === index ? { ...item, ...changes } : item) }) : old) }
   const changeScheduleEffectiveFrom = (date: string) => {
     if (!draft || date < vietnamTodayKey()) return
@@ -348,7 +354,7 @@ export default function Students() {
         )
       )}
       {error && <div role="alert" className="demo-alert teaching-retry"><span>{error}</span><button onClick={() => void refresh()}>Thử lại</button></div>}
-      {loading ? <div className="teaching-loading-list" role="status" aria-label="Đang tải học viên"><div className="teaching-skeleton"/><div className="teaching-skeleton"/><div className="teaching-skeleton"/></div> : !dataLoaded ? <div className="teaching-empty-card"><UserRound size={24}/><strong>Danh sách chưa được tải</strong><p>Tải hồ sơ khi cần xem hoặc quản lý học viên. Thống kê học phí có thể tải riêng sau đó.</p><button className="demo-primary" onClick={() => loadRequested ? void refresh() : setLoadRequested(true)}>{loadRequested ? 'Tải lại danh sách' : 'Tải danh sách học viên'}</button></div> : !students.length ? <div className="teaching-empty-card"><UserRound size={24}/><strong>Chưa có học viên</strong><p>Thêm học viên để bắt đầu tạo lịch dạy.</p><button className="demo-primary" onClick={openNew}><Plus size={16}/> Thêm học viên</button></div> : <div className="teaching-students-table-wrap"><table className="teaching-students-table"><thead><tr><th>Học viên</th><th>Đã học trong kỳ</th><th>Học phí phát sinh<br/><small>(Số dư đầu kỳ)</small></th><th>Thu tiền</th><th>Buổi đã qua · có học?</th><th className="teaching-student-actions-heading">Thao tác</th></tr></thead><tbody>{students.map(student => {
+      {loading ? <div className="teaching-loading-list" role="status" aria-label="Đang tải học viên"><div className="teaching-skeleton"/><div className="teaching-skeleton"/><div className="teaching-skeleton"/></div> : !dataLoaded ? <div className="teaching-empty-card"><UserRound size={24}/><strong>Danh sách chưa được tải</strong><p>Tải hồ sơ khi cần xem hoặc quản lý học viên. Thống kê học phí có thể tải riêng sau đó.</p><button className="demo-primary" onClick={() => loadRequested ? void refresh() : setLoadRequested(true)}>{loadRequested ? 'Tải lại danh sách' : 'Tải danh sách học viên'}</button></div> : !students.length ? <div className="teaching-empty-card"><UserRound size={24}/><strong>Chưa có học viên</strong><p>Thêm học viên để bắt đầu tạo lịch dạy.</p><button className="demo-primary" onClick={openNew}><Plus size={16}/> Thêm học viên</button></div> : <div className="teaching-students-table-wrap"><table className="teaching-students-table"><thead><tr><th>Học viên</th><th>Trong kỳ</th><th>Học phí<br/><small>(Số dư đầu kỳ)</small></th><th>Thu tiền</th><th>Buổi đã qua · có học?</th><th className="teaching-student-actions-heading">Thao tác</th></tr></thead><tbody>{students.map(student => {
         const billing = billingByStudent.get(student.id)
         const openingBalance = billingSummary ? billing?.openingBalanceAmount ?? 0 : null
         const billingModes = billing?.billingModes.length ? billing.billingModes : [resolveStudentPricing(student, settings as TeachingSettings).mode]
@@ -365,6 +371,24 @@ export default function Students() {
           <td className="teaching-student-actions-cell"><button type="button" className="teaching-student-edit-icon" aria-label={`Sửa ${student.name}`} title="Sửa học viên" onClick={() => openEdit(student)}><Pencil size={22}/></button></td>
         </tr>
       })}</tbody></table></div>}
+      {!loading && dataLoaded && students.length > 0 && <div className="teaching-students-mobile-list">{students.map(student => {
+        const billing = billingByStudent.get(student.id)
+        const openingBalance = billingSummary ? billing?.openingBalanceAmount ?? 0 : null
+        const billingModes = billing?.billingModes.length ? billing.billingModes : [resolveStudentPricing(student, settings as TeachingSettings).mode]
+        const usage = [
+          billingModes.includes('PER_SESSION') ? `${billing?.perSessionCompletedSessions || 0} buổi` : '',
+          billingModes.includes('PER_HOUR') ? billingHours(billing?.perHourDurationMinutes || 0) : '',
+        ].filter(Boolean).join(' · ')
+        return <article className="teaching-student-mobile-card" key={student.id}>
+          <header className="teaching-student-mobile-heading"><div className="teaching-student-table-person"><span className="teaching-student-avatar" style={{ ...studentAvatarStyle(student.id, students.map(item => item.id)), borderRadius: '50%' }} aria-hidden="true">{studentInitials(student.name)}</span><span><button className="teaching-student-table-name" onClick={() => { setConfirmStatus(false); void openStudentDetails(student) }}>{student.name}</button><span className={`teaching-status teaching-status-${student.status.toLowerCase()}`}>{student.status === 'ACTIVE' ? 'Đang học' : 'Đã ngừng'}</span><small>{student.weeklySchedules?.length || 0} buổi/tuần</small></span></div><button type="button" className="teaching-student-edit-icon" aria-label={`Sửa ${student.name}`} title="Sửa học viên" onClick={() => openEdit(student)}><Pencil size={22}/></button></header>
+          <div className="teaching-student-mobile-metrics">
+            <div className="teaching-student-mobile-metric"><span>Trong kỳ</span><strong>{billingSummary ? usage : <span className="teaching-muted-cell">Chưa tải</span>}</strong></div>
+            <div className="teaching-student-mobile-metric"><span>Học phí</span><strong className="teaching-student-fee">{billingSummary ? formatVnd(billing?.feeAmount || 0) : '—'}</strong><small className="teaching-student-opening-balance">{openingBalance == null ? '(Chưa tải)' : `(${formatBalance(openingBalance)})`}</small></div>
+            <div className="teaching-student-mobile-metric"><span>Thu tiền</span><div className="teaching-student-collect-cell"><strong className="teaching-student-fee">{billingSummary ? (billing?.remainingAmount || 0) < 0 ? <>Dư<br/>{formatCompactVnd(Math.abs(billing?.remainingAmount || 0))}</> : formatVnd(billing?.remainingAmount || 0) : '—'}</strong><button type="button" className="teaching-student-pay-icon" aria-label={`Thu tiền từ ${student.name}`} title="Thu tiền" onClick={() => void openPayment(student)}><HandCoins size={22}/></button></div></div>
+          </div>
+          <section className="teaching-student-mobile-overdue"><span>Buổi đã qua · có học?</span>{renderStudentOverdue(student, billing)}</section>
+        </article>
+      })}</div>}
     </section>
 
     <dialog ref={dialog} className={`ai-task-dialog teaching-dialog teaching-student-dialog${pendingStudent ? ' teaching-pending-fullscreen' : ''}`} onCancel={event => { event.preventDefault(); if (reviewingPendingSession) window.dispatchEvent(new Event('teaching:request-form-close')); else closeRequest() }} onClose={() => { paymentBillingRequest.current += 1; detailBillingRequest.current += 1; openingBalanceRequest.current += 1; setDraft(null); setDetailStudent(null); setDetailBilling(null); setDetailBillingLoading(false); setDetailBillingError(''); setPendingStudent(null); setPaymentStudent(null); setPaymentAmount(''); setPaymentId(''); setPaymentBilling(null); setPaymentBillingLoading(false); setOpeningBalanceCalculation(null); setOpeningBalanceLoading(false); setPendingSession(null); setPendingSessionId(''); setPendingActionId(''); setPendingActionKind(null); setReviewingPendingSession(false); setPreview(null) }}>
