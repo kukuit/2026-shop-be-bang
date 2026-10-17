@@ -13,6 +13,7 @@ const dateValue = (value: unknown): string | null =>
   value instanceof Timestamp ? value.toDate().toISOString() : null
 
 function mapUser(id: string, data: FirebaseFirestore.DocumentData): User {
+  const role = (data.role === 'admin' ? 'admin' : 'user') as UserRole
   return {
     userId: id,
     username: String(data.username ?? ''),
@@ -20,9 +21,9 @@ function mapUser(id: string, data: FirebaseFirestore.DocumentData): User {
     email: data.email ? String(data.email) : null,
     phone: data.phone ? String(data.phone) : null,
     avatar: data.avatar ? String(data.avatar) : null,
-    role: (data.role === 'admin' ? 'admin' : 'user') as UserRole,
+    role,
     status: (data.status ?? 'active') as UserStatus,
-    activeGame: data.activeGame !== false,
+    activeGame: role !== 'admin' && data.activeGame !== false,
     ...normalizeGameProfile(data),
     createdAt: dateValue(data.createdAt),
     updatedAt: dateValue(data.updatedAt),
@@ -61,6 +62,7 @@ export async function createUser(input: CreateUserInput): Promise<User> {
     transaction.create(userRef, {
       userId,
       ...safeData,
+      activeGame: data.role === 'admin' ? false : data.activeGame,
       ...normalizeGameProfile({ primaryGrade: data.primaryGrade, activeGrade: data.primaryGrade }),
       username,
       displayName: data.name,
@@ -82,11 +84,13 @@ export async function updateUser(userId: string, input: UpdateUserInput): Promis
   const exists = await getAdminDb().runTransaction(async transaction => {
     const snapshot = await transaction.get(reference)
     if (!snapshot.exists) return false
+    const storedData = snapshot.data() ?? {}
+    const safeData = storedData.role === 'admin' ? { ...data, activeGame: false } : data
     const profile = data.primaryGrade === undefined ? {} : data.primaryGrade === null
-      ? { ...normalizeGameProfile(snapshot.data()), primaryGrade: null }
-      : changeGameGrade(snapshot.data(), data.primaryGrade, true)
-    transaction.update(reference, { ...data, ...profile,
-      ...(data.name ? { displayName: data.name } : {}), updatedAt: FieldValue.serverTimestamp() })
+      ? { ...normalizeGameProfile(storedData), primaryGrade: null }
+      : changeGameGrade(storedData, data.primaryGrade, true)
+    transaction.update(reference, { ...safeData, ...profile,
+      ...(safeData.name ? { displayName: safeData.name } : {}), updatedAt: FieldValue.serverTimestamp() })
     return true
   })
   if (!exists) return null

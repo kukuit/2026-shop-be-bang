@@ -3,6 +3,8 @@ import KidsLearningSection from '@/components/home/KidsLearningSection'
 import NewArrivalsSection from '@/components/home/NewArrivalsSection'
 import SaleSection from '@/components/home/SaleSection'
 
+export const dynamic = 'force-dynamic'
+
 export default function HomePage() {
   return (
     <main className="!bg-[#fffcfa] text-zinc-900">

@@ -10,6 +10,7 @@ export async function GET(request: Request) {
   const lessonId = new URL(request.url).searchParams.get('lessonId')
   if (!lessonId || !isLessonId(lessonId)) return NextResponse.json({ message: 'Invalid lessonId' }, { status: 400 })
   const user = await getCurrentUser()
+  if (user?.role === 'admin') return NextResponse.json({ message: 'Admin không có quyền chơi game.' }, { status: 403 })
   const guestId = request.headers.get('cookie')?.match(new RegExp(`(?:^|;\\s*)${GUEST_COOKIE}=([^;]+)`))?.[1]
   const playerId = user?.id ?? (guestId?.startsWith('guest_') ? guestId : null)
   if (!playerId) return NextResponse.json({ bestLevel: 0, playCount: 0, coinBalance: 0 })

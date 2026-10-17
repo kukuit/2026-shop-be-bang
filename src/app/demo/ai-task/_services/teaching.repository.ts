@@ -157,7 +157,7 @@ export async function undoTeachingActivity(userId: string, activityId: string) {
     const target = doc.get('side') === 'before' ? before : after
     target.set(path, doc.get('data') as FirebaseFirestore.DocumentData)
   }
-  const paths = Array.from(new Set([...before.keys(), ...after.keys()]))
+  const paths = Array.from(new Set(Array.from(before.keys()).concat(Array.from(after.keys()))))
   if (paths.length + 1 > 500) throw new Error('Thao tác quá lớn để hoàn tác an toàn.')
   const refs = paths.map(path => getAdminDb().doc(path))
   await getAdminDb().runTransaction(async tx => {

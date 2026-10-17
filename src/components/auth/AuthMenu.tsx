@@ -89,12 +89,12 @@ export default function AuthMenu({ game = false, children, trigger, triggerClass
             <span className={`min-w-0 truncate text-sm font-black ${gamePopup ? 'text-sky-950' : 'text-slate-800'}`}>{menuDisplayName}</span>
           </div>
           {children}
-          {game && user?.activeGame && (
+          {game && user?.role !== 'admin' && user?.activeGame && (
             <Link href="/game/me" className={`block px-4 py-2 text-sm ${gamePopup ? 'font-bold hover:bg-amber-50' : 'hover:bg-slate-50'}`}>
               Tiến trình học
             </Link>
           )}
-          {gamePopup && user && <Link href="/game/me/rewards/list" className="block px-4 py-2 text-sm font-bold hover:bg-amber-50">Đổi quà</Link>}
+          {gamePopup && user && user.role !== 'admin' && <Link href="/game/me/rewards/list" className="block px-4 py-2 text-sm font-bold hover:bg-amber-50">Đổi quà</Link>}
           {user?.role === 'admin' && (
             <Link href="/admin/users" className={`block px-4 py-2 text-sm ${gamePopup ? 'font-bold hover:bg-amber-50' : 'hover:bg-slate-50'}`}>
               Quản trị user

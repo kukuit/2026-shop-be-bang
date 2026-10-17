@@ -10,6 +10,7 @@ const headers = { 'Cache-Control': 'private, no-store' }
 export async function GET(request: Request) {
   const user = await getCurrentUser()
   if (!user) return NextResponse.json({ message: 'Authentication required.' }, { status: 401, headers })
+  if (user.role === 'admin') return NextResponse.json({ message: 'Admin không có quyền chơi game.' }, { status: 403, headers })
   const params = new URL(request.url).searchParams
   const subject = params.get('subject') ?? ''
   const grade = params.get('grade')
