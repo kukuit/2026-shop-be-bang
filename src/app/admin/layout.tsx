@@ -1,10 +1,11 @@
 import type { Metadata } from 'next'
-import Link from 'next/link'
-import { GraduationCap, LayoutDashboard, Users } from 'lucide-react'
+import { GraduationCap, ShieldCheck } from 'lucide-react'
 import { redirect } from 'next/navigation'
 import { requireAdmin } from '@/lib/auth/current-user'
 import { cookies } from 'next/headers'
 import { REFRESH_COOKIE } from '@/lib/auth/config'
+import AdminNavigation from '@/components/admin/AdminNavigation'
+import AuthMenu from '@/components/auth/AuthMenu'
 
 export const metadata: Metadata = {
   title: 'Quản trị Shop Bé Băng',
@@ -31,26 +32,17 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             </p>
             <h1 className="font-black">Admin</h1>
           </div>
+          <div className="ml-auto">
+            <AuthMenu
+              trigger={<><ShieldCheck size={18} /><span className="hidden sm:inline">Admin</span></>}
+              triggerClassName="flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-bold text-slate-700 hover:bg-slate-50"
+            />
+          </div>
         </div>
       </header>
       <div className="mx-auto lg:grid lg:max-w-[1500px] lg:grid-cols-[16rem_1fr]">
-        <aside className="border-b border-slate-200 bg-white p-4 lg:min-h-[calc(100vh-5rem)] lg:border-b-0 lg:border-r">
-          <nav className="flex gap-2 lg:flex-col">
-            <Link
-              href="/game/me"
-              className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-bold text-slate-600 hover:bg-slate-50"
-            >
-              <LayoutDashboard size={18} />
-              Tiến trình của tôi
-            </Link>
-            <Link
-              href="/admin/users"
-              className="flex items-center gap-3 rounded-xl bg-pink-50 px-4 py-3 text-sm font-bold text-pink-700"
-            >
-              <Users size={18} />
-              Users
-            </Link>
-          </nav>
+        <aside className="sticky top-0 z-40 self-start border-b border-slate-200 bg-white p-4 lg:min-h-[calc(100vh-5rem)] lg:border-b-0 lg:border-r">
+          <AdminNavigation />
         </aside>
         <main className="min-w-0 p-4 sm:p-6 lg:p-8">{children}</main>
       </div>

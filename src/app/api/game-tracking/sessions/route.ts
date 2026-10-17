@@ -145,6 +145,9 @@ export async function POST(request: Request) {
     if (rejected) return rejected
     const session = sessionSchema.parse(await request.json())
     const user = await getCurrentUser()
+    if (user?.role === 'admin') {
+      return NextResponse.json({ message: 'Admin không có quyền chơi game.' }, { status: 403 })
+    }
     const cookieHeader = request.headers.get('cookie') ?? ''
     const hasRefreshToken = Boolean(
       cookieHeader.match(new RegExp(`(?:^|;\\s*)${REFRESH_COOKIE}=([^;]+)`))?.[1]

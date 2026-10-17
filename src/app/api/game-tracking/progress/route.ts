@@ -21,6 +21,8 @@ export async function GET(request: Request) {
   )
   if (!user && hasRefreshToken)
     return NextResponse.json({ message: 'Access token expired.' }, { status: 401 })
+  if (user?.role === 'admin')
+    return NextResponse.json({ message: 'Admin không có quyền chơi game.' }, { status: 403 })
   if (!user) return NextResponse.json({ keys: {}, games: {}, totalSessions: 0 }, { headers: { 'Cache-Control': 'private, no-store' } })
   const url = new URL(request.url)
   const parsed = querySchema.safeParse(Object.fromEntries(url.searchParams))

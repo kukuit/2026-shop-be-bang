@@ -8,15 +8,16 @@ const collection = () => getAdminDb().collection('shopbebangcom').doc('users').c
 
 export function safeUser(id: string, data: FirebaseFirestore.DocumentData): SafeAuthUser {
   const legacyRole = String(data.role ?? 'user')
+  const role = (legacyRole === 'admin' ? 'admin' : 'user') as AuthRole
   return {
     ...normalizeGameProfile(data),
     id,
     username: String(data.username ?? ''),
     displayName: String(data.name ?? data.displayName ?? data.username ?? ''),
     avatar: typeof data.avatar === 'string' && data.avatar.trim() ? data.avatar.trim() : null,
-    role: (legacyRole === 'admin' ? 'admin' : 'user') as AuthRole,
+    role,
     status: (data.status === 'active' ? 'active' : 'inactive') as AuthStatus,
-    activeGame: data.activeGame !== false,
+    activeGame: role !== 'admin' && data.activeGame !== false,
   }
 }
 

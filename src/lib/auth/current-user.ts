@@ -36,5 +36,7 @@ export async function requireAdmin() {
 export async function requireGameUser() {
   const auth = await requireAuth()
   if (!auth.ok) return auth
-  return auth.user.activeGame ? auth : { ok: false as const, status: 403 as const }
+  return auth.user.role !== 'admin' && auth.user.activeGame
+    ? auth
+    : { ok: false as const, status: 403 as const }
 }

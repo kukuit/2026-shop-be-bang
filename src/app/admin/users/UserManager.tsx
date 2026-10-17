@@ -404,7 +404,11 @@ function UserForm({
         <Field label="Vai trò">
           <select
             value={form.role}
-            onChange={(event) => set('role', event.target.value as UserRole)}
+            onChange={(event) => {
+              const role = event.target.value as UserRole
+              set('role', role)
+              set('activeGame', role !== 'admin')
+            }}
             className="input"
           >
             <option value="user">User</option>
@@ -465,13 +469,16 @@ function UserForm({
       <label className="flex items-center justify-between rounded-2xl border border-slate-200 p-4">
         <span>
           <b className="block text-sm">Quyền chơi game</b>
-          <span className="text-xs text-slate-500">Cho phép user sử dụng hệ thống game</span>
+          <span className="text-xs text-slate-500">
+            {form.role === 'admin' ? 'Admin không có quyền chơi game' : 'Cho phép user sử dụng hệ thống game'}
+          </span>
         </span>
         <input
           type="checkbox"
-          checked={form.activeGame}
+          checked={form.role !== 'admin' && form.activeGame}
+          disabled={form.role === 'admin'}
           onChange={(event) => set('activeGame', event.target.checked)}
-          className="h-5 w-5 accent-pink-500"
+          className="h-5 w-5 accent-pink-500 disabled:cursor-not-allowed disabled:opacity-50"
         />
       </label>
       <div className="flex gap-3 pt-3">

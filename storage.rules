@@ -1,0 +1,10 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Product images are uploaded and removed only through authenticated server routes.
+    // Firebase Admin SDK bypasses these rules; download-token URLs serve storefront media.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

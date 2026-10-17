@@ -164,7 +164,7 @@ export async function localUndoTeachingActivity(workspaceId: string, activityId:
     if (!activity.undoable) throw new Error(activity.undoUnavailableReason || 'Hoạt động này chỉ được lưu lịch sử và chưa thể hoàn tác.')
     const before = new Map(activity.before.map(item => [`${item.store}:${item.id}`, item]))
     const after = new Map(activity.after.map(item => [`${item.store}:${item.id}`, item]))
-    const keys = Array.from(new Set([...before.keys(), ...after.keys()]))
+    const keys = Array.from(new Set(Array.from(before.keys()).concat(Array.from(after.keys()))))
     const current = await Promise.all(keys.map(key => {
       const item = after.get(key) || before.get(key)!
       return requestResult(tx.objectStore(item.store).get(compoundKey(workspaceId, item.id)))
