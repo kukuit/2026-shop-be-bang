@@ -10,6 +10,72 @@ export interface ProductImage {
   sortOrder: number
 }
 
+export interface ProductAttributes {
+  gender?: string
+  material?: string
+  ageRange?: string
+  style?: string
+  brand?: string
+  origin?: string
+  careInstructions?: string
+}
+
+export interface ProductSizeGuide {
+  id: string
+  size: string
+  minWeight?: number
+  maxWeight?: number
+  minHeight?: number
+  maxHeight?: number
+}
+
+export interface ProductVariantOption {
+  id: string
+  name: string
+  imageUrl?: string | null
+}
+
+export interface ProductVariantConfig {
+  colors: ProductVariantOption[]
+  sizes: ProductVariantOption[]
+}
+
+export interface ProductVariant {
+  id: string
+  sku: string
+  colorId?: string
+  color?: string
+  sizeId?: string
+  size?: string
+  stock: number
+  price?: number | null
+  imageUrl?: string | null
+}
+
+export type ProductType = 'SIMPLE' | 'COMBO'
+export type ProductDiscountType = 'PERCENT' | 'FIXED_AMOUNT'
+
+export interface ProductComboComponent {
+  productId: string
+  variantId?: string | null
+  quantity: number
+}
+
+export interface ProductDiscount {
+  type: ProductDiscountType
+  value: number
+}
+
+export interface ResolvedProductComboComponent extends ProductComboComponent {
+  productName: string
+  productSlug: string
+  imageUrl: string
+  color?: string | null
+  size?: string | null
+  unitPrice: number
+  stockAvailable: number
+}
+
 export interface Product {
   id: string
   name: string
@@ -24,6 +90,7 @@ export interface Product {
   saleStartAt: string | null
   saleEndAt: string | null
   isNewArrival: boolean
+  showOnHomeBanner: boolean
   arrivalAt: string | null
   stock: number
   isActive: boolean
@@ -31,6 +98,19 @@ export interface Product {
   createdAt: string | null
   updatedAt: string | null
   deletedAt: string | null
+  type?: ProductType
+  components?: ProductComboComponent[]
+  discount?: ProductDiscount | null
+  comboSubtotal?: number
+  discountAmount?: number
+  resolvedComponents?: ResolvedProductComboComponent[]
+  seoTitle?: string
+  seoDescription?: string
+  attributes?: ProductAttributes
+  sizeGuide?: ProductSizeGuide[]
+  hasVariants?: boolean
+  variantConfig?: ProductVariantConfig
+  variants?: ProductVariant[]
 }
 
 export type ProductInput = Omit<Product, 'createdAt' | 'updatedAt' | 'deletedAt'> & {
@@ -42,4 +122,16 @@ export type PublicProductImage = Omit<ProductImage, 'storagePath'>
 export interface PublicProduct extends Omit<Product, 'stock' | 'sortOrder' | 'deletedAt' | 'isActive' | 'createdAt' | 'updatedAt' | 'images'> {
   images: PublicProductImage[]
   inStock: boolean
+  availableCombos?: number
+}
+
+export interface HomeBannerProduct {
+  id: string
+  name: string
+  slug: string
+  images: Array<{ url: string; publicId?: string; alt?: string }>
+  price: number
+  salePrice: number | null
+  saleStartAt: string | null
+  saleEndAt: string | null
 }

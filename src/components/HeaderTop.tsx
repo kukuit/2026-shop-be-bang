@@ -5,6 +5,7 @@ import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { useState } from 'react'
 import AuthMenu from '@/components/auth/AuthMenu'
+import { CartButton } from '@/components/cart/CartProvider'
 
 type Item = { label: string; href: string }
 
@@ -84,7 +85,8 @@ export default function HeaderTop() {
           ))}
         </nav>
 
-        <div className="ml-auto sm:hidden">
+        <div className="ml-auto flex items-center gap-1 sm:hidden">
+          <CartButton />
           <AuthMenu />
         </div>
 
@@ -99,7 +101,8 @@ export default function HeaderTop() {
           </svg>
         </button>
 
-        <div className="ml-auto hidden sm:block">
+        <div className="ml-auto hidden items-center gap-2 sm:flex">
+          <CartButton />
           <AuthMenu />
         </div>
       </div>

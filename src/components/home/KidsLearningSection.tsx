@@ -8,7 +8,7 @@ const learningCards = [
     description: 'Học xong một bài, chơi ngay một game để bé ôn lại kiến thức.',
     action: 'Chơi ngay',
     href: '/game',
-    image: '/games/lessons/lop-1/images/optimize/toan-square.png',
+    image: '/images/banner/game.webp',
     alt: 'Cappy cùng bé khám phá các con số',
     tone: 'bg-[#eaf6ff]',
     overlay: 'from-[#eaf6ff] via-[#eaf6ff]/75 to-transparent',

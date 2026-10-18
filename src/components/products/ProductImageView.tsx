@@ -1,34 +1,32 @@
 'use client'
 
-import Image from 'next/image'
 import { useState } from 'react'
+import CloudinaryImage from '@/components/common/CloudinaryImage'
 
 type ImageVariant = 'card' | 'detail' | 'thumbnail' | 'admin'
 
-function cloudinaryDeliveryUrl(src: string, publicId?: string, variant: ImageVariant = 'detail') {
-  if (!publicId || !/^shopbebang\/products\/[a-zA-Z0-9_-]{1,180}\/[a-f0-9-]{36}$/i.test(publicId)) return src
-  const uploadMarker = '/image/upload/'
-  const uploadIndex = src.indexOf(uploadMarker)
-  if (!src.startsWith('https://res.cloudinary.com/') || uploadIndex < 0) return src
-  const transformations: Record<ImageVariant, string> = {
-    card: 'c_fill,w_720,h_540,g_auto/f_auto/q_auto:good',
-    detail: 'c_limit,w_1600/f_auto/q_auto:good',
-    thumbnail: 'c_fill,w_240,h_240,g_auto/f_auto/q_auto:good',
-    admin: 'c_limit,w_640/f_auto/q_auto:good',
-  }
-  const boundary = uploadIndex + uploadMarker.length
-  return `${src.slice(0, boundary)}${transformations[variant]}/${src.slice(boundary)}`
-}
-
-export default function ProductImageView({ src, alt, sizes, className = '', publicId, variant = 'detail' }: { src: string; alt: string; sizes: string; className?: string; publicId?: string; variant?: ImageVariant }) {
+export default function ProductImageView({ src, alt, sizes, className = '', variant = 'detail', priority = false }: { src: string; alt: string; sizes: string; className?: string; publicId?: string; variant?: ImageVariant; priority?: boolean }) {
   const [failed, setFailed] = useState(false)
-  return <Image
-    src={failed || !src ? '/images/product-placeholder.svg' : cloudinaryDeliveryUrl(src, publicId, variant)}
-    alt={alt}
-    fill
-    unoptimized
-    sizes={sizes}
-    onError={() => setFailed(true)}
-    className={className}
-  />
+  const imageSrc = failed || !src ? '/images/product-placeholder.svg' : src
+  const pixelSizes = /(?:vw|vh|%|calc\()/i.test(sizes)
+    ? []
+    : Array.from(sizes.matchAll(/(\d+(?:\.\d+)?)px/g), match => Number(match[1]))
+  const fixedSize = pixelSizes.length ? Math.max(...pixelSizes) : null
+  const imageTransform = variant === 'thumbnail'
+    ? { cropMode: 'fill' as const, aspectRatio: 1, gravity: 'auto' }
+    : variant === 'card'
+      ? { cropMode: 'fill' as const, aspectRatio: 4 / 3, gravity: 'auto' }
+      : { cropMode: 'fit' as const }
+  const commonProps = {
+    src: imageSrc,
+    alt,
+    priority,
+    onError: () => setFailed(true),
+    className: fixedSize ? `h-full w-full ${className}` : className,
+    ...imageTransform,
+  }
+
+  return fixedSize
+    ? <CloudinaryImage {...commonProps} width={Math.round(fixedSize)} height={Math.round(fixedSize)} />
+    : <CloudinaryImage {...commonProps} fill sizes={sizes} />
 }

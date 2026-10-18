@@ -6,6 +6,7 @@ import { ArrowLeft, Settings } from 'lucide-react'
 import type { ReactNode } from 'react'
 import AuthMenu from '@/components/auth/AuthMenu'
 import { useAuth } from '@/components/auth/AuthProvider'
+import CloudinaryImage from '@/components/common/CloudinaryImage'
 import GameGradePopup from './GameGradePopup'
 
 const TRANG_NGUYEN_EXAM_ROUTE = '/game/lop-1/tieng-viet/trang-nguyen/thi-thu'
@@ -49,8 +50,7 @@ export default function GameRouteShell({ children }: { children: ReactNode }) {
     <Settings size={22} strokeWidth={2.8} />
     {user ? <span className="pointer-events-none absolute -right-1 -top-1 grid h-5 w-5 place-items-center overflow-hidden rounded-full border-2 border-white bg-sky-100 text-[9px] font-black text-sky-900">
       {user.avatar ? <>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={user.avatar} alt="" aria-hidden="true" className="h-full w-full object-cover" />
+        <CloudinaryImage src={user.avatar} alt="" aria-hidden="true" fill sizes="20px" className="h-full w-full object-cover" />
       </> : Array.from(user.displayName.trim())[0]?.toLocaleUpperCase('vi-VN')}
     </span> : !authLoading && <span aria-hidden="true" className="pointer-events-none absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border-2 border-white bg-red-500" />}
   </span>

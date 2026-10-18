@@ -1,7 +1,6 @@
 'use client'
 
 import { FormEvent, useMemo, useState } from 'react'
-import Image, { type ImageLoaderProps } from 'next/image'
 import { Check, ChevronRight, Gamepad2, Pencil, Plus, Search, UserRound, X } from 'lucide-react'
 import type {
   CreateUserInput,
@@ -11,8 +10,7 @@ import type {
   UserStatus,
 } from '@/lib/users/user.types'
 import { fetchWithAuthRetry } from '@/lib/auth/client-fetch'
-
-const avatarLoader = ({ src }: ImageLoaderProps) => src
+import CloudinaryImage from '@/components/common/CloudinaryImage'
 
 const statusMap: Record<UserStatus, { label: string; style: string }> = {
   active: { label: 'Hoạt động', style: 'bg-emerald-50 text-emerald-700' },
@@ -208,13 +206,11 @@ export default function UserManager({ initialUsers }: { initialUsers: User[] }) 
                     <div className="flex items-center gap-3">
                       <span className="grid h-10 w-10 place-items-center overflow-hidden rounded-full bg-pink-50 font-black text-pink-600">
                         {user.avatar ? (
-                          <Image
-                            loader={avatarLoader}
+                          <CloudinaryImage
                             src={user.avatar}
                             alt=""
                             width={40}
                             height={40}
-                            unoptimized
                             className="h-full w-full object-cover"
                           />
                         ) : (
