@@ -15,8 +15,10 @@ export default function ProductCard({ product, now = new Date() }: { product: Pu
       <Link href={`/products/${product.slug}`} className="block">
         <div className="relative aspect-[4/3] overflow-hidden bg-[#fff8f5]">
           <ProductImageView src={product.thumbnail} publicId={thumbnailImage?.publicId} variant="card" alt={product.name} sizes="(max-width: 639px) 100vw, (max-width: 1023px) 50vw, 360px" className="object-cover transition-transform duration-300 hover:scale-[1.03]" />
-          {product.isNewArrival && <span className="absolute left-3 top-3 rounded-full bg-pink-500 px-3 py-1 text-xs font-semibold text-white">Mới về</span>}
+          {product.isNewArrival && <span className={`absolute left-3 rounded-full bg-pink-500 px-3 py-1 text-xs font-semibold text-white ${product.type === 'COMBO' ? 'top-12' : 'top-3'}`}>Mới về</span>}
+          {product.type === 'COMBO' && <span className="absolute left-3 top-3 rounded-full bg-violet-600 px-3 py-1 text-xs font-bold text-white">COMBO</span>}
           {onSale && <span className="absolute right-3 top-3 rounded-full bg-rose-500 px-3 py-1 text-xs font-semibold text-white">-{getProductDiscountPercent(product, now)}%</span>}
+          {!product.inStock && <span className="absolute bottom-3 left-3 rounded-full bg-zinc-900/80 px-3 py-1 text-xs font-bold text-white">Hết hàng</span>}
         </div>
         <div className="p-4">
           <h3 className="min-h-12 text-base font-medium leading-6 text-zinc-800">{product.name}</h3>
@@ -24,6 +26,7 @@ export default function ProductCard({ product, now = new Date() }: { product: Pu
             <span className="text-sm text-zinc-400 line-through">{formatPrice(product.price)}</span>
             <span className="text-lg font-semibold text-rose-500">{formatPrice(getProductEffectivePrice(product, now))}</span>
           </div> : <p className="mt-2 text-lg font-semibold text-zinc-900">{formatPrice(product.price)}</p>}
+          {product.type === 'COMBO' && product.discountAmount ? <p className="mt-1 text-xs font-bold text-emerald-700">Tiết kiệm {formatPrice(product.discountAmount)}</p> : null}
         </div>
       </Link>
     </article>

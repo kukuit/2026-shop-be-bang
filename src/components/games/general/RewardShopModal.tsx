@@ -3,6 +3,7 @@
 import Image from 'next/image'
 import { useEffect, useState } from 'react'
 import { Gift, LoaderCircle, X } from 'lucide-react'
+import CloudinaryImage from '@/components/common/CloudinaryImage'
 
 type Reward = { id: string; name: string; coinCost: number; imageUrl: string | null; isActive: boolean; order: number }
 type WonGift = { name: string; imageUrl: string | null }
@@ -14,7 +15,7 @@ function RewardImage({ src, size, className = '' }: { src: string | null; size: 
     {(!src || failed) && <Gift className="text-slate-300" size={Math.round(size * 0.48)} />}
     {src && !failed && <>
       {!loaded && <LoaderCircle className="absolute text-slate-300 animate-spin" size={Math.round(size * 0.28)} />}
-      <Image src={src} alt="" width={size} height={size} onLoad={() => setLoaded(true)} onError={() => setFailed(true)} className={`absolute inset-0 h-full w-full object-contain transition-opacity duration-200 ${loaded ? 'opacity-100' : 'opacity-0'}`} />
+      <CloudinaryImage src={src} alt="" width={size} height={size} cropMode="fit" onLoad={() => setLoaded(true)} onError={() => setFailed(true)} className={`absolute inset-0 h-full w-full object-contain transition-opacity duration-200 ${loaded ? 'opacity-100' : 'opacity-0'}`} />
     </>}
   </div>
 }

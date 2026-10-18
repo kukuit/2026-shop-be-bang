@@ -8,6 +8,7 @@ import StarIcon from './StarIcon'
 import GameProgress from './GameProgress'
 import { useAuth } from '@/components/auth/AuthProvider'
 import RewardShopModal from './RewardShopModal'
+import CloudinaryImage from '@/components/common/CloudinaryImage'
 
 type GameShellProps = {
   children: ReactNode
@@ -100,9 +101,7 @@ export default function GameShell({
         <div className="flex h-10 min-w-max items-center justify-self-center gap-1.5 rounded-2xl border-2 border-white/80 bg-blue-600/90 py-0.5 pl-0.5 pr-2 text-white shadow-lg">
           <span className="grid h-[30px] w-[30px] shrink-0 place-items-center overflow-hidden rounded-full bg-slate-200 text-slate-600" aria-label={user ? `Ảnh đại diện ${user.displayName}` : 'Ảnh đại diện khách'}>
             {!user ? <UserRound size={21} strokeWidth={2.5} aria-hidden="true" /> : avatarUrl && !avatarFailed ?
-              // Avatar URLs may be hosted outside Next.js configured image domains.
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={avatarUrl} alt="" className="h-full w-full object-cover" onError={() => setAvatarFailed(true)} /> :
+              <CloudinaryImage src={avatarUrl} alt="" fill sizes="30px" className="h-full w-full object-cover" onError={() => setAvatarFailed(true)} /> :
               <span className="text-base font-black leading-none" aria-hidden="true">{avatarInitial}</span>}
           </span>
           {lives === undefined ? <span className="min-w-0 flex-1 truncate text-xs font-black drop-shadow" title={displayName}>{shortDisplayName}</span> :
@@ -152,7 +151,7 @@ export default function GameShell({
       {redeemedGift && <div className="pointer-events-none absolute inset-0 z-[70] grid place-items-center bg-slate-950/20" onAnimationEnd={() => setRedeemedGift(null)}>
         <div className="reward-gift-pop flex w-[82%] flex-col items-center rounded-[2rem] border-4 border-amber-300 bg-white/95 p-5 text-center shadow-2xl">
           <span className="text-4xl" aria-hidden="true">🎉</span>
-          {redeemedGift.imageUrl && <Image src={redeemedGift.imageUrl} alt="" width={150} height={150} className="mt-2 h-32 w-32 object-contain" />}
+          {redeemedGift.imageUrl && <CloudinaryImage src={redeemedGift.imageUrl} alt="" width={150} height={150} cropMode="fit" className="mt-2 h-32 w-32 object-contain" />}
           <p className="mt-2 text-xl font-black text-blue-700">{redeemedGift.name}</p><p className="font-bold text-emerald-600">Đã đổi quà!</p>
         </div>
         <style jsx>{`@keyframes reward-gift-pop { 0% { opacity: 0; transform: scale(.5) } 16% { opacity: 1; transform: scale(1.12) } 28% { transform: scale(1) } 76% { opacity: 1; transform: scale(1.04) } 100% { opacity: 0; transform: scale(.92) } } .reward-gift-pop { animation: reward-gift-pop 1.8s ease-in-out both }`}</style>

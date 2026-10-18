@@ -63,6 +63,94 @@ test('product schema accepts Cloudinary metadata while enforcing eight images an
   assert.throws(() => createProductSchema.parse({ ...product, images: Array.from({ length: 9 }, (_, sortOrder) => ({ ...image, sortOrder })) }))
 })
 
+test('variant helpers generate stable color-size combinations and keep stock, SKU, price and image data when options change', () => {
+  const { generateVariantCombinations, calculateTotalStock, findSelectedVariant, resolveVariantPrice, resolveVariantImage } = loadDomain()('src/lib/products/variants.ts')
+  const colors = [{ id: 'color_pink', name: 'Hồng' }, { id: 'color_blue', name: 'Xanh' }]
+  const sizes = [{ id: 'size_s', name: 'S' }, { id: 'size_m', name: 'M' }]
+  const first = generateVariantCombinations({ colors: [colors[0]], sizes: [sizes[0]] }, [], 'dam-hoa')
+  assert.equal(first.length, 1)
+  const edited = [{ ...first[0], sku: 'SKU-EDITED', stock: 4, price: 179000, imageUrl: '/images/pink.webp' }]
+  const expanded = generateVariantCombinations({ colors, sizes: [sizes[0], sizes[1]] }, edited, 'dam-hoa')
+  assert.equal(expanded.length, 4)
+  assert.equal(expanded.find(item => item.id === first[0].id).sku, 'SKU-EDITED')
+  assert.equal(expanded.find(item => item.id === first[0].id).stock, 4)
+  assert.equal(expanded.find(item => item.id === first[0].id).price, 179000)
+  assert.equal(expanded.find(item => item.id === first[0].id).imageUrl, '/images/pink.webp')
+  assert.equal(calculateTotalStock(expanded), 4)
+  const selected = findSelectedVariant({ colors, sizes }, expanded, 'color_pink', 'size_s')
+  assert.equal(selected.id, first[0].id)
+  assert.equal(findSelectedVariant({ colors, sizes }, expanded, 'color_pink'), null)
+  assert.equal(resolveVariantPrice({ price: 299000, salePrice: 199000, saleStartAt: null, saleEndAt: null }, { price: null }, new Date()), 199000)
+  assert.equal(resolveVariantPrice({ price: 299000, salePrice: 199000, saleStartAt: null, saleEndAt: null }, { price: 179000 }, new Date()), 179000)
+  assert.equal(resolveVariantImage({ imageUrl: null }, { imageUrl: '/images/color.webp' }, '/images/main.webp'), '/images/color.webp')
+  assert.equal(generateVariantCombinations({ colors: [], sizes: [] }, [], 'product').length, 0)
+  assert.equal(generateVariantCombinations({ colors: Array.from({ length: 11 }, (_, index) => ({ id: `c${index}`, name: `C${index}` })), sizes: Array.from({ length: 10 }, (_, index) => ({ id: `s${index}`, name: `S${index}` })) }, [], 'product'), null)
+})
+
+test('variant sizes follow the size guide while retaining data for renamed guide rows', () => {
+  const { syncVariantSizesWithSizeGuide } = loadDomain()('src/lib/products/variants.ts')
+  const config = { colors: [{ id: 'color_blue', name: 'Xanh' }], sizes: [{ id: 'legacy_s', name: 'S' }] }
+  const variants = [{ id: 'variant_s', sku: 'CUSTOM-SKU', colorId: 'color_blue', color: 'Xanh', sizeId: 'legacy_s', size: 'S', stock: 7, price: 129000, imageUrl: '/custom.webp' }]
+  const firstGuide = [{ id: 'guide_s', size: 'S', minWeight: 10, maxWeight: 12 }]
+  const first = syncVariantSizesWithSizeGuide(firstGuide, config, variants, 'dam-be')
+  assert.deepEqual(first.config.sizes, [{ id: 'guide_s', name: 'S' }])
+  assert.equal(first.variants.length, 1)
+  assert.deepEqual(first.variants[0], { ...variants[0], sizeId: 'guide_s' })
+  const legacyWithoutConfiguredSizes = syncVariantSizesWithSizeGuide(firstGuide, { ...config, sizes: [] }, variants, 'dam-be')
+  assert.equal(legacyWithoutConfiguredSizes.variants[0].stock, 7)
+  assert.equal(legacyWithoutConfiguredSizes.variants[0].sku, 'CUSTOM-SKU')
+
+  const expanded = syncVariantSizesWithSizeGuide([...firstGuide, { id: 'guide_m', size: 'M' }], first.config, first.variants, 'dam-be')
+  assert.deepEqual(expanded.config.sizes.map(size => size.name), ['S', 'M'])
+  assert.equal(expanded.variants.length, 2)
+  assert.equal(expanded.variants.find(variant => variant.sizeId === 'guide_m').stock, 0)
+  assert.equal(expanded.variants.find(variant => variant.sizeId === 'guide_s').sku, 'CUSTOM-SKU')
+
+  const renamed = syncVariantSizesWithSizeGuide([{ ...firstGuide[0], size: 'Size S' }, { id: 'guide_m', size: 'M' }], expanded.config, expanded.variants, 'dam-be')
+  const retained = renamed.variants.find(variant => variant.sizeId === 'guide_s')
+  assert.equal(retained.size, 'Size S')
+  assert.equal(retained.id, 'variant_s')
+  assert.equal(retained.sku, 'CUSTOM-SKU')
+  assert.equal(retained.stock, 7)
+  assert.equal(retained.price, 129000)
+  assert.equal(retained.imageUrl, '/custom.webp')
+
+  const removed = syncVariantSizesWithSizeGuide([{ ...firstGuide[0], size: 'Size S' }], renamed.config, renamed.variants, 'dam-be')
+  assert.deepEqual(removed.config.sizes.map(size => size.name), ['Size S'])
+  assert.equal(removed.variants.length, 1)
+})
+
+test('product schema validates size guides and complete variant combinations while accepting old product records', () => {
+  const load = loadDomain()
+  const { createProductSchema } = load('src/lib/products/validation.ts')
+  const { normalizeProductAttributes, normalizeProductData, normalizeProductSizeGuide, normalizeProductVariantConfig, normalizeProductVariants } = load('src/lib/products/variants.ts')
+  const product = {
+    name: 'Đầm hoa', slug: 'dam-hoa', description: '', shortDescription: '', categoryId: 'dam-be-gai',
+    thumbnail: '', images: [], price: 299000, salePrice: null, saleStartAt: null, saleEndAt: null,
+    isNewArrival: false, arrivalAt: null, stock: 3, isActive: true, sortOrder: 0,
+  }
+  assert.equal(createProductSchema.parse(product).hasVariants, undefined)
+  assert.equal(normalizeProductAttributes(undefined), undefined)
+  assert.equal(normalizeProductSizeGuide(undefined), undefined)
+  assert.equal(normalizeProductVariantConfig(undefined), undefined)
+  assert.equal(normalizeProductVariants(undefined), undefined)
+  assert.deepEqual(normalizeProductData({ stock: 20 }), { stock: 20, hasVariants: false })
+
+  const config = { colors: [{ id: 'color_pink', name: 'Hồng' }, { id: 'color_blue', name: 'Xanh' }], sizes: [{ id: 'size_s', name: 'S' }] }
+  const variants = [
+    { id: 'variant_color_pink_size_s', sku: 'DAM-HONG-S', colorId: 'color_pink', color: 'Hồng', sizeId: 'size_s', size: 'S', stock: 2 },
+    { id: 'variant_color_blue_size_s', sku: 'DAM-XANH-S', colorId: 'color_blue', color: 'Xanh', sizeId: 'size_s', size: 'S', stock: 1, price: 199000 },
+  ]
+  const full = { ...product, hasVariants: true, variantConfig: config, variants, sizeGuide: [{ id: 'guide_1', size: 'S', minWeight: 10, maxWeight: 12, minHeight: 80, maxHeight: 90 }] }
+  assert.equal(createProductSchema.parse(full).variants.length, 2)
+  assert.equal(normalizeProductData({ ...full, stock: 999 }).stock, 3)
+  assert.throws(() => createProductSchema.parse({ ...full, sizeGuide: [{ id: 'guide_1', size: 'S', minWeight: 13, maxWeight: 12 }] }), /Giá trị “từ” không được lớn hơn giá trị “đến”/)
+  assert.throws(() => createProductSchema.parse({ ...full, variants: variants.map(variant => ({ ...variant, sku: 'SAME' })) }), /SKU không được trùng/)
+  assert.throws(() => createProductSchema.parse({ ...full, variants: [variants[0]] }), /đủ mọi tổ hợp màu và size/)
+  assert.throws(() => createProductSchema.parse({ ...full, hasVariants: true, variantConfig: { colors: [], sizes: [] }, variants: [] }), /ít nhất một màu hoặc một size/)
+  assert.throws(() => createProductSchema.parse({ ...full, variants: variants.map(variant => ({ ...variant, stock: -1 })) }))
+})
+
 test('product image validation recognizes only JPEG, PNG, and WebP signatures and matches MIME', () => {
   const { detectProductImageFormat, matchesProductImageMime, MAX_PRODUCT_IMAGE_BYTES } = loadDomain()('src/lib/products/image-validation.ts')
   const jpeg = Uint8Array.from([0xff, 0xd8, 0xff, 0x00])
@@ -173,6 +261,21 @@ test('Firestore emulator CRUD covers products/categories, unique slugs, soft del
     const product = await products.createProduct(input)
     assert.equal(product.name, input.name)
     assert.equal((await categories.getAdminCategory(categoryId)).productCount, 1)
+    const variantProductId = `variant-${suffix}`
+    const variantConfig = { colors: [{ id: 'color_red', name: 'Đỏ' }], sizes: [{ id: 'size_s', name: 'S' }, { id: 'size_m', name: 'M' }] }
+    const variantRows = [
+      { id: 'variant_color_red_size_s', sku: `DAM-${suffix.slice(0, 6)}-DO-S`, colorId: 'color_red', color: 'Đỏ', sizeId: 'size_s', size: 'S', stock: 2 },
+      { id: 'variant_color_red_size_m', sku: `DAM-${suffix.slice(0, 6)}-DO-M`, colorId: 'color_red', color: 'Đỏ', sizeId: 'size_m', size: 'M', stock: 5 },
+    ]
+    const variantProduct = await products.createProduct({ ...input, id: variantProductId, slug: `variant-${suffix}`, hasVariants: true, variantConfig, variants: variantRows, stock: 999 })
+    assert.equal(variantProduct.stock, 7)
+    const resizedConfig = { ...variantConfig, sizes: [...variantConfig.sizes, { id: 'size_l', name: 'L' }] }
+    const { generateVariantCombinations } = load('src/lib/products/variants.ts')
+    const resizedRows = generateVariantCombinations(resizedConfig, variantRows, `variant-${suffix}`)
+    const resizedProduct = await products.updateProduct(variantProductId, { variantConfig: resizedConfig, variants: resizedRows })
+    assert.equal(resizedProduct.variants.find(variant => variant.id === variantRows[0].id).stock, 2)
+    assert.equal(resizedProduct.variants.find(variant => variant.id === variantRows[0].id).sku, variantRows[0].sku)
+    assert.equal(resizedProduct.stock, 7)
     await assert.rejects(products.createProduct({ ...input, id: `duplicate-${suffix}` }), /PRODUCT_SLUG_DUPLICATE/)
     const updated = await products.updateProduct(productId, { price: 320000, isActive: false })
     assert.equal(updated.price, 320000)
@@ -184,6 +287,7 @@ test('Firestore emulator CRUD covers products/categories, unique slugs, soft del
     assert.equal(publicPage.products.length, 1)
     await assert.rejects(categories.deleteCategory(categoryId), /CATEGORY_IN_USE/)
     await products.softDeleteProduct(productId)
+    await products.softDeleteProduct(variantProductId)
     assert.equal(await products.getAdminProduct(productId), null)
     assert.equal((await products.listPublicCategoryProducts(categoryId)).products.length, 0)
     const deletedSnapshot = await products.productCollection().doc(productId).get()

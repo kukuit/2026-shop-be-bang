@@ -1,5 +1,5 @@
-import Image from 'next/image'
 import Link from 'next/link'
+import HomeProductBanner from '@/components/home/HomeProductBanner'
 
 export default function HeroSection() {
   return (
@@ -29,21 +29,8 @@ export default function HeroSection() {
           </div>
         </div>
 
-        <div className="relative order-first mx-auto w-full max-w-md md:order-last md:ml-auto">
-          {/* TODO: replace with a final lifestyle hero image when one is available. */}
-          <div className="relative aspect-[16/10] overflow-hidden rounded-[2rem] bg-white shadow-sm ring-1 ring-rose-100">
-            <Image
-              src="/images/products/product-0001.webp"
-              alt="Bộ quần áo hồng xinh cho bé"
-              fill
-              priority
-              sizes="(max-width: 768px) 100vw, 520px"
-              className="object-cover"
-            />
-          </div>
-          <div className="absolute bottom-4 left-4 rounded-full bg-white/95 px-4 py-2 text-xs font-semibold text-zinc-700 shadow-sm sm:bottom-5 sm:left-5 sm:text-sm">
-            Mềm mại, thoải mái mỗi ngày
-          </div>
+        <div className="relative order-first mx-auto w-full max-w-md md:order-last md:mx-0 md:ml-auto">
+          <HomeProductBanner />
         </div>
       </div>
     </section>

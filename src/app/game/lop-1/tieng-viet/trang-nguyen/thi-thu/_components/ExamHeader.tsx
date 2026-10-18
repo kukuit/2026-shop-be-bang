@@ -1,10 +1,10 @@
 'use client'
 
-import Image from 'next/image'
 import Link from 'next/link'
 import { ArrowLeft, UserRound } from 'lucide-react'
 import AuthMenu from '@/components/auth/AuthMenu'
 import { useAuth } from '@/components/auth/AuthProvider'
+import CloudinaryImage from '@/components/common/CloudinaryImage'
 import styles from './exam.module.css'
 
 export default function ExamHeader({ onBack, backHref = '/', backDisabled = false }: { onBack?: () => void; backHref?: string; backDisabled?: boolean }) {
@@ -37,7 +37,7 @@ export default function ExamHeader({ onBack, backHref = '/', backDisabled = fals
           trigger={<>
             <span className={styles.avatar} aria-hidden="true">
               {user?.avatar ? (
-                <Image src={user.avatar} alt="" width={36} height={36} unoptimized />
+                <CloudinaryImage src={user.avatar} alt="" width={36} height={36} />
               ) : user ? (
                 initial
               ) : (

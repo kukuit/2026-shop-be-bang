@@ -2,21 +2,27 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Image as ImageIcon, Info, PackageCheck, Tags } from 'lucide-react'
+import { ArrowLeft, Image as ImageIcon, Info, PackageCheck, Plus, Search, Tags, X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
-import type { Product, ProductImage } from '@/lib/products/types'
+import type { Product, ProductAttributes, ProductComboComponent, ProductDiscount, ProductImage, ProductSizeGuide, ProductType, ProductVariant, ProductVariantConfig } from '@/lib/products/types'
 import type { ProductCategory } from '@/lib/product-categories/types'
 import { getProductDiscountPercent } from '@/lib/products/pricing'
 import { MAX_PRODUCT_IMAGE_COUNT } from '@/lib/products/image-validation'
+import { calculateTotalStock, MAX_PRODUCT_VARIANTS, MAX_VARIANT_STOCK, syncVariantSizesWithSizeGuide } from '@/lib/products/variants'
 import { slugify } from '@/lib/products/slug'
 import ProductImageEditor, { type ProductImageItem } from './ProductImageEditor'
+import { ProductAttributesSection, ProductSizeGuideSection, ProductVariantsSection } from './ProductConfigurationEditor'
+import ShortLinkManager from '@/components/admin/short-links/ShortLinkManager'
+import ProductImageView from '@/components/products/ProductImageView'
+import { getProductEffectivePrice } from '@/lib/products/pricing'
 
 type Fields = {
   name: string; slug: string; categoryId: string; shortDescription: string; description: string
+  seoTitle: string; seoDescription: string
   price: string; salePrice: string; saleStartAt: string; saleEndAt: string
-  isNewArrival: boolean; arrivalAt: string; stock: string; sortOrder: string
+  isNewArrival: boolean; showOnHomeBanner: boolean; arrivalAt: string; stock: string; sortOrder: string
 }
-const blank: Fields = { name: '', slug: '', categoryId: '', shortDescription: '', description: '', price: '', salePrice: '', saleStartAt: '', saleEndAt: '', isNewArrival: false, arrivalAt: '', stock: '0', sortOrder: '0' }
+const blank: Fields = { name: '', slug: '', categoryId: '', shortDescription: '', description: '', seoTitle: '', seoDescription: '', price: '', salePrice: '', saleStartAt: '', saleEndAt: '', isNewArrival: false, showOnHomeBanner: false, arrivalAt: '', stock: '0', sortOrder: '0' }
 const formatPrice = (value: number) => `${new Intl.NumberFormat('vi-VN').format(value)}đ`
 const localDateTime = (value: string | null | undefined) => {
   if (!value) return ''
@@ -56,17 +62,68 @@ async function readApiResponse<T extends Record<string, unknown>>(response: Resp
   }
 }
 
-export default function ProductForm({ product }: { product?: Product }) {
+function buildInitialVariantEditorState(product?: Product) {
+  const config = product?.variantConfig ?? { colors: [], sizes: [] }
+  const variants = product?.variants ?? []
+  const sizeGuide = [...(product?.sizeGuide ?? [])]
+  const normalizeSize = (value: string) => value.trim().normalize('NFC').toLocaleLowerCase('vi-VN')
+  const guideNames = new Set(sizeGuide.map(row => normalizeSize(row.size)))
+
+  if (!sizeGuide.length) {
+    sizeGuide.push(...config.sizes.map(size => ({ id: size.id, size: size.name })))
+  } else {
+    for (const size of config.sizes) {
+      const key = normalizeSize(size.name)
+      if (!sizeGuide.some(row => row.id === size.id) && !guideNames.has(key)) {
+        sizeGuide.push({ id: size.id, size: size.name })
+        guideNames.add(key)
+      }
+    }
+  }
+
+  const synchronized = syncVariantSizesWithSizeGuide(sizeGuide, config, variants, product?.slug ?? '')
+  return {
+    sizeGuide,
+    variantConfig: synchronized.config,
+    variants: synchronized.variants ?? variants,
+  }
+}
+
+export default function ProductForm({ product, initialType = 'SIMPLE' }: { product?: Product; initialType?: ProductType }) {
   const router = useRouter()
+  const [initialVariantState] = useState(() => buildInitialVariantEditorState(product))
   const [savedId, setSavedId] = useState<string | null>(product?.id ?? null)
+  const [productType, setProductType] = useState<ProductType>(product?.type ?? initialType)
+  const [comboComponents, setComboComponents] = useState<ProductComboComponent[]>(product?.components ?? [])
+  const [discountType, setDiscountType] = useState<ProductDiscount['type']>(product?.discount?.type ?? 'PERCENT')
+  const [discountValue, setDiscountValue] = useState(String(product?.discount?.value ?? 10))
+  const [comboProducts, setComboProducts] = useState<Record<string, Product>>({})
+  const [comboPickerOpen, setComboPickerOpen] = useState(false)
+  const [componentSearch, setComponentSearch] = useState('')
+  const [componentCandidates, setComponentCandidates] = useState<Product[]>([])
+  const [componentLoading, setComponentLoading] = useState(false)
+  const [pendingComponent, setPendingComponent] = useState<Product | null>(null)
+  const [pendingVariantId, setPendingVariantId] = useState('')
+  const [isActive, setIsActive] = useState(product?.isActive ?? initialType !== 'COMBO')
   const [fields, setFields] = useState<Fields>(product ? {
     name: product.name, slug: product.slug, categoryId: product.categoryId,
     shortDescription: product.shortDescription, description: product.description,
+    seoTitle: product.seoTitle ?? '', seoDescription: product.seoDescription ?? '',
     price: String(product.price), salePrice: product.salePrice === null ? '' : String(product.salePrice),
     saleStartAt: localDateTime(product.saleStartAt), saleEndAt: localDateTime(product.saleEndAt),
-    isNewArrival: product.isNewArrival, arrivalAt: dateOnly(product.arrivalAt), stock: String(product.stock),
+    isNewArrival: product.isNewArrival, showOnHomeBanner: product.showOnHomeBanner, arrivalAt: dateOnly(product.arrivalAt), stock: String(product.stock),
     sortOrder: String(product.sortOrder),
   } : blank)
+  const [attributes, setAttributes] = useState<ProductAttributes>(product?.attributes ?? {})
+  const [sizeGuide, setSizeGuide] = useState<ProductSizeGuide[]>(initialVariantState.sizeGuide)
+  const [hasVariants, setHasVariants] = useState(product?.hasVariants === true)
+  const [variantConfig, setVariantConfig] = useState<ProductVariantConfig>(initialVariantState.variantConfig)
+  const [variants, setVariants] = useState<ProductVariant[]>(initialVariantState.variants)
+  const [pendingSizeGuideRemoval, setPendingSizeGuideRemoval] = useState<{ id: string; name: string; affectedStock: number } | null>(null)
+  const [sizeGuideSyncError, setSizeGuideSyncError] = useState('')
+  const [legacyStockAtEnable, setLegacyStockAtEnable] = useState(product?.stock ?? Number(blank.stock))
+  const [confirmedVariantStockTotal, setConfirmedVariantStockTotal] = useState<number | null>(null)
+  const [pendingDisableVariants, setPendingDisableVariants] = useState(false)
   const [categories, setCategories] = useState<ProductCategory[]>([])
   const [categoriesLoading, setCategoriesLoading] = useState(true)
   const [categoryReload, setCategoryReload] = useState(0)
@@ -94,7 +151,8 @@ export default function ProductForm({ product }: { product?: Product }) {
   const imagesRef = useRef(images)
   imagesRef.current = images
   const editing = Boolean(savedId)
-  const isActive = product?.isActive ?? true
+  const variantStock = calculateTotalStock(variants)
+  const stockConfirmationRequired = hasVariants && !product?.hasVariants && variantStock !== legacyStockAtEnable
 
   useEffect(() => {
     let active = true
@@ -111,6 +169,42 @@ export default function ProductForm({ product }: { product?: Product }) {
       .finally(() => { if (active) setCategoriesLoading(false) })
     return () => { active = false }
   }, [categoryReload])
+
+  useEffect(() => {
+    const missingIds = Array.from(new Set(comboComponents.map(component => component.productId).filter(id => !comboProducts[id])))
+    if (!missingIds.length) return
+    let active = true
+    Promise.all(missingIds.map(async id => {
+      const response = await fetch(`/api/admin/products/${encodeURIComponent(id)}`, { cache: 'no-store' })
+      const body = await response.json()
+      if (!response.ok || !body.product) throw new Error(body.message ?? 'Không tải được sản phẩm thành phần.')
+      return body.product as Product
+    })).then(products => {
+      if (active) setComboProducts(current => ({ ...current, ...Object.fromEntries(products.map(item => [item.id, item])) }))
+    }).catch(reason => { if (active) setError(reason instanceof Error ? reason.message : 'Không tải được sản phẩm thành phần.') })
+    return () => { active = false }
+  }, [comboComponents, comboProducts])
+
+  useEffect(() => {
+    if (!comboPickerOpen) return
+    let active = true
+    const timeout = window.setTimeout(async () => {
+      setComponentLoading(true)
+      try {
+        const params = new URLSearchParams({ limit: '30', status: 'active' })
+        if (componentSearch.trim()) params.set('search', componentSearch.trim())
+        const response = await fetch(`/api/admin/products?${params}`, { cache: 'no-store' })
+        const body = await response.json()
+        if (!response.ok) throw new Error(body.message ?? 'Không thể tìm sản phẩm.')
+        if (active) setComponentCandidates((body.products ?? []).filter((candidate: Product) => candidate.type !== 'COMBO' && candidate.id !== product?.id && !comboComponents.some(component => component.productId === candidate.id)))
+      } catch (reason) {
+        if (active) setError(reason instanceof Error ? reason.message : 'Không thể tìm sản phẩm.')
+      } finally {
+        if (active) setComponentLoading(false)
+      }
+    }, 250)
+    return () => { active = false; window.clearTimeout(timeout) }
+  }, [comboPickerOpen, componentSearch, comboComponents, product?.id])
 
   useEffect(() => {
     if (product) {
@@ -146,27 +240,148 @@ export default function ProductForm({ product }: { product?: Product }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const price = Number(fields.price)
-  const salePrice = fields.salePrice ? Number(fields.salePrice) : null
+  const comboDiscountValue = Number(discountValue)
+  const comboSubtotal = useMemo(() => comboComponents.reduce((sum, component) => {
+    const source = comboProducts[component.productId]
+    if (!source) return sum
+    const variant = source.hasVariants ? source.variants?.find(item => item.id === component.variantId) : null
+    if (source.hasVariants && !variant) return sum
+    const unitPrice = variant?.price ?? getProductEffectivePrice(source, new Date())
+    return sum + unitPrice * component.quantity
+  }, 0), [comboComponents, comboProducts])
+  const comboDiscountAmount = Number.isSafeInteger(comboDiscountValue) && comboDiscountValue > 0
+    ? discountType === 'PERCENT' ? Math.round(comboSubtotal * comboDiscountValue / 100) : comboDiscountValue
+    : 0
+  const comboFinalPrice = comboSubtotal - comboDiscountAmount
+  const comboAvailable = comboComponents.length ? comboComponents.reduce((available, component) => {
+    const source = comboProducts[component.productId]
+    if (!source) return 0
+    const variant = source.hasVariants ? source.variants?.find(item => item.id === component.variantId) : null
+    const stock = source.hasVariants ? variant?.stock ?? 0 : source.stock
+    return Math.min(available, Math.floor(stock / component.quantity))
+  }, Number.MAX_SAFE_INTEGER) : 0
+  const price = productType === 'COMBO' ? comboSubtotal : Number(fields.price)
+  const salePrice = productType === 'COMBO' ? comboFinalPrice : fields.salePrice ? Number(fields.salePrice) : null
   const salePreview = useMemo(() => {
     if (!Number.isSafeInteger(price) || !Number.isSafeInteger(salePrice) || price <= 0 || salePrice! <= 0 || salePrice! >= price) return null
     const now = new Date()
     return getProductDiscountPercent({ price, salePrice, saleStartAt: null, saleEndAt: null } as Product, now)
   }, [price, salePrice])
 
+  const duplicateGuideSize = new Set<string>()
+  const duplicateSku = new Set<string>()
+  const duplicateColor = new Set<string>()
+  const duplicateSize = new Set<string>()
+  const configurationIssues: string[] = []
+  sizeGuide.forEach((row, index) => {
+    const key = row.size.trim().toLocaleLowerCase('vi-VN')
+    if (!key) configurationIssues.push(`Bảng size: dòng ${index + 1} cần có tên size`)
+    else if (duplicateGuideSize.has(key)) configurationIssues.push(`Bảng size: size “${row.size}” bị trùng`)
+    duplicateGuideSize.add(key)
+    for (const [from, to, label] of [['minWeight', 'maxWeight', 'cân nặng'], ['minHeight', 'maxHeight', 'chiều cao']] as const) {
+      const lower = row[from], upper = row[to]
+      if (lower !== undefined && (!Number.isFinite(lower) || lower < 0) || upper !== undefined && (!Number.isFinite(upper) || upper < 0)) configurationIssues.push(`Bảng size: ${label} phải là số không âm`)
+      if (lower !== undefined && upper !== undefined && lower > upper) configurationIssues.push(`Bảng size: ${label} từ không được lớn hơn đến`)
+    }
+  })
+  if (hasVariants) {
+    variantConfig.colors.forEach(color => {
+      const key = color.name.trim().toLocaleLowerCase('vi-VN')
+      if (!key || duplicateColor.has(key)) configurationIssues.push('Danh sách màu không được để trống hoặc trùng tên')
+      duplicateColor.add(key)
+    })
+    variantConfig.sizes.forEach(size => {
+      const key = size.name.trim().toLocaleLowerCase('vi-VN')
+      if (!key || duplicateSize.has(key)) configurationIssues.push('Danh sách size không được để trống hoặc trùng tên')
+      duplicateSize.add(key)
+    })
+    if (!variantConfig.colors.length && !variantConfig.sizes.length) configurationIssues.push('Phân loại: cần khai báo ít nhất một màu hoặc một size')
+    if (!variants.length) configurationIssues.push('Phân loại: cần có ít nhất một biến thể hợp lệ')
+    if (variants.length > MAX_PRODUCT_VARIANTS) configurationIssues.push(`Phân loại: tối đa ${MAX_PRODUCT_VARIANTS} biến thể`)
+    variants.forEach(variant => {
+      const sku = variant.sku.trim().toLocaleUpperCase('vi-VN')
+      if (!sku || duplicateSku.has(sku)) configurationIssues.push('SKU biến thể không được để trống hoặc trùng nhau')
+      duplicateSku.add(sku)
+      if (!Number.isSafeInteger(variant.stock) || variant.stock < 0 || variant.stock > MAX_VARIANT_STOCK) configurationIssues.push(`Tồn kho ${[variant.color, variant.size].filter(Boolean).join(' / ')} phải là số nguyên từ 0 đến ${MAX_VARIANT_STOCK}`)
+      if (variant.price !== null && variant.price !== undefined && (!Number.isSafeInteger(variant.price) || variant.price < 1)) configurationIssues.push(`Giá riêng ${[variant.color, variant.size].filter(Boolean).join(' / ')} phải là số nguyên lớn hơn 0`)
+    })
+    if (stockConfirmationRequired && confirmedVariantStockTotal !== variantStock) configurationIssues.push('Cần xác nhận tổng tồn kho biến thể trước khi lưu')
+  }
+
+  const comboConfigurationIssues = [
+    comboComponents.reduce((total, component) => total + component.quantity, 0) < 2 ? 'Combo cần có ít nhất 2 sản phẩm tính cả số lượng' : '',
+    comboComponents.some(component => !comboProducts[component.productId]) ? 'Đang tải hoặc thiếu thông tin sản phẩm thành phần' : '',
+    comboComponents.some(component => {
+      const source = comboProducts[component.productId]
+      return source?.hasVariants === true && !source.variants?.some(variant => variant.id === component.variantId)
+    }) ? 'Mỗi sản phẩm có phân loại cần chọn một biến thể' : '',
+    !Number.isSafeInteger(comboDiscountValue) || comboDiscountValue < 1 ? 'Mức giảm phải là số nguyên dương' : '',
+    discountType === 'PERCENT' && comboDiscountValue >= 100 ? 'Mức giảm phần trăm phải nhỏ hơn 100%' : '',
+    comboDiscountAmount <= 0 || comboDiscountAmount >= comboSubtotal || comboFinalPrice < 1 ? 'Mức giảm phải nhỏ hơn giá gốc của combo' : '',
+  ].filter(Boolean)
+
   const formIssues = [
     images.length > MAX_PRODUCT_IMAGE_COUNT ? `Ảnh sản phẩm: giảm từ ${images.length} xuống tối đa ${MAX_PRODUCT_IMAGE_COUNT} ảnh` : '',
     !fields.name.trim() ? 'Tên sản phẩm' : '',
     !fields.slug.trim() ? 'Slug' : '',
     !fields.categoryId ? 'Danh mục' : '',
-    !fields.price.trim() ? 'Giá gốc' : !Number.isSafeInteger(price) || price < 1 ? 'Giá gốc phải là số nguyên lớn hơn 0' : '',
-    fields.salePrice && (!Number.isSafeInteger(salePrice) || salePrice! < 1 || salePrice! >= price) ? 'Giá sale phải là số nguyên dương và thấp hơn giá gốc' : '',
-    fields.saleStartAt && fields.saleEndAt && new Date(fields.saleEndAt) < new Date(fields.saleStartAt) ? 'Thời gian kết thúc sale phải sau thời gian bắt đầu' : '',
-    !fields.stock.trim() || !Number.isSafeInteger(Number(fields.stock)) || Number(fields.stock) < 0 ? 'Tồn kho phải là số nguyên không âm' : '',
+    productType === 'SIMPLE' && !fields.price.trim() ? 'Giá gốc' : !Number.isSafeInteger(price) || price < 1 ? 'Giá gốc phải là số nguyên lớn hơn 0' : '',
+    productType === 'SIMPLE' && fields.salePrice && (!Number.isSafeInteger(salePrice) || salePrice! < 1 || salePrice! >= price) ? 'Giá sale phải là số nguyên dương và thấp hơn giá gốc' : '',
+    productType === 'SIMPLE' && fields.saleStartAt && fields.saleEndAt && new Date(fields.saleEndAt) < new Date(fields.saleStartAt) ? 'Thời gian kết thúc sale phải sau thời gian bắt đầu' : '',
+    productType === 'SIMPLE' && !hasVariants && (!fields.stock.trim() || !Number.isSafeInteger(Number(fields.stock)) || Number(fields.stock) < 0) ? 'Tồn kho phải là số nguyên không âm' : '',
     !fields.sortOrder.trim() || !Number.isSafeInteger(Number(fields.sortOrder)) || Number(fields.sortOrder) < 0 ? 'Thứ tự hiển thị phải là số nguyên không âm' : '',
+    ...(productType === 'COMBO' ? comboConfigurationIssues : configurationIssues),
   ].filter((issue): issue is string => Boolean(issue))
 
   const setField = <K extends keyof Fields>(key: K, value: Fields[K]) => setFields(current => ({ ...current, [key]: value }))
+
+  const applySizeGuideRows = (nextRows: ProductSizeGuide[]) => {
+    const synchronized = syncVariantSizesWithSizeGuide(nextRows, variantConfig, variants, fields.slug)
+    if (!synchronized.variants) {
+      setSizeGuideSyncError(`Tổ hợp vượt quá ${MAX_PRODUCT_VARIANTS} biến thể. Hãy giảm số màu hoặc size trước khi thêm size.`)
+      return false
+    }
+    setSizeGuide(nextRows)
+    setVariantConfig(synchronized.config)
+    setVariants(synchronized.variants)
+    setSizeGuideSyncError('')
+    setPendingSizeGuideRemoval(null)
+    return true
+  }
+
+  const requestSizeGuideChange = (nextRows: ProductSizeGuide[]) => {
+    const removed = sizeGuide.find(row => !nextRows.some(next => next.id === row.id))
+    if (removed) {
+      const affectedStock = calculateTotalStock(variants.filter(variant => variant.sizeId === removed.id))
+      if (affectedStock > 0) {
+        setPendingSizeGuideRemoval({ id: removed.id, name: removed.size, affectedStock })
+        return
+      }
+    }
+    applySizeGuideRows(nextRows)
+  }
+
+  const requestRemoveSizeGuideRow = (id: string) => {
+    requestSizeGuideChange(sizeGuide.filter(row => row.id !== id))
+  }
+
+  const toggleVariants = (enabled: boolean) => {
+    if (enabled) {
+      setLegacyStockAtEnable(Number(fields.stock) || 0)
+      setConfirmedVariantStockTotal(null)
+      setHasVariants(true)
+      return
+    }
+    if (hasVariants && variants.length) setPendingDisableVariants(true)
+    else setHasVariants(false)
+  }
+
+  const confirmDisableVariants = () => {
+    setFields(current => ({ ...current, stock: String(variantStock) }))
+    setHasVariants(false)
+    setPendingDisableVariants(false)
+    setConfirmedVariantStockTotal(null)
+  }
 
   function uploadImage(item: ProductImageItem, ownerId: string, onProgress: (percent: number) => void) {
     return new Promise<ProductImageItem>((resolve, reject) => {
@@ -253,28 +468,41 @@ export default function ProductForm({ product }: { product?: Product }) {
     if (salePrice !== null && (!Number.isSafeInteger(salePrice) || salePrice < 1 || salePrice >= price)) {
       setBusy(false); setError('Giá sale phải là số nguyên lớn hơn 0 và thấp hơn giá gốc.'); return
     }
-    const startAt = toISO(fields.saleStartAt)
-    const endAt = toISO(fields.saleEndAt)
+    const startAt = productType === 'COMBO' ? null : toISO(fields.saleStartAt)
+    const endAt = productType === 'COMBO' ? null : toISO(fields.saleEndAt)
     if (startAt && endAt && new Date(endAt) < new Date(startAt)) {
       setBusy(false); setError('Thời gian kết thúc sale phải sau thời gian bắt đầu.'); return
     }
-    const stock = Number(fields.stock), sortOrder = Number(fields.sortOrder)
-    if (!Number.isSafeInteger(stock) || stock < 0 || !Number.isSafeInteger(sortOrder) || sortOrder < 0) {
+    const stock = productType === 'COMBO' ? 0 : hasVariants ? variantStock : Number(fields.stock), sortOrder = Number(fields.sortOrder)
+    if (!Number.isSafeInteger(stock) || stock < 0 || stock > MAX_PRODUCT_VARIANTS * MAX_VARIANT_STOCK || !Number.isSafeInteger(sortOrder) || sortOrder < 0) {
       setBusy(false); setError('Kho và thứ tự hiển thị phải là số nguyên không âm.'); return
+    }
+    if (formIssues.length) {
+      setBusy(false); setError('Hãy xử lý các mục đang được đánh dấu trước khi lưu sản phẩm.'); return
     }
     const payload = {
       name: fields.name.trim(), slug: fields.slug.trim(), categoryId: fields.categoryId,
       shortDescription: fields.shortDescription, description: fields.description,
+      seoTitle: fields.seoTitle, seoDescription: fields.seoDescription,
       price, salePrice, saleStartAt: startAt, saleEndAt: endAt,
-      isNewArrival: fields.isNewArrival, arrivalAt: bangkokDayStart(fields.arrivalAt),
+      isNewArrival: fields.isNewArrival, showOnHomeBanner: fields.showOnHomeBanner, arrivalAt: bangkokDayStart(fields.arrivalAt),
       stock, isActive, sortOrder,
+      attributes,
+      sizeGuide,
+      hasVariants: productType === 'COMBO' ? false : hasVariants,
+      variantConfig: productType === 'COMBO' || !hasVariants ? { colors: [], sizes: [] } : variantConfig,
+      variants: productType === 'COMBO' || !hasVariants ? [] : variants,
+      type: productType,
+      components: productType === 'COMBO' ? comboComponents : [],
+      discount: productType === 'COMBO' ? { type: discountType, value: comboDiscountValue } : null,
     }
 
     let id = savedId
     try {
       if (!id) {
         if (!draftReady || !draftIdRef.current || !draftTokenRef.current) throw new Error(draftError || 'Đang cấp mã sản phẩm. Hãy thử lại sau.')
-        const response = await fetch('/api/admin/products', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id: draftIdRef.current, draftToken: draftTokenRef.current, ...payload, isActive: false, thumbnail: '', images: [] }) })
+      const draftPayload = { ...payload, stock: productType === 'COMBO' ? 0 : Number(fields.stock) || 0, hasVariants: false, variantConfig: { colors: [], sizes: [] }, variants: [], isActive: false, thumbnail: '', images: [] }
+        const response = await fetch('/api/admin/products', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id: draftIdRef.current, draftToken: draftTokenRef.current, ...draftPayload }) })
         const body = await readApiResponse<{ message?: string; product?: Product }>(response)
         if (!response.ok || !body.product) throw new Error(body.message ?? 'Không lưu được sản phẩm.')
         id = body.product.id
@@ -314,9 +542,18 @@ export default function ProductForm({ product }: { product?: Product }) {
       if (mainIndex > 0) presentationImages.unshift(presentationImages.splice(mainIndex, 1)[0])
       const orderedPresentationImages = presentationImages.map((image, sortOrder) => ({ ...image, sortOrder }))
       const nextImages = orderedPresentationImages.filter(image => !image.file).map((image, sortOrder) => ({ ...image, sortOrder }))
+      const availableImageUrls = new Set(nextImages.map(image => image.url))
+      const nextVariantConfig = hasVariants ? {
+        colors: variantConfig.colors.map(color => ({ ...color, ...(color.imageUrl && availableImageUrls.has(color.imageUrl) ? {} : { imageUrl: undefined }) })),
+        sizes: variantConfig.sizes,
+      } : { colors: [], sizes: [] }
+      const nextVariants = hasVariants ? variants.map(variant => ({
+        ...variant,
+        ...(variant.imageUrl && availableImageUrls.has(variant.imageUrl) ? {} : { imageUrl: undefined }),
+      })) : []
       const response = await fetch(`/api/admin/products/${id}`, {
         method: 'PATCH', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ ...payload, thumbnail: selected?.url ?? '', images: nextImages.map(persistedImage) }),
+        body: JSON.stringify({ ...payload, stock: hasVariants ? calculateTotalStock(nextVariants) : stock, variantConfig: nextVariantConfig, variants: nextVariants, thumbnail: selected?.url ?? '', images: nextImages.map(persistedImage) }),
       })
       const body = await readApiResponse<{ message?: string }>(response)
       if (!response.ok) throw new Error(body.message ?? 'Không lưu được sản phẩm.')
@@ -361,14 +598,28 @@ export default function ProductForm({ product }: { product?: Product }) {
     <form ref={formRef} onSubmit={event => void save(event)} className="space-y-5 pb-24">
       <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
         <h3 className="flex items-center gap-2 text-lg font-black"><Info size={19} className="text-pink-500" />Thông tin sản phẩm</h3>
+        {!product ? <div className="mt-5 grid gap-3 sm:grid-cols-2">
+          {(['SIMPLE', 'COMBO'] as const).map(type => <button key={type} type="button" onClick={() => setProductType(type)} aria-pressed={productType === type} className={`rounded-2xl border p-4 text-left transition ${productType === type ? 'border-pink-300 bg-pink-50 ring-1 ring-pink-200' : 'border-slate-200 hover:bg-slate-50'}`}><span className="block font-black">{type === 'COMBO' ? 'Combo sản phẩm' : 'Sản phẩm thường'}</span><span className="mt-1 block text-sm text-slate-500">{type === 'COMBO' ? 'Gộp nhiều sản phẩm, dùng chung tồn kho thành phần.' : 'Một sản phẩm hoặc sản phẩm có phân loại.'}</span></button>)}
+        </div> : <p className="mt-4 rounded-xl bg-slate-50 p-3 text-sm font-semibold text-slate-700">Loại: {productType === 'COMBO' ? 'Combo sản phẩm' : 'Sản phẩm thường'}</p>}
         <div className="mt-5 grid gap-4 sm:grid-cols-2">
           <Field label="Tên sản phẩm *"><input required maxLength={160} value={fields.name} onChange={event => { const name = event.target.value; setField('name', name); if (!slugEdited) setField('slug', slugify(name)) }} className="input" /></Field>
           <Field label="Slug *"><input required maxLength={180} value={fields.slug} onChange={event => { setSlugEdited(true); setField('slug', slugify(event.target.value)) }} className="input" /><span className="mt-1 block text-xs text-slate-400">Đường dẫn: /products/{fields.slug || 'ten-san-pham'}</span></Field>
           <Field label="Danh mục *"><select required value={fields.categoryId} onChange={event => setField('categoryId', event.target.value)} className="input"><option value="">Chọn danh mục</option>{categories.map(category => <option key={category.id} value={category.id}>{category.name}</option>)}</select>{categoryError && <span className="mt-1 block text-xs text-rose-600">{categoryError}</span>}{!categories.length && !categoryError && <Link href="/admin/product-categories" className="mt-1 inline-block text-xs font-semibold text-pink-600">Tạo danh mục trước</Link>}</Field>
           <Field label="Mô tả ngắn"><input maxLength={500} value={fields.shortDescription} onChange={event => setField('shortDescription', event.target.value)} className="input" /></Field>
           <div className="sm:col-span-2"><Field label="Mô tả chi tiết"><textarea maxLength={10000} rows={5} value={fields.description} onChange={event => setField('description', event.target.value)} className="input min-h-32 resize-y" /></Field></div>
+          <Field label="Tiêu đề SEO"><input maxLength={200} value={fields.seoTitle} onChange={event => setField('seoTitle', event.target.value)} className="input" placeholder={fields.name || 'Tiêu đề hiển thị trên Google'} /></Field>
+          <Field label="Mô tả SEO"><textarea maxLength={320} rows={2} value={fields.seoDescription} onChange={event => setField('seoDescription', event.target.value)} className="input resize-y" placeholder="Mô tả ngắn cho kết quả tìm kiếm" /></Field>
         </div>
       </section>
+
+      <ProductAttributesSection value={attributes} onChange={setAttributes} />
+      {productType === 'SIMPLE' && <ProductSizeGuideSection rows={sizeGuide} onChange={requestSizeGuideChange} onRequestRemove={requestRemoveSizeGuideRow} />}
+      {productType === 'SIMPLE' && sizeGuideSyncError && <p role="alert" className="rounded-xl bg-rose-50 p-3 text-sm font-semibold text-rose-700">{sizeGuideSyncError}</p>}
+      {pendingSizeGuideRemoval && <div role="alertdialog" aria-label="Xác nhận xóa size" className="rounded-2xl border border-rose-300 bg-rose-50 p-4 text-sm text-rose-900">
+        <p className="font-bold">Xóa size “{pendingSizeGuideRemoval.name || 'chưa đặt tên'}” khỏi bảng hướng dẫn?</p>
+        <p className="mt-1">Các biến thể của size này đang có tổng tồn kho {pendingSizeGuideRemoval.affectedStock}. Xóa size sẽ xóa các dòng biến thể liên quan khỏi biểu mẫu; thay đổi chỉ được lưu khi bạn lưu sản phẩm.</p>
+        <div className="mt-3 flex justify-end gap-2"><button type="button" onClick={() => setPendingSizeGuideRemoval(null)} className="rounded-lg border border-rose-300 bg-white px-3 py-2 font-bold">Giữ lại size</button><button type="button" onClick={() => applySizeGuideRows(sizeGuide.filter(row => row.id !== pendingSizeGuideRemoval.id))} className="rounded-lg bg-rose-700 px-3 py-2 font-bold text-white">Xóa size và biến thể</button></div>
+      </div>}
 
       <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
         <h3 className="flex items-center gap-2 text-lg font-black"><ImageIcon size={19} className="text-pink-500" />Hình ảnh</h3>
@@ -376,7 +627,26 @@ export default function ProductForm({ product }: { product?: Product }) {
         <div className="mt-4"><ProductImageEditor items={images} onChange={setImages} thumbnailId={thumbnailId} onThumbnailChange={setThumbnailId} onRetryUpload={() => formRef.current?.requestSubmit()} onUploadImage={uploadConfirmedImage} disabled={!draftReady} /></div>
       </section>
 
-      <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+      {productType === 'SIMPLE' && <ProductVariantsSection
+        hasVariants={hasVariants}
+        config={variantConfig}
+        variants={variants}
+        images={images.filter(image => !image.file && Boolean(image.url))}
+        productSlug={fields.slug}
+        originalStock={legacyStockAtEnable}
+        busy={busy}
+        stockConfirmationRequired={stockConfirmationRequired}
+        confirmedStockTotal={confirmedVariantStockTotal}
+        pendingDisable={pendingDisableVariants}
+        onToggle={toggleVariants}
+        onConfigChange={setVariantConfig}
+        onVariantsChange={setVariants}
+        onConfirmStock={setConfirmedVariantStockTotal}
+        onCancelDisable={() => setPendingDisableVariants(false)}
+        onConfirmDisable={confirmDisableVariants}
+      />}
+
+      {productType === 'SIMPLE' ? <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
         <h3 className="flex items-center gap-2 text-lg font-black"><Tags size={19} className="text-pink-500" />Giá bán</h3>
         <div className="mt-5 grid gap-4 sm:grid-cols-2">
           <Field label="Giá gốc (VND) *"><input required type="number" min="1" step="1" value={fields.price} onChange={event => setField('price', event.target.value)} className="input" /></Field>
@@ -387,19 +657,55 @@ export default function ProductForm({ product }: { product?: Product }) {
         {fields.salePrice && <p className={`mt-4 rounded-xl p-3 text-sm font-semibold ${salePreview === null ? 'bg-rose-50 text-rose-700' : 'bg-pink-50 text-pink-700'}`}>
           {salePreview === null ? 'Giá sale phải thấp hơn giá gốc.' : <>Giá gốc: {formatPrice(price)} · Giá sale: {formatPrice(salePrice!)} · Giảm {salePreview}%</>}
         </p>}
-      </section>
+      </section> : <ComboConfigurationSection
+        components={comboComponents}
+        products={comboProducts}
+        candidates={componentCandidates}
+        loading={componentLoading}
+        search={componentSearch}
+        pendingProduct={pendingComponent}
+        pendingVariantId={pendingVariantId}
+        discountType={discountType}
+        discountValue={discountValue}
+        subtotal={comboSubtotal}
+        discountAmount={comboDiscountAmount}
+        finalPrice={comboFinalPrice}
+        available={comboAvailable}
+        productName={fields.name}
+        previewImage={images.find(image => imageKey(image) === thumbnailId)?.previewUrl ?? images.find(image => imageKey(image) === thumbnailId)?.url ?? images[0]?.previewUrl ?? images[0]?.url ?? ''}
+        onOpenPicker={() => { setComboPickerOpen(true); setComponentSearch(''); setPendingComponent(null) }}
+        onSearch={setComponentSearch}
+        onSelectCandidate={candidate => { setPendingComponent(candidate); setPendingVariantId(''); setComboProducts(current => ({ ...current, [candidate.id]: candidate })) }}
+        onSelectVariant={setPendingVariantId}
+        onAdd={() => {
+          if (!pendingComponent || pendingComponent.hasVariants && !pendingVariantId || comboComponents.length >= 20) return
+          setComboComponents(current => [...current, { productId: pendingComponent.id, variantId: pendingComponent.hasVariants ? pendingVariantId : null, quantity: 1 }])
+          setPendingComponent(null)
+          setPendingVariantId('')
+        }}
+        onQuantityChange={(component, quantity) => setComboComponents(current => current.map(item => item.productId === component.productId ? { ...item, quantity } : item))}
+        onRemove={component => setComboComponents(current => current.filter(item => item.productId !== component.productId))}
+        onDiscountTypeChange={setDiscountType}
+        onDiscountValueChange={setDiscountValue}
+        onClosePicker={() => setComboPickerOpen(false)}
+        pickerOpen={comboPickerOpen}
+      />}
 
       <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
         <h3 className="flex items-center gap-2 text-lg font-black"><PackageCheck size={19} className="text-pink-500" />Quản lý hiển thị</h3>
         <div className="mt-5 grid gap-4 sm:grid-cols-2">
           <Field label="Ngày hàng về"><input type="date" value={fields.arrivalAt} onChange={event => setField('arrivalAt', event.target.value)} disabled={!fields.isNewArrival} className="input disabled:bg-slate-50" /></Field>
-          <Field label="Tồn kho *"><input required type="number" min="0" step="1" value={fields.stock} onChange={event => setField('stock', event.target.value)} className="input" /></Field>
+          {productType === 'COMBO' ? <Field label="Số combo có thể bán"><input type="number" value={comboAvailable} readOnly className="input bg-slate-50" /><span className="mt-1 block text-xs text-slate-500">Được tính từ tồn kho các thành phần; combo không có tồn kho riêng.</span></Field> : hasVariants ? <Field label="Tồn kho tổng"><input type="number" value={variantStock} readOnly className="input bg-slate-50" /><span className="mt-1 block text-xs text-slate-500">Tồn kho được tính từ các phân loại sản phẩm.</span></Field> : <Field label="Tồn kho *"><input required type="number" min="0" step="1" value={fields.stock} onChange={event => setField('stock', event.target.value)} className="input" /></Field>}
           <Field label="Thứ tự hiển thị *"><input required type="number" min="0" step="1" value={fields.sortOrder} onChange={event => setField('sortOrder', event.target.value)} className="input" /></Field>
           <div className="flex flex-wrap gap-4 pt-7">
             <Check label="Sản phẩm mới về" checked={fields.isNewArrival} onChange={value => setField('isNewArrival', value)} />
+            <Check label="Hiển thị trên banner trang chủ" checked={fields.showOnHomeBanner} onChange={value => setField('showOnHomeBanner', value)} />
           </div>
+          {productType === 'COMBO' && <fieldset className="sm:col-span-2"><legend className="mb-2 text-sm font-bold text-slate-700">Trạng thái combo</legend><div className="flex flex-wrap gap-2"><button type="button" aria-pressed={!isActive} onClick={() => setIsActive(false)} className={`rounded-xl border px-4 py-2 text-sm font-bold ${!isActive ? 'border-amber-300 bg-amber-50 text-amber-800' : 'border-slate-200 text-slate-600'}`}>Lưu nháp</button><button type="button" aria-pressed={isActive} onClick={() => setIsActive(true)} className={`rounded-xl border px-4 py-2 text-sm font-bold ${isActive ? 'border-emerald-300 bg-emerald-50 text-emerald-800' : 'border-slate-200 text-slate-600'}`}>Kích hoạt combo</button></div></fieldset>}
         </div>
+        <p className="mt-3 text-xs leading-5 text-slate-500">Banner chỉ hiển thị một sản phẩm; nếu chọn nhiều, sản phẩm có thứ tự hiển thị thấp hơn được ưu tiên. Tối đa 3 ảnh của sản phẩm sẽ xuất hiện.</p>
       </section>
+      <ShortLinkManager targetType="product" targetId={savedId && !createdDuringFormRef.current ? savedId : undefined} targetUrl={`/products/${fields.slug}`} title={fields.name} />
       <div className="space-y-3 pb-8">
         {categoriesLoading && <p role="status" className="rounded-xl bg-blue-50 p-3 text-sm font-semibold text-blue-800">Đang tải danh mục. Nút lưu sẽ dùng được sau khi danh mục tải xong.</p>}
         {!product && !draftReady && !draftError && <p role="status" className="rounded-xl bg-blue-50 p-3 text-sm font-semibold text-blue-800">Đang cấp mã sản phẩm trước khi tải ảnh…</p>}
@@ -420,6 +726,71 @@ export default function ProductForm({ product }: { product?: Product }) {
       </div>
     </form>
   </div>
+}
+
+type ComboConfigurationProps = {
+  components: ProductComboComponent[]
+  products: Record<string, Product>
+  candidates: Product[]
+  loading: boolean
+  search: string
+  pendingProduct: Product | null
+  pendingVariantId: string
+  discountType: ProductDiscount['type']
+  discountValue: string
+  subtotal: number
+  discountAmount: number
+  finalPrice: number
+  available: number
+  productName: string
+  previewImage: string
+  pickerOpen: boolean
+  onOpenPicker: () => void
+  onSearch: (value: string) => void
+  onSelectCandidate: (product: Product) => void
+  onSelectVariant: (variantId: string) => void
+  onAdd: () => void
+  onQuantityChange: (component: ProductComboComponent, quantity: number) => void
+  onRemove: (component: ProductComboComponent) => void
+  onDiscountTypeChange: (type: ProductDiscount['type']) => void
+  onDiscountValueChange: (value: string) => void
+  onClosePicker: () => void
+}
+
+function ComboConfigurationSection(props: ComboConfigurationProps) {
+  const money = (value: number) => `${new Intl.NumberFormat('vi-VN').format(value)}đ`
+  return <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+    <div className="flex flex-wrap items-start justify-between gap-3"><div><h3 className="text-lg font-black">Thành phần combo</h3><p className="mt-1 text-sm text-slate-500">Chọn sản phẩm thường và biến thể cần đóng gói trong combo.</p></div><button type="button" onClick={props.onOpenPicker} disabled={props.components.length >= 20} className="inline-flex items-center gap-2 rounded-xl bg-pink-500 px-4 py-2.5 text-sm font-bold text-white hover:bg-pink-600 disabled:opacity-50"><Plus size={16} />Chọn sản phẩm</button></div>
+    {!props.components.length ? <p className="mt-4 rounded-xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">Chưa chọn sản phẩm thành phần.</p> : <div className="mt-4 space-y-2">
+      {props.components.map(component => {
+        const source = props.products[component.productId]
+        const variant = source?.hasVariants ? source.variants?.find(item => item.id === component.variantId) : null
+        const unitPrice = source ? variant?.price ?? getProductEffectivePrice(source, new Date()) : 0
+        const stock = source ? source.hasVariants ? variant?.stock ?? 0 : source.stock : 0
+        return <article key={component.productId} className="flex flex-col gap-3 rounded-2xl border border-slate-200 p-3 sm:flex-row sm:items-center">
+          <div className="h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-slate-100">{source?.thumbnail && <ProductImageView src={source.thumbnail} alt="" sizes="64px" variant="thumbnail" className="object-cover" />}</div>
+          <div className="min-w-0 flex-1"><p className="truncate font-bold text-slate-800">{source?.name ?? 'Đang tải sản phẩm…'}</p><p className="mt-0.5 text-xs text-slate-500">{variant ? [variant.color, variant.size, variant.sku ? `SKU ${variant.sku}` : null].filter(Boolean).join(' · ') : source?.hasVariants ? 'Chưa chọn biến thể' : 'Không có biến thể'} · Kho {stock}</p><p className="mt-1 text-sm font-bold text-pink-700">{money(unitPrice)} / sản phẩm</p></div>
+          <label className="flex h-10 items-center gap-2 rounded-lg border px-2 text-xs font-bold text-slate-600">SL<input type="number" min={1} max={99} value={component.quantity} onChange={event => props.onQuantityChange(component, Math.max(1, Math.min(99, Number(event.target.value) || 1)))} className="w-14 border-0 p-0 text-center text-sm font-bold outline-none" /></label>
+          <button type="button" onClick={() => props.onRemove(component)} aria-label={`Bỏ ${source?.name ?? 'sản phẩm'} khỏi combo`} className="self-end rounded-lg p-2 text-slate-500 hover:bg-rose-50 hover:text-rose-600 sm:self-auto"><X size={17} /></button>
+        </article>
+      })}
+    </div>}
+
+    <div className="mt-5 grid gap-4 rounded-2xl bg-slate-50 p-4 sm:grid-cols-2">
+      <label className="block"><span className="mb-1.5 block text-sm font-bold text-slate-700">Kiểu giảm giá</span><select value={props.discountType} onChange={event => props.onDiscountTypeChange(event.target.value as ProductDiscount['type'])} className="input"><option value="PERCENT">Phần trăm (%)</option><option value="FIXED_AMOUNT">Số tiền (VNĐ)</option></select></label>
+      <label className="block"><span className="mb-1.5 block text-sm font-bold text-slate-700">Mức giảm</span><input type="number" min={1} max={props.discountType === 'PERCENT' ? 99 : 1000000000} step={1} value={props.discountValue} onChange={event => props.onDiscountValueChange(event.target.value)} className="input" /></label>
+      <div className="space-y-2 text-sm sm:col-span-2"><div className="flex justify-between gap-3"><span className="text-slate-600">Tổng giá gốc</span><strong>{money(props.subtotal)}</strong></div><div className="flex justify-between gap-3"><span className="text-slate-600">Tiết kiệm</span><strong className="text-emerald-700">−{money(props.discountAmount)}</strong></div><div className="flex justify-between gap-3 border-t border-slate-200 pt-2 text-base"><span className="font-bold">Giá combo</span><strong className="text-pink-700">{money(props.finalPrice)}</strong></div><p className="text-xs text-slate-500">Giá được tính lại từ giá và biến thể hiện tại khi lưu và khi đặt hàng.</p></div>
+    </div>
+
+    <div className="mt-5"><h4 className="text-sm font-black text-slate-700">Xem trước card sản phẩm</h4><article className="mt-2 flex max-w-md gap-3 overflow-hidden rounded-2xl border border-slate-200 bg-white p-3 shadow-sm"><div className="h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-[#fff8f5]">{props.previewImage && <ProductImageView src={props.previewImage} alt="" sizes="80px" variant="thumbnail" className="object-cover" />}</div><div className="min-w-0 flex-1"><span className="inline-flex rounded-full bg-pink-50 px-2 py-0.5 text-[11px] font-black text-pink-700">COMBO</span><p className="mt-1 truncate text-sm font-bold">{props.productName || 'Tên combo'}</p><div className="mt-1 flex flex-wrap items-baseline gap-x-2"><span className="text-xs text-slate-400 line-through">{money(props.subtotal)}</span><strong className="text-sm text-pink-700">{money(props.finalPrice)}</strong></div><p className="mt-0.5 text-xs text-slate-500">{props.available > 0 ? `Còn ${props.available} combo` : 'Hết hàng'}</p></div></article></div>
+
+    {props.pickerOpen && <div className="fixed inset-0 z-[120] grid place-items-center bg-slate-950/55 p-3 sm:p-6" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) props.onClosePicker() }}><section role="dialog" aria-modal="true" aria-labelledby="combo-component-picker-title" className="max-h-[90dvh] w-full max-w-2xl overflow-y-auto rounded-3xl bg-white p-5 shadow-2xl sm:p-7">
+      <header className="flex items-center justify-between gap-3"><div><p className="text-xs font-black uppercase tracking-wide text-pink-500">Combo</p><h4 id="combo-component-picker-title" className="text-xl font-black">Chọn sản phẩm thành phần</h4></div><button type="button" onClick={props.onClosePicker} aria-label="Đóng" className="rounded-lg p-2 text-slate-500 hover:bg-slate-100"><X size={20} /></button></header>
+      <label className="relative mt-4 block"><Search size={17} className="absolute left-3 top-3 text-slate-400" /><input value={props.search} onChange={event => props.onSearch(event.target.value)} className="input pl-9" placeholder="Tìm tên sản phẩm" /></label>
+      {props.loading ? <p className="py-8 text-center text-sm text-slate-500">Đang tìm sản phẩm…</p> : <div className="mt-3 max-h-72 divide-y overflow-y-auto rounded-xl border border-slate-100">{props.candidates.map(candidate => <div key={candidate.id} className="flex items-center gap-3 p-3"><div className="h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-slate-100">{candidate.thumbnail && <ProductImageView src={candidate.thumbnail} alt="" sizes="48px" variant="thumbnail" className="object-cover" />}</div><div className="min-w-0 flex-1"><p className="truncate text-sm font-bold">{candidate.name}</p><p className="text-xs text-slate-500">{money(getProductEffectivePrice(candidate, new Date()))} · Kho {candidate.stock}</p></div><button type="button" onClick={() => props.onSelectCandidate(candidate)} className="rounded-lg border border-pink-200 px-3 py-2 text-xs font-bold text-pink-700 hover:bg-pink-50">Chọn</button></div>)}{!props.candidates.length && <p className="p-6 text-center text-sm text-slate-500">Không có sản phẩm thường phù hợp.</p>}</div>}
+      {props.pendingProduct && <div className="mt-4 rounded-2xl border border-pink-200 bg-pink-50 p-4"><p className="font-bold">{props.pendingProduct.name}</p>{props.pendingProduct.hasVariants && <label className="mt-3 block text-sm font-bold">Biến thể<select value={props.pendingVariantId} onChange={event => props.onSelectVariant(event.target.value)} className="input mt-1.5"><option value="">Chọn biến thể</option>{(props.pendingProduct.variants ?? []).map(variant => <option key={variant.id} value={variant.id}>{[variant.color, variant.size, variant.sku].filter(Boolean).join(' · ')} · Kho {variant.stock} · {money(variant.price ?? getProductEffectivePrice(props.pendingProduct!, new Date()))}</option>)}</select></label>}<div className="mt-3 flex justify-end"><button type="button" disabled={props.pendingProduct.hasVariants && !props.pendingVariantId} onClick={props.onAdd} className="rounded-xl bg-pink-500 px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50">Thêm vào combo</button></div></div>}
+    </section></div>}
+  </section>
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {

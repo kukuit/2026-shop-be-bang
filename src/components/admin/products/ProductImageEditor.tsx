@@ -7,6 +7,7 @@ import { useEffect, useRef, useState, type DragEvent } from 'react'
 import type { ProductImage } from '@/lib/products/types'
 import { MAX_PRODUCT_IMAGE_COUNT } from '@/lib/products/image-validation'
 import { createCroppedProductWebp, formatImageSize, PRODUCT_IMAGE_OUTPUT_SIZE, validateProductCropSource } from './product-image-crop'
+import ProductImageView from '@/components/products/ProductImageView'
 
 const itemKey = (item: ProductImageItem) => item.localId ?? item.id
 
@@ -344,8 +345,7 @@ export default function ProductImageEditor({
           className={`overflow-hidden rounded-xl border bg-white ${thumbnailId === key ? 'border-pink-400 ring-2 ring-pink-100' : 'border-slate-200'} ${draggingKey === key ? 'opacity-50' : ''}`}
         >
           <div className="relative aspect-[4/3] bg-[#fff8f5]">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={item.previewUrl ?? item.url} alt={item.alt ?? ''} className="h-full w-full object-cover" />
+            <ProductImageView src={item.previewUrl ?? item.url} publicId={item.publicId} alt={item.alt ?? ''} sizes="(min-width: 1024px) 220px, (min-width: 640px) 30vw, 45vw" variant="admin" className="object-cover" />
             {thumbnailId === key && <span className="absolute left-2 top-2 rounded-full bg-pink-600 px-2 py-1 text-xs font-bold text-white">Ảnh chính</span>}
           </div>
           <div className="space-y-2 p-2">
@@ -421,11 +421,8 @@ export default function ProductImageEditor({
             </div>
             <p className="mt-3 text-center text-xs text-slate-500">Kéo ảnh để căn chỉnh · cuộn hoặc dùng hai ngón tay để thu phóng</p>
           </> : <>
-            <div className="mx-auto aspect-square w-full max-w-[480px] overflow-hidden rounded-xl bg-slate-50">
-              {processedPreviewUrl && <>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={processedPreviewUrl} alt="Ảnh sản phẩm đã crop và nén WebP" className="h-full w-full object-contain" />
-              </>}
+            <div className="relative mx-auto aspect-square w-full max-w-[480px] overflow-hidden rounded-xl bg-slate-50">
+              {processedPreviewUrl && <ProductImageView src={processedPreviewUrl} alt="Ảnh sản phẩm đã crop và nén WebP" sizes="480px" variant="detail" className="object-contain" />}
             </div>
             <div className="mx-auto mt-4 grid w-full max-w-[480px] grid-cols-1 gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm sm:grid-cols-3">
               <p className="min-w-0 break-all"><span className="block text-xs text-slate-500">Ảnh gốc</span><strong>{currentOriginal.name} · {formatImageSize(currentOriginal.size)}</strong></p>

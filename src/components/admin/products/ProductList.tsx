@@ -2,11 +2,13 @@
 
 import Link from 'next/link'
 import { useCallback, useEffect, useState, type MouseEvent } from 'react'
-import { ChevronLeft, ChevronRight, ExternalLink, Eye, EyeOff, MoreHorizontal, Package, Pencil, Plus, Search, Trash2, X } from 'lucide-react'
+import { ChevronLeft, ChevronRight, ExternalLink, Eye, EyeOff, Layers, Link2, MoreHorizontal, Package, Pencil, Plus, Search, Trash2, X } from 'lucide-react'
 import type { Product } from '@/lib/products/types'
 import type { ProductCategory } from '@/lib/product-categories/types'
 import ProductImageView from '@/components/products/ProductImageView'
 import { getProductEffectivePrice, isProductOnSale } from '@/lib/products/pricing'
+import ShortLinkManager from '@/components/admin/short-links/ShortLinkManager'
+import type { ShortLink } from '@/lib/short-links/types'
 
 type AdminProduct = Product & { categoryName: string }
 type Filters = { search: string; categoryId: string; status: string; group: string; sort: string }
@@ -29,6 +31,9 @@ export default function ProductList() {
   const [previewProduct, setPreviewProduct] = useState<AdminProduct | null>(null)
   const [previewImageUrl, setPreviewImageUrl] = useState('')
   const [actionMenu, setActionMenu] = useState<{ productId: string; top: number; left: number } | null>(null)
+  const [shortLinkProduct, setShortLinkProduct] = useState<AdminProduct | null>(null)
+  const [shortLinkByProduct, setShortLinkByProduct] = useState<Record<string, ShortLink | null>>({})
+  const [checkingShortLink, setCheckingShortLink] = useState('')
   const now = new Date()
 
   useEffect(() => {
@@ -117,6 +122,22 @@ export default function ProductList() {
     setPreviewImageUrl(product.thumbnail || product.images[0]?.url || '')
   }
 
+  const loadProductShortLink = async (productId: string) => {
+    if (Object.prototype.hasOwnProperty.call(shortLinkByProduct, productId)) return
+    setCheckingShortLink(productId)
+    try {
+      const params = new URLSearchParams({ targetType: 'product', targetId: productId, limit: '1' })
+      const response = await fetch(`/api/admin/short-links?${params}`, { cache: 'no-store' })
+      const body = await response.json()
+      if (!response.ok) throw new Error(body.message ?? 'Không thể kiểm tra Short Link.')
+      setShortLinkByProduct(current => ({ ...current, [productId]: body.links?.[0] ?? null }))
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Không thể kiểm tra Short Link.')
+    } finally {
+      setCheckingShortLink(current => current === productId ? '' : current)
+    }
+  }
+
   const toggleActionMenu = (event: MouseEvent<HTMLButtonElement>, productId: string) => {
     if (actionMenu?.productId === productId) {
       setActionMenu(null)
@@ -124,12 +145,31 @@ export default function ProductList() {
     }
     const rect = event.currentTarget.getBoundingClientRect()
     const menuWidth = 190
-    const menuHeight = 104
+    const menuHeight = 160
     const top = rect.bottom + menuHeight + 8 > window.innerHeight
       ? Math.max(8, rect.top - menuHeight - 8)
       : rect.bottom + 8
     const left = Math.min(Math.max(8, rect.right - menuWidth), window.innerWidth - menuWidth - 8)
     setActionMenu({ productId, top, left })
+    void loadProductShortLink(productId)
+  }
+
+  const openProductShortLinks = (product: AdminProduct) => {
+    setActionMenu(null)
+    setShortLinkProduct(product)
+  }
+
+  const copyProductShortLink = async (product: AdminProduct) => {
+    const link = shortLinkByProduct[product.id]
+    if (!link) return openProductShortLinks(product)
+    try {
+      await navigator.clipboard.writeText(`${window.location.origin}/${link.code}`)
+      setNotice(`Đã sao chép Short Link /${link.code}.`)
+      setError('')
+    } catch {
+      setError('Không thể sao chép Short Link. Hãy kiểm tra quyền clipboard của trình duyệt.')
+    }
+    setActionMenu(null)
   }
 
   const renderActions = (product: AdminProduct, compact = false) => <div className={`flex items-center ${compact ? 'gap-1' : 'gap-2'}`}>
@@ -152,7 +192,7 @@ export default function ProductList() {
   return <div className="mx-auto max-w-7xl">
     <header className="my-7 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
       <div><p className="text-xs font-black uppercase tracking-[.18em] text-pink-500">Quản trị hệ thống</p><h2 className="mt-1 text-3xl font-black">Quản lý sản phẩm</h2><p className="mt-1 text-sm text-slate-500">Quản lý quần áo, giá bán và sản phẩm hiển thị trên website.</p></div>
-      <Link href="/admin/products/new" className="flex items-center justify-center gap-2 rounded-xl bg-pink-500 px-5 py-3 text-sm font-bold text-white shadow-sm hover:bg-pink-600"><Plus size={18} />Thêm sản phẩm</Link>
+      <div className="flex flex-wrap gap-2"><Link href="/admin/products/new?type=COMBO" className="flex items-center justify-center gap-2 rounded-xl border border-pink-200 bg-white px-4 py-3 text-sm font-bold text-pink-700 shadow-sm hover:bg-pink-50"><Layers size={18} />Tạo combo</Link><Link href="/admin/products/new" className="flex items-center justify-center gap-2 rounded-xl bg-pink-500 px-5 py-3 text-sm font-bold text-white shadow-sm hover:bg-pink-600"><Plus size={18} />Thêm sản phẩm</Link></div>
     </header>
     {notice && <p role="status" className="mb-4 rounded-xl bg-emerald-50 p-3 text-sm font-semibold text-emerald-700">{notice}</p>}
     {error && <p role="alert" className="mb-4 rounded-xl bg-rose-50 p-3 text-sm font-semibold text-rose-700">{error}</p>}
@@ -199,6 +239,10 @@ export default function ProductList() {
     {actionMenu && actionMenuProduct && <>
       <button type="button" aria-label="Đóng menu thao tác" className="fixed inset-0 z-[70] cursor-default bg-transparent" onClick={() => setActionMenu(null)} />
       <div role="menu" className="fixed z-[71] min-w-[190px] rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl" style={{ top: actionMenu.top, left: actionMenu.left }}>
+        {checkingShortLink === actionMenuProduct.id && <p className="px-3 py-2 text-xs text-slate-500">Đang kiểm tra Short Link…</p>}
+        {checkingShortLink !== actionMenuProduct.id && shortLinkByProduct[actionMenuProduct.id] && <button type="button" role="menuitem" onClick={() => void copyProductShortLink(actionMenuProduct)} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-semibold text-slate-700 hover:bg-slate-50"><Link2 size={16} className="text-pink-600" />Copy Short Link</button>}
+        {checkingShortLink !== actionMenuProduct.id && !shortLinkByProduct[actionMenuProduct.id] && <button type="button" role="menuitem" onClick={() => openProductShortLinks(actionMenuProduct)} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-semibold text-slate-700 hover:bg-slate-50"><Link2 size={16} className="text-pink-600" />Tạo Short Link</button>}
+        {checkingShortLink !== actionMenuProduct.id && shortLinkByProduct[actionMenuProduct.id] && <button type="button" role="menuitem" onClick={() => openProductShortLinks(actionMenuProduct)} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-semibold text-slate-700 hover:bg-slate-50"><Link2 size={16} className="text-pink-600" />Quản lý Short Links</button>}
         <button type="button" role="menuitem" disabled={actionId === actionMenuProduct.id} onClick={() => { setActionMenu(null); void mutate(actionMenuProduct, 'toggle') }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50">
           {actionMenuProduct.isActive ? <EyeOff size={16} className="text-amber-600" /> : <Eye size={16} className="text-amber-600" />}
           {actionMenuProduct.isActive ? 'Ngưng bán' : 'Mở bán'}
@@ -206,6 +250,7 @@ export default function ProductList() {
         <button type="button" role="menuitem" disabled={actionId === actionMenuProduct.id} onClick={() => { setActionMenu(null); void mutate(actionMenuProduct, 'delete') }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-semibold text-rose-600 hover:bg-rose-50 disabled:opacity-50"><Trash2 size={16} />Xóa sản phẩm</button>
       </div>
     </>}
+    {shortLinkProduct && <ShortLinkManager targetType="product" targetId={shortLinkProduct.id} targetUrl={`/products/${shortLinkProduct.slug}`} title={shortLinkProduct.name} presentation="dialog" onClose={() => setShortLinkProduct(null)} />}
     {previewProduct && <div className="fixed inset-0 z-[100] grid place-items-center bg-slate-950/55 p-3 sm:p-6" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) setPreviewProduct(null) }}>
       <section role="dialog" aria-modal="true" aria-labelledby="product-preview-title" className="max-h-[92dvh] w-full max-w-5xl overflow-y-auto rounded-3xl bg-white shadow-2xl" onMouseDown={event => event.stopPropagation()}>
         <header className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-100 bg-white/95 px-5 py-4 backdrop-blur sm:px-7">

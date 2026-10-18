@@ -37,7 +37,12 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     if (error instanceof Error && error.message === 'CATEGORY_INACTIVE') return json({ message: 'Hãy chọn danh mục đang hiển thị.' }, 400)
     if (error instanceof Error && error.message === 'PRODUCT_IMAGE_NOT_OWNED') return json({ message: 'Ảnh Cloudinary chưa được tải lên cho sản phẩm này.' }, 400)
     if (error instanceof Error && error.message === 'PRODUCT_THUMBNAIL_NOT_IN_IMAGES') return json({ message: 'Ảnh chính phải được chọn từ danh sách ảnh sản phẩm.' }, 400)
+    if (error instanceof Error && error.message === 'PRODUCT_VARIANT_IMAGE_NOT_FOUND') return json({ message: 'Ảnh biến thể phải chọn từ danh sách ảnh sản phẩm hiện có.' }, 400)
+    if (error instanceof Error && error.message === 'PRODUCT_VARIANT_HAS_ACTIVE_ORDERS') return json({ message: 'Không thể xóa phân loại đang được đơn hàng chưa hoàn tất sử dụng.' }, 409)
+    if (error instanceof Error && error.message === 'PRODUCT_DOCUMENT_TOO_LARGE') return json({ message: 'Dữ liệu sản phẩm vượt giới hạn lưu trữ. Hãy giảm số lượng hoặc độ dài dữ liệu biến thể.' }, 413)
     if (error instanceof Error && error.message === 'CLOUDINARY_NOT_CONFIGURED') return json({ message: 'Cloudinary chưa được cấu hình.' }, 503)
+    if (error instanceof Error && ['COMBO_COMPONENT_UNAVAILABLE', 'COMBO_COMPONENT_VARIANT_INVALID', 'COMBO_INVALID_COMPONENTS', 'COMBO_INVALID_PRICE', 'COMBO_INVALID_DISCOUNT'].includes(error.message)) return json({ message: 'Combo chưa hợp lệ. Kiểm tra sản phẩm thành phần, biến thể và mức giảm.' }, 400)
+    if (error instanceof Error && error.message === 'PRODUCT_TYPE_IMMUTABLE') return json({ message: 'Không thể đổi loại sản phẩm sau khi đã tạo. Hãy tạo sản phẩm combo mới.' }, 409)
     console.error('[AdminProducts] Update failed', error)
     return json({ message: 'Không thể lưu sản phẩm.' }, 500)
   }
