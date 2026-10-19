@@ -4,7 +4,7 @@ import { FieldPath, FieldValue, Timestamp } from 'firebase-admin/firestore'
 import { getAdminDb } from '@/lib/firebaseAdmin'
 import { getCloudinary, isCloudinaryImageUrl, isProductImagePublicIdFor } from '@/lib/cloudinary'
 import { productCategoryCollection, listAllCategories, listPublicCategories } from '@/lib/product-categories/service'
-import type { Product, ProductComboComponent, ProductDiscount, ProductImage, ProductInput, PublicProduct, ResolvedProductComboComponent } from './types'
+import type { Product, ProductAttributes, ProductComboComponent, ProductDiscount, ProductImage, ProductInput, PublicProduct, ResolvedProductComboComponent } from './types'
 import { createProductSchema, updateProductSchema } from './validation'
 import { normalizeSearch } from './slug'
 import { getProductEffectivePrice, isProductOnSale } from './pricing'
@@ -88,12 +88,42 @@ export function mapProduct(id: string, data: FirebaseFirestore.DocumentData): Pr
 
 function toPublicProduct(product: Product): PublicProduct {
   const { stock, sortOrder: _sortOrder, deletedAt: _deletedAt, isActive: _isActive, createdAt: _createdAt, updatedAt: _updatedAt, ...publicProduct } = product
+  const ownImages = product.images.map(({ storagePath: _storagePath, ...image }) => image)
+  const seenComboImageUrls = new Set<string>()
+  const comboImages = product.type === 'COMBO' && !product.thumbnail && !ownImages.length
+    ? (product.resolvedComponents ?? []).flatMap((component, index) => {
+      if (!component.imageUrl || seenComboImageUrls.has(component.imageUrl)) return []
+      seenComboImageUrls.add(component.imageUrl)
+      return [{
+        id: `combo-${product.id}-${index}`,
+        url: component.imageUrl,
+        alt: component.productName,
+        sortOrder: index,
+      }]
+    })
+    : []
   return {
     ...publicProduct,
-    images: product.images.map(({ storagePath: _storagePath, ...image }) => image),
+    thumbnail: product.thumbnail || ownImages[0]?.url || comboImages[0]?.url || '',
+    images: ownImages.length ? ownImages : comboImages,
     inStock: stock > 0,
     ...(product.type === 'COMBO' ? { availableCombos: product.stock } : {}),
+    ...(comboImages.length ? { comboImageFallback: true } : {}),
   }
+}
+
+function mergeComboAttributes(products: Iterable<Product>): ProductAttributes {
+  const values: Partial<Record<keyof ProductAttributes, string[]>> = {}
+  for (const product of Array.from(products)) {
+    for (const [key, rawValue] of Object.entries(product.attributes ?? {})) {
+      if (typeof rawValue !== 'string' || !rawValue.trim()) continue
+      const attribute = key as keyof ProductAttributes
+      const value = rawValue.trim()
+      const current = values[attribute] ?? []
+      if (!current.includes(value)) values[attribute] = [...current, value]
+    }
+  }
+  return Object.fromEntries(Object.entries(values).map(([key, parts]) => [key, (parts ?? []).join(key === 'careInstructions' ? '\n' : ' · ')])) as ProductAttributes
 }
 
 async function hydrateComboProducts(products: Product[], visibleCategoryIds?: ReadonlySet<string>) {
@@ -107,29 +137,37 @@ async function hydrateComboProducts(products: Product[], visibleCategoryIds?: Re
     const components = product.components ?? []
     const resolvedComponents: ResolvedProductComboComponent[] = []
     const stockByComponent = new Map<string, number>()
+    const attributeProducts = new Map<string, Product>()
     let subtotal = 0
     let valid = components.reduce((total, component) => total + component.quantity, 0) >= 2 && Boolean(product.discount)
     let visible = true
-    for (const component of components) {
+    for (let componentIndex = 0; componentIndex < components.length; componentIndex += 1) {
+      const component = components[componentIndex]
       const source = componentsById.get(component.productId)
       if (!source || source.type === 'COMBO' || source.deletedAt) { valid = false; visible = false; continue }
+      attributeProducts.set(source.id, source)
       const componentVisible = source.isActive && (!visibleCategoryIds || visibleCategoryIds.has(source.categoryId))
       if (!componentVisible) visible = false
       const variant = source.hasVariants ? source.variants?.find(item => item.id === component.variantId) : null
-      if (source.hasVariants && (!component.variantId || !variant) || !source.hasVariants && component.variantId) { valid = false; continue }
+      if (source.hasVariants && (component.variantId ? !variant : !source.variants?.length) || !source.hasVariants && component.variantId) { valid = false; continue }
       const unitPrice = resolveVariantPrice(source, variant, now)
       const lineTotal = unitPrice * component.quantity
       if (!Number.isSafeInteger(unitPrice) || unitPrice < 1 || !Number.isSafeInteger(lineTotal) || !Number.isSafeInteger(subtotal + lineTotal)) { valid = false; continue }
       subtotal += lineTotal
-      const stockAvailable = variant?.stock ?? source.stock
+      const stockAvailable = variant?.stock ?? (source.hasVariants
+        ? Math.max(0, ...(source.variants ?? []).map(item => item.stock))
+        : source.stock)
       stockByComponent.set(JSON.stringify([component.productId, component.variantId ?? null]), stockAvailable)
       const colorOption = variant?.colorId ? source.variantConfig?.colors.find(option => option.id === variant.colorId) : undefined
       resolvedComponents.push({
         ...component,
+        componentIndex,
         variantId: variant?.id ?? null,
         productName: source.name,
         productSlug: source.slug,
         imageUrl: variant?.imageUrl || colorOption?.imageUrl || source.thumbnail || source.images[0]?.url || '',
+        hasVariants: source.hasVariants === true,
+        ...(source.hasVariants && !component.variantId ? { variants: source.variants ?? [] } : {}),
         color: variant?.color ?? null,
         size: variant?.size ?? null,
         unitPrice,
@@ -142,6 +180,7 @@ async function hydrateComboProducts(products: Product[], visibleCategoryIds?: Re
       const availableCombos = visible ? getAvailableComboCount(components, stockByComponent) : 0
       return {
         ...product,
+        attributes: mergeComboAttributes(attributeProducts.values()),
         price: pricing.subtotal,
         salePrice: pricing.finalPrice,
         saleStartAt: null,
@@ -328,10 +367,10 @@ async function calculateComboForTransaction(
     const product = products.get(component.productId)
     if (!product || product.type === 'COMBO' || requireAvailable && (!product.isActive || product.deletedAt || !activeCategoryIds.has(product.categoryId)))
       throw new Error('COMBO_COMPONENT_UNAVAILABLE')
-    const variant = product.hasVariants ? product.variants?.find(item => item.id === component.variantId) : null
-    if (requireAvailable && (product.hasVariants && (!component.variantId || !variant) || !product.hasVariants && component.variantId))
+    const variant = product.hasVariants && component.variantId ? product.variants?.find(item => item.id === component.variantId) ?? null : null
+    if (requireAvailable && (product.hasVariants && (component.variantId ? !variant : !product.variants?.length) || !product.hasVariants && component.variantId))
       throw new Error('COMBO_COMPONENT_VARIANT_INVALID')
-    const unitPrice = product.hasVariants && !variant && !requireAvailable ? getProductEffectivePrice(product, now) : resolveVariantPrice(product, variant, now)
+    const unitPrice = resolveVariantPrice(product, variant, now)
     if (!Number.isSafeInteger(unitPrice) || unitPrice < 1) throw new Error('COMBO_INVALID_PRICE')
     const lineTotal = unitPrice * component.quantity
     if (!Number.isSafeInteger(lineTotal) || !Number.isSafeInteger(subtotal + lineTotal)) throw new Error('COMBO_INVALID_PRICE')
@@ -340,13 +379,18 @@ async function calculateComboForTransaction(
     resolvedComponents.push({
       ...component,
       variantId: variant?.id ?? component.variantId ?? null,
+      componentIndex: resolvedComponents.length,
       productName: product.name,
       productSlug: product.slug,
       imageUrl: variant?.imageUrl || colorOption?.imageUrl || product.thumbnail || product.images[0]?.url || '',
+      hasVariants: product.hasVariants === true,
+      ...(product.hasVariants && !component.variantId ? { variants: product.variants ?? [] } : {}),
       color: variant?.color ?? null,
       size: variant?.size ?? null,
       unitPrice,
-      stockAvailable: variant?.stock ?? (requireAvailable ? product.stock : 0),
+      stockAvailable: variant?.stock ?? (product.hasVariants
+        ? Math.max(0, ...(product.variants ?? []).map(item => item.stock))
+        : product.stock),
     })
   }
   return { ...calculateComboPricing(subtotal, discount), components: resolvedComponents }

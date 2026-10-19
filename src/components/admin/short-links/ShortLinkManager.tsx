@@ -191,5 +191,5 @@ export default function ShortLinkManager({ targetType, targetId, targetUrl, titl
     </section>
   </div>
 
-  return <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">{content}</section>
+  return <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">{content}</section>
 }

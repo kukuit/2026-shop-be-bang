@@ -175,7 +175,7 @@ export default function CategoryManager() {
     finally { setSeedingDefaults(false) }
   }
 
-  return <div className="mx-auto max-w-7xl">
+  return <div className="w-full">
     <header className="my-7 flex flex-col justify-between gap-4 sm:flex-row sm:items-end"><div><p className="text-xs font-black uppercase tracking-[.18em] text-pink-500">Quản trị hệ thống</p><h2 className="mt-1 text-3xl font-black">Danh mục sản phẩm</h2><p className="mt-1 text-sm text-slate-500">Tổ chức sản phẩm theo danh mục cha và danh mục con.</p></div><div className="flex flex-wrap gap-2">{!loading && categories.length === 0 && <button disabled={seedingDefaults} onClick={() => void seedDefaults()} className="rounded-xl border border-pink-200 bg-white px-4 py-3 text-sm font-bold text-pink-700 disabled:opacity-50">{seedingDefaults ? 'Đang tạo…' : 'Tạo danh mục mặc định'}</button>}<button onClick={openCreate} className="flex items-center justify-center gap-2 rounded-xl bg-pink-500 px-5 py-3 text-sm font-bold text-white shadow-sm hover:bg-pink-600"><Plus size={18} />Thêm danh mục</button></div></header>
     {notice && <p role="status" className="mb-4 rounded-xl bg-emerald-50 p-3 text-sm font-semibold text-emerald-700">{notice}</p>}{error && !formOpen && <p role="alert" className="mb-4 rounded-xl bg-rose-50 p-3 text-sm font-semibold text-rose-700">{error}</p>}
     <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">

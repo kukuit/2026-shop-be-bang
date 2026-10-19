@@ -1,8 +1,10 @@
+import type { ProductComboSelection } from '@/lib/products/types'
+
 export const ORDER_STATUSES = ['PENDING', 'CONFIRMED', 'SHIPPING', 'DELIVERED', 'FAILED', 'CANCELLED'] as const
 export type OrderStatus = typeof ORDER_STATUSES[number]
 export type PaymentStatus = 'UNPAID' | 'PAID'
 
-export interface OrderLineInput { productId: string; variantId: string | null; quantity: number }
+export interface OrderLineInput { productId: string; variantId: string | null; quantity: number; comboSelections?: ProductComboSelection[] }
 
 export function calculateOrderSubtotal(lines: Array<{ unitPrice: number; quantity: number }>) {
   return lines.reduce((sum, line) => sum + line.unitPrice * line.quantity, 0)

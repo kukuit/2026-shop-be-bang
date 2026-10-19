@@ -1,3 +1,5 @@
+import type { ProductComboSelection } from '@/lib/products/types'
+
 export const CART_STORAGE_KEY = 'shopbebang_cart_v1'
 export const BUY_NOW_STORAGE_KEY = 'shopbebang_buy_now_v1'
 export const MAX_CART_QUANTITY = 99
@@ -7,6 +9,7 @@ export interface CartItem {
   productId: string
   variantId: string | null
   quantity: number
+  comboSelections?: ProductComboSelection[]
 }
 
 export interface CartResolvedLine extends CartItem {
@@ -26,8 +29,9 @@ export interface CartResolvedLine extends CartItem {
   comboComponents?: Array<{ productId: string; productName: string; color?: string | null; size?: string | null; quantity: number; unitPrice: number }>
 }
 
-export function cartItemKey(item: Pick<CartItem, 'productId' | 'variantId'>) {
-  return JSON.stringify([item.productId, item.variantId])
+export function cartItemKey(item: Pick<CartItem, 'productId' | 'variantId' | 'comboSelections'>) {
+  const selections = [...(item.comboSelections ?? [])].sort((a, b) => a.componentIndex - b.componentIndex).map(selection => [selection.componentIndex, selection.variantId])
+  return JSON.stringify([item.productId, item.variantId, selections])
 }
 
 export function sanitizeCart(value: unknown): CartItem[] {
@@ -43,7 +47,33 @@ export function sanitizeCart(value: unknown): CartItem[] {
     const quantity = item.quantity
     if (!productId || productId.length > 180 || productId.includes('/') || variantId === undefined || (variantId && (variantId.length > 180 || variantId.includes('/')))) continue
     if (!Number.isSafeInteger(quantity) || Number(quantity) < 1) continue
-    const normalized = { productId, variantId, quantity: Math.min(MAX_CART_QUANTITY, Number(quantity)) }
+    const rawComboSelections = item.comboSelections
+    if (rawComboSelections !== undefined && !Array.isArray(rawComboSelections)) continue
+    if (Array.isArray(rawComboSelections) && rawComboSelections.length > 20) continue
+    const comboSelections: ProductComboSelection[] = []
+    const selectionIndexes = new Set<number>()
+    let selectionsValid = true
+    for (const rawSelection of Array.isArray(rawComboSelections) ? rawComboSelections : []) {
+      if (!rawSelection || typeof rawSelection !== 'object' || Array.isArray(rawSelection)) { selectionsValid = false; break }
+      const selection = rawSelection as Record<string, unknown>
+      const componentIndex = selection.componentIndex
+      const selectedVariantId = typeof selection.variantId === 'string' ? selection.variantId.trim() : ''
+      if (!Number.isSafeInteger(componentIndex) || Number(componentIndex) < 0 || Number(componentIndex) >= 20
+        || selectionIndexes.has(Number(componentIndex)) || !selectedVariantId || selectedVariantId.length > 180 || selectedVariantId.includes('/')) {
+        selectionsValid = false
+        break
+      }
+      selectionIndexes.add(Number(componentIndex))
+      comboSelections.push({ componentIndex: Number(componentIndex), variantId: selectedVariantId })
+    }
+    if (!selectionsValid) continue
+    comboSelections.sort((a, b) => a.componentIndex - b.componentIndex)
+    const normalized: CartItem = {
+      productId,
+      variantId,
+      quantity: Math.min(MAX_CART_QUANTITY, Number(quantity)),
+      ...(comboSelections.length ? { comboSelections } : {}),
+    }
     const key = cartItemKey(normalized)
     const previous = items.get(key)
     if (previous) previous.quantity = Math.min(MAX_CART_QUANTITY, previous.quantity + normalized.quantity)

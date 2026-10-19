@@ -6,6 +6,7 @@ import { ChevronLeft, ChevronRight, ExternalLink, Eye, EyeOff, Layers, Link2, Mo
 import type { Product } from '@/lib/products/types'
 import type { ProductCategory } from '@/lib/product-categories/types'
 import ProductImageView from '@/components/products/ProductImageView'
+import ComboImageCollage, { type ComboDisplayImage } from '@/components/products/ComboImageCollage'
 import { getProductEffectivePrice, isProductOnSale } from '@/lib/products/pricing'
 import ShortLinkManager from '@/components/admin/short-links/ShortLinkManager'
 import type { ShortLink } from '@/lib/short-links/types'
@@ -15,6 +16,22 @@ type Filters = { search: string; categoryId: string; status: string; group: stri
 const initialFilters: Filters = { search: '', categoryId: '', status: 'all', group: 'all', sort: 'newest' }
 const priceText = (price: number) => `${new Intl.NumberFormat('vi-VN').format(price)}đ`
 const dateText = (value: string | null) => value ? new Intl.DateTimeFormat('vi-VN', { dateStyle: 'short', timeZone: 'Asia/Bangkok' }).format(new Date(value)) : '—'
+
+function getComboFallbackImages(product: Product): ComboDisplayImage[] {
+  if (product.type !== 'COMBO' || product.thumbnail || product.images.length) return []
+  return (product.resolvedComponents ?? []).flatMap((component, index) => component.imageUrl
+    ? [{ id: `${component.productId}-${component.variantId ?? 'base'}-${index}`, url: component.imageUrl, name: component.productName }]
+    : [])
+}
+
+function ProductThumbnail({ product, className, sizes }: { product: Product; className: string; sizes: string }) {
+  const comboImages = getComboFallbackImages(product)
+  return <span className={className}>
+    {comboImages.length
+      ? <ComboImageCollage images={comboImages} variant="thumbnail" />
+      : <ProductImageView src={product.thumbnail} alt="" sizes={sizes} className="object-cover" />}
+  </span>
+}
 
 export default function ProductList() {
   const [filters, setFilters] = useState(initialFilters)
@@ -180,16 +197,19 @@ export default function ProductList() {
 
   const actionMenuProduct = actionMenu ? products.find(product => product.id === actionMenu.productId) : null
   const previewImages = previewProduct
-    ? [
+    ? (() => {
+        const ownImages = [
         ...(previewProduct.thumbnail && !previewProduct.images.some(image => image.url === previewProduct.thumbnail)
           ? [{ id: `${previewProduct.id}-thumbnail`, url: previewProduct.thumbnail, publicId: undefined, alt: previewProduct.name, sortOrder: -1 }]
           : []),
         ...previewProduct.images,
-      ]
+        ]
+        return ownImages.length ? ownImages : getComboFallbackImages(previewProduct).map(image => ({ ...image, publicId: undefined, alt: image.name, sortOrder: 0 }))
+      })()
     : []
   const selectedPreviewImage = previewImages.find(image => image.url === previewImageUrl) ?? previewImages[0]
 
-  return <div className="mx-auto max-w-7xl">
+  return <div className="w-full">
     <header className="my-7 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
       <div><p className="text-xs font-black uppercase tracking-[.18em] text-pink-500">Quản trị hệ thống</p><h2 className="mt-1 text-3xl font-black">Quản lý sản phẩm</h2><p className="mt-1 text-sm text-slate-500">Quản lý quần áo, giá bán và sản phẩm hiển thị trên website.</p></div>
       <div className="flex flex-wrap gap-2"><Link href="/admin/products/new?type=COMBO" className="flex items-center justify-center gap-2 rounded-xl border border-pink-200 bg-white px-4 py-3 text-sm font-bold text-pink-700 shadow-sm hover:bg-pink-50"><Layers size={18} />Tạo combo</Link><Link href="/admin/products/new" className="flex items-center justify-center gap-2 rounded-xl bg-pink-500 px-5 py-3 text-sm font-bold text-white shadow-sm hover:bg-pink-600"><Plus size={18} />Thêm sản phẩm</Link></div>
@@ -210,7 +230,7 @@ export default function ProductList() {
             <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500"><tr>{['Sản phẩm', 'Danh mục', 'Giá', 'Kho', 'Nhóm', 'Trạng thái', 'Ngày tạo', 'Action'].map(label => <th key={label} className="px-4 py-4">{label}</th>)}</tr></thead>
             <tbody className="divide-y divide-slate-100">
               {products.map(product => <tr key={product.id} className="hover:bg-slate-50/70">
-                <td className="max-w-[280px] px-4 py-3"><div className="flex items-center gap-3"><span className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-[#fff8f5]"><ProductImageView src={product.thumbnail} alt="" sizes="56px" className="object-cover" /></span><div className="min-w-0"><b className="block truncate">{product.name}</b><span className="block truncate text-xs text-slate-400">/{product.slug}</span></div></div></td>
+                <td className="max-w-[280px] px-4 py-3"><div className="flex items-center gap-3"><ProductThumbnail product={product} className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-[#fff8f5]" sizes="56px" /><div className="min-w-0"><b className="block truncate">{product.name}</b><span className="block truncate text-xs text-slate-400">/{product.slug}</span></div></div></td>
                 <td className="px-4 py-3">{product.categoryName}</td>
                 <td className="px-4 py-3"><span className="font-bold text-slate-800">{priceText(getProductEffectivePrice(product, now))}</span>{isProductOnSale(product, now) && <span className="block text-xs text-slate-400 line-through">{priceText(product.price)}</span>}</td>
                 <td className="px-4 py-3">{product.stock}</td>
@@ -225,7 +245,7 @@ export default function ProductList() {
         </div>
         <div className="divide-y divide-slate-100 lg:hidden">
           {products.map(product => <article key={product.id} className="flex gap-3 p-3 sm:p-4">
-            <span className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-[#fff8f5]"><ProductImageView src={product.thumbnail} alt="" sizes="80px" className="object-cover" /></span>
+            <ProductThumbnail product={product} className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-[#fff8f5]" sizes="80px" />
             <div className="min-w-0 flex-1"><div className="flex items-start justify-between gap-2"><div className="min-w-0"><h3 className="truncate text-sm font-bold">{product.name}</h3><p className="truncate text-xs text-slate-400">{product.categoryName} · {product.stock} trong kho</p></div><Badge label={product.isActive ? 'Đang bán' : 'Ngưng bán'} tone={product.isActive ? 'green' : 'slate'} /></div>
               <p className="mt-1 font-bold text-slate-800">{priceText(getProductEffectivePrice(product, now))}{isProductOnSale(product, now) && <span className="ml-2 text-xs text-slate-400 line-through">{priceText(product.price)}</span>}</p>
               <div className="mt-2 flex items-center justify-between gap-2"><div className="flex gap-1">{product.isNewArrival && <Badge label="Mới" tone="pink" />}{isProductOnSale(product, now) && <Badge label="Sale" tone="rose" />}</div>{renderActions(product, true)}</div>
