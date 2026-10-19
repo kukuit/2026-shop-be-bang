@@ -10,7 +10,12 @@ const schema = z.object({
   idempotencyKey: z.string().min(16).max(128).regex(/^[\w-]+$/),
   shippingConsent: z.literal(true),
   customer: z.object({ name: z.string().trim().min(2).max(100), phone: z.string().trim().min(7).max(30), address: z.string().trim().min(8).max(300), note: z.string().max(500).optional().default('') }).strict(),
-  items: z.array(z.object({ productId: z.string().trim().min(1).max(180).refine(value => !value.includes('/')), variantId: z.string().trim().max(180).refine(value => !value.includes('/')).nullable(), quantity: z.number().int().min(1).max(99) }).strict()).min(1).max(25),
+  items: z.array(z.object({
+    productId: z.string().trim().min(1).max(180).refine(value => !value.includes('/')),
+    variantId: z.string().trim().max(180).refine(value => !value.includes('/')).nullable(),
+    quantity: z.number().int().min(1).max(99),
+    comboSelections: z.array(z.object({ componentIndex: z.number().int().min(0).max(19), variantId: z.string().trim().min(1).max(180).refine(value => !value.includes('/')) }).strict()).max(20).optional(),
+  }).strict()).min(1).max(25),
 }).strict()
 
 function errorResponse(error: unknown) {

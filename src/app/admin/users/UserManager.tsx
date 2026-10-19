@@ -155,7 +155,7 @@ export default function UserManager({ initialUsers }: { initialUsers: User[] }) 
   }
 
   return (
-    <div className="mx-auto max-w-7xl">
+    <div className="w-full">
       <div className="my-7 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div>
           <p className="text-xs font-black uppercase tracking-[.18em] text-pink-500">

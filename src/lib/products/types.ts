@@ -61,15 +61,23 @@ export interface ProductComboComponent {
   quantity: number
 }
 
+export interface ProductComboSelection {
+  componentIndex: number
+  variantId: string
+}
+
 export interface ProductDiscount {
   type: ProductDiscountType
   value: number
 }
 
 export interface ResolvedProductComboComponent extends ProductComboComponent {
+  componentIndex: number
   productName: string
   productSlug: string
   imageUrl: string
+  hasVariants: boolean
+  variants?: ProductVariant[]
   color?: string | null
   size?: string | null
   unitPrice: number
@@ -123,6 +131,7 @@ export interface PublicProduct extends Omit<Product, 'stock' | 'sortOrder' | 'de
   images: PublicProductImage[]
   inStock: boolean
   availableCombos?: number
+  comboImageFallback?: boolean
 }
 
 export interface HomeBannerProduct {

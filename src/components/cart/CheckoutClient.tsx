@@ -63,7 +63,12 @@ export default function CheckoutClient() {
     const body = {
       customer: { name: name.trim(), phone: phone.trim(), address: address.trim(), note: note.trim() },
       shippingConsent: true as const,
-      items: checkoutItems.map(item => ({ productId: item.productId, variantId: item.variantId, quantity: item.quantity })),
+      items: checkoutItems.map(item => ({
+        productId: item.productId,
+        variantId: item.variantId,
+        quantity: item.quantity,
+        ...(item.comboSelections?.length ? { comboSelections: item.comboSelections } : {}),
+      })),
     }
     const fingerprint = JSON.stringify(body)
     let idempotencyKey = ''
@@ -110,7 +115,7 @@ export default function CheckoutClient() {
       </form>
       <aside className="rounded-2xl border border-zinc-200 bg-white p-5 lg:sticky lg:top-24"><h2 className="text-lg font-black">Đơn hàng của bạn</h2><div className="mt-4 max-h-80 space-y-3 overflow-y-auto">{checkoutItems.map(item => {
         const line = resolvedLines.find(candidate => candidate.key === cartItemKey(item))
-        return <div key={cartItemKey(item)} className="flex gap-3"><div className="h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-zinc-100">{line?.imageUrl && <ProductImageView src={line.imageUrl} alt="" sizes="64px" variant="thumbnail" className="object-cover" />}</div><div className="min-w-0 flex-1"><p className="line-clamp-2 text-sm font-bold">{line?.productName ?? 'Đang kiểm tra sản phẩm…'}</p>{line?.isCombo && <p className="text-[11px] font-black text-violet-700">COMBO</p>}<p className="text-xs text-zinc-500">{[line?.color, line?.size].filter(Boolean).join(' · ')} · SL {item.quantity}</p>{line?.comboComponents?.map((component, index) => <p key={`${component.productId}-${index}`} className="text-[11px] text-zinc-500">{component.productName} × {component.quantity * item.quantity}</p>)}</div><span className="whitespace-nowrap text-sm font-bold">{line?.lineTotal == null ? '—' : money(line.lineTotal)}</span></div>
+        return <div key={cartItemKey(item)} className="flex gap-3"><div className="h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-zinc-100">{line?.imageUrl && <ProductImageView src={line.imageUrl} alt="" sizes="64px" variant="thumbnail" className="object-cover" />}</div><div className="min-w-0 flex-1"><p className="line-clamp-2 text-sm font-bold">{line?.productName ?? 'Đang kiểm tra sản phẩm…'}</p>{line?.isCombo && <p className="text-[11px] font-black text-violet-700">COMBO</p>}<p className="text-xs text-zinc-500">{[line?.color, line?.size].filter(Boolean).join(' · ')} · SL {item.quantity}</p>{line?.comboComponents?.map((component, index) => <p key={`${component.productId}-${index}`} className="text-[11px] text-zinc-500">{component.productName}{[component.color, component.size].filter(Boolean).length ? ` · ${[component.color, component.size].filter(Boolean).join(' / ')}` : ''} × {component.quantity * item.quantity}</p>)}</div><span className="whitespace-nowrap text-sm font-bold">{line?.lineTotal == null ? '—' : money(line.lineTotal)}</span></div>
       })}</div><div className="mt-4 space-y-3 border-t pt-4 text-sm"><div className="flex justify-between"><span className="text-zinc-600">Tiền hàng</span><strong>{money(subtotal)}</strong></div><div className="flex justify-between gap-4"><span className="text-zinc-600">Phí vận chuyển</span><span className="text-right text-zinc-600">Shop sẽ xác nhận</span></div></div><p className="mt-4 rounded-xl bg-amber-50 p-3 text-xs leading-5 text-amber-900">Đơn hàng chưa có tổng thanh toán cuối cùng. Shop sẽ báo phí ship để bạn đồng ý trước khi xác nhận.</p>
         {resolvedLines.some(line => !line.available) && <div className="mt-3 space-y-1 text-xs font-semibold text-red-600">{resolvedLines.filter(line => !line.available).map(line => <p key={line.key}>{line.productName}: {line.unavailableReason}</p>)}</div>}
         {resolving && <p className="mt-3 text-xs text-zinc-500">Đang kiểm tra giá và tồn kho…</p>}

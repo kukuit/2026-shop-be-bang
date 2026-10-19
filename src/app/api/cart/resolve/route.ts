@@ -4,7 +4,8 @@ import { rejectCrossSiteMutation } from '@/lib/auth/request-security'
 import { getPublicProductWithStockById } from '@/lib/products/service'
 import { getProductEffectivePrice } from '@/lib/products/pricing'
 import { resolveVariantPrice } from '@/lib/products/variants'
-import { sanitizeCart } from '@/lib/cart/model'
+import { calculateComboPricing } from '@/lib/products/combos'
+import { cartItemKey, sanitizeCart } from '@/lib/cart/model'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -20,36 +21,68 @@ export async function POST(request: Request) {
     const items = sanitizeCart(parsed.data.items)
     const lines = await Promise.all(items.map(async item => {
       const resolved = await getPublicProductWithStockById(item.productId)
-      if (!resolved) return { ...item, key: JSON.stringify([item.productId, item.variantId]), productName: 'Sản phẩm không còn khả dụng', unitPrice: null, lineTotal: null, stockAvailable: 0, available: false, unavailableReason: 'Sản phẩm đã ngừng bán hoặc không còn tồn tại.' }
+      if (!resolved) return { ...item, key: cartItemKey(item), productName: 'Sản phẩm không còn khả dụng', unitPrice: null, lineTotal: null, stockAvailable: 0, available: false, unavailableReason: 'Sản phẩm đã ngừng bán hoặc không còn tồn tại.' }
       const { product, stock: baseStock } = resolved
       if (product.type === 'COMBO') {
-        const variantInvalid = Boolean(item.variantId)
-        const unitPrice = getProductEffectivePrice(product, new Date())
-        const available = !variantInvalid && baseStock >= item.quantity && Number.isSafeInteger(unitPrice) && unitPrice > 0
+        const components = product.resolvedComponents ?? []
+        const selectionByIndex = new Map<number, string>()
+        let selectionsValid = !item.variantId
+        for (const selection of item.comboSelections ?? []) {
+          const component = components[selection.componentIndex]
+          if (!component?.hasVariants || component.variantId || selectionByIndex.has(selection.componentIndex)) {
+            selectionsValid = false
+            continue
+          }
+          selectionByIndex.set(selection.componentIndex, selection.variantId)
+        }
+        let subtotal = 0
+        let stockAvailable = Number.MAX_SAFE_INTEGER
+        const comboComponents = components.map((component, componentIndex) => {
+          const selectedVariantId = component.variantId ?? selectionByIndex.get(componentIndex)
+          const selectedVariant = component.hasVariants && !component.variantId && selectedVariantId
+            ? component.variants?.find(candidate => candidate.id === selectedVariantId)
+            : null
+          if (component.hasVariants && !component.variantId && (!selectedVariantId || !selectedVariant) || !component.hasVariants && selectionByIndex.has(componentIndex)) selectionsValid = false
+          const componentStock = component.hasVariants
+            ? component.variantId ? component.stockAvailable : selectedVariant?.stock ?? 0
+            : component.stockAvailable
+          const componentUnitPrice = component.variantId ? component.unitPrice : selectedVariant?.price ?? component.unitPrice
+          if (!Number.isSafeInteger(componentUnitPrice) || componentUnitPrice < 1) selectionsValid = false
+          subtotal += componentUnitPrice * component.quantity
+          stockAvailable = Math.min(stockAvailable, Math.floor(componentStock / component.quantity))
+          return {
+            productId: component.productId,
+            productName: component.productName,
+            color: selectedVariant?.color ?? component.color,
+            size: selectedVariant?.size ?? component.size,
+            quantity: component.quantity,
+            unitPrice: componentUnitPrice,
+          }
+        })
+        const requiredSelections = components.reduce((count, component) => count + (component.hasVariants && !component.variantId ? 1 : 0), 0)
+        if (selectionByIndex.size !== requiredSelections) selectionsValid = false
+        let unitPrice: number | null = null
+        try {
+          if (selectionsValid && product.discount) unitPrice = calculateComboPricing(subtotal, product.discount).finalPrice
+        } catch { /* The server will reject invalid pricing at order creation too. */ }
+        const available = selectionsValid && stockAvailable >= item.quantity && unitPrice !== null && Number.isSafeInteger(unitPrice) && unitPrice > 0
         return {
           ...item,
-          key: JSON.stringify([item.productId, item.variantId]),
+          key: cartItemKey(item),
           productName: product.name,
           productSlug: product.slug,
           imageUrl: product.thumbnail || product.images[0]?.url,
-          unitPrice: variantInvalid ? null : unitPrice,
-          lineTotal: variantInvalid ? null : unitPrice * item.quantity,
-          stockAvailable: baseStock,
+          unitPrice,
+          lineTotal: unitPrice === null ? null : unitPrice * item.quantity,
+          stockAvailable,
           available,
           isCombo: true,
-          comboComponents: (product.resolvedComponents ?? []).map(component => ({
-            productId: component.productId,
-            productName: component.productName,
-            color: component.color,
-            size: component.size,
-            quantity: component.quantity,
-            unitPrice: component.unitPrice,
-          })),
-          ...(!available ? { unavailableReason: variantInvalid ? 'Combo không có biến thể để chọn.' : baseStock < item.quantity ? `Chỉ còn ${baseStock} combo.` : 'Combo hiện không khả dụng.' } : {}),
+          comboComponents,
+          ...(!available ? { unavailableReason: !selectionsValid ? 'Vui lòng chọn lại biến thể cho từng sản phẩm trong combo.' : stockAvailable < item.quantity ? `Chỉ còn ${stockAvailable} combo với các biến thể đã chọn.` : 'Combo hiện không khả dụng.' } : {}),
         }
       }
       const variant = product.hasVariants ? product.variants?.find(candidate => candidate.id === item.variantId) : null
-      const invalidVariant = product.hasVariants ? !item.variantId || !variant : Boolean(item.variantId)
+      const invalidVariant = Boolean(item.comboSelections?.length) || (product.hasVariants ? !item.variantId || !variant : Boolean(item.variantId))
       const stockAvailable = product.hasVariants ? variant?.stock ?? 0 : baseStock
       const unitPrice = invalidVariant ? null : product.hasVariants
         ? resolveVariantPrice(product, variant, new Date())
@@ -59,7 +92,7 @@ export async function POST(request: Request) {
       const size = variant?.size
       return {
         ...item,
-        key: JSON.stringify([item.productId, item.variantId]),
+        key: cartItemKey(item),
         productName: product.name,
         productSlug: product.slug,
         imageUrl: variant?.imageUrl || product.thumbnail || product.images[0]?.url,

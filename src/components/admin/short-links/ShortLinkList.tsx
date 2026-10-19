@@ -174,7 +174,7 @@ export default function ShortLinkList() {
     }
   }
 
-  return <div className="mx-auto max-w-7xl px-1">
+  return <div className="w-full px-1">
     <header className="my-7 flex flex-wrap items-end justify-between gap-4"><div><p className="text-xs font-black uppercase tracking-[.18em] text-pink-500">Quản trị hệ thống</p><h1 className="mt-1 text-3xl font-black">Short Link Manager</h1><p className="mt-1 text-sm text-slate-500">Quản lý liên kết ngắn, đích chuyển hướng và lượt click.</p></div><button type="button" onClick={() => { setCreateOpen(true); setError('') }} className="inline-flex items-center gap-2 rounded-xl bg-pink-500 px-4 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-pink-600"><Plus size={17} />Tạo Short Link</button></header>
     {notice && <p role="status" className="mb-4 rounded-xl bg-emerald-50 p-3 text-sm font-semibold text-emerald-700">{notice}</p>}
     {error && <p role="alert" className="mb-4 rounded-xl bg-rose-50 p-3 text-sm font-semibold text-rose-700">{error}</p>}

@@ -32,11 +32,12 @@ function canonicalInput(input: CreateOrderInput, phone: string) {
   const customer = { name: cleanString(input.customer.name, 100), phone, address: cleanString(input.customer.address, 300), note: cleanString(input.customer.note, 500) }
   const grouped = new Map<string, OrderLineInput>()
   for (const line of input.items) {
-    const key = JSON.stringify([line.productId, line.variantId])
+    const comboSelections = [...(line.comboSelections ?? [])].sort((a, b) => a.componentIndex - b.componentIndex)
+    const key = JSON.stringify([line.productId, line.variantId, comboSelections.map(selection => [selection.componentIndex, selection.variantId])])
     const previous = grouped.get(key)
     const quantity = (previous?.quantity ?? 0) + line.quantity
     if (quantity > 99) throw new Error('ORDER_QUANTITY_LIMIT')
-    grouped.set(key, { ...line, quantity })
+    grouped.set(key, { ...line, ...(comboSelections.length ? { comboSelections } : {}), quantity })
   }
   return { customer, items: Array.from(grouped.values()), shippingConsent: input.shippingConsent === true }
 }
@@ -79,8 +80,10 @@ function resolveOrderLine(
   now: Date,
   products: ReadonlyMap<string, Product | null>,
   visibleCategories: ReadonlySet<string>,
+  comboSelections: OrderLineInput['comboSelections'] = [],
 ) {
   if (product.type !== 'COMBO') {
+    if (comboSelections.length) throw new Error('ORDER_VARIANT_UNAVAILABLE')
     const line = resolveLine(product, variantId, quantity, now)
     const { reservationKey: _reservationKey, ...item } = line
     return {
@@ -94,18 +97,29 @@ function resolveOrderLine(
   const discount = product.discount as ProductDiscount | null | undefined
   try { validateComboComponents(components) } catch { throw new Error('ORDER_PRODUCT_UNAVAILABLE') }
   if (!discount) throw new Error('ORDER_PRODUCT_UNAVAILABLE')
+  const selectionsByIndex = new Map<number, string>()
+  for (const selection of comboSelections) {
+    if (selection.componentIndex >= components.length || selectionsByIndex.has(selection.componentIndex)) throw new Error('ORDER_VARIANT_UNAVAILABLE')
+    const component = components[selection.componentIndex]
+    if (!component || component.variantId || selectionsByIndex.has(selection.componentIndex)) throw new Error('ORDER_VARIANT_UNAVAILABLE')
+    selectionsByIndex.set(selection.componentIndex, selection.variantId)
+  }
   let comboSubtotal = 0
   const resolvedComponents: Array<Record<string, unknown>> = []
   const demands = new Map<string, InventoryDemand>()
 
-  for (const component of components as ProductComboComponent[]) {
+  for (let componentIndex = 0; componentIndex < components.length; componentIndex += 1) {
+    const component = (components as ProductComboComponent[])[componentIndex]
     const source = products.get(component.productId)
     if (!source || source.type === 'COMBO' || !isProductPubliclyVisible(source, visibleCategories)) throw new Error('ORDER_PRODUCT_UNAVAILABLE')
     let variant: ProductVariant | null = null
     if (source.hasVariants) {
-      variant = source.variants?.find(item => item.id === component.variantId) ?? null
+      const selectedVariantId = component.variantId ?? selectionsByIndex.get(componentIndex)
+      if (!selectedVariantId) throw new Error('ORDER_VARIANT_REQUIRED')
+      variant = source.variants?.find(item => item.id === selectedVariantId) ?? null
       if (!variant) throw new Error('ORDER_VARIANT_UNAVAILABLE')
     } else if (component.variantId) throw new Error('ORDER_VARIANT_UNAVAILABLE')
+    if (!source.hasVariants && selectionsByIndex.has(componentIndex)) throw new Error('ORDER_VARIANT_UNAVAILABLE')
     const unitPrice = variant?.price ?? getProductEffectivePrice(source, now)
     const componentLineTotal = unitPrice * component.quantity
     if (!Number.isSafeInteger(unitPrice) || unitPrice < 1 || !Number.isSafeInteger(componentLineTotal) || !Number.isSafeInteger(comboSubtotal + componentLineTotal))
@@ -121,6 +135,7 @@ function resolveOrderLine(
     resolvedComponents.push({
       productId: source.id,
       variantId: variant?.id ?? null,
+      componentIndex,
       productName: source.name,
       productSlug: source.slug,
       color: variant?.color ?? null,
@@ -137,6 +152,7 @@ function resolveOrderLine(
   try { pricing = calculateComboPricing(comboSubtotal, discount) } catch { throw new Error('ORDER_PRICE_UNAVAILABLE') }
   const lineTotal = pricing.finalPrice * quantity
   if (!Number.isSafeInteger(lineTotal)) throw new Error('ORDER_PRICE_UNAVAILABLE')
+  const firstComponentImage = resolvedComponents.find(component => typeof component.imageUrl === 'string')?.imageUrl
   return {
     item: {
       productId: product.id,
@@ -149,12 +165,12 @@ function resolveOrderLine(
       color: null,
       size: null,
       sku: null,
-      imageUrl: product.thumbnail || product.images[0]?.url || null,
       isCombo: true,
       comboSubtotal: pricing.subtotal,
       discountAmount: pricing.discountAmount,
       discount: { ...discount },
       comboComponents: resolvedComponents,
+      imageUrl: product.thumbnail || product.images[0]?.url || (typeof firstComponentImage === 'string' ? firstComponentImage : null),
     },
     demands: Array.from(demands.values()),
   }
@@ -238,7 +254,12 @@ export async function createOrder(input: CreateOrderInput, ip: string) {
     for (const line of canonical.items) {
       const product = productById.get(line.productId)
       if (product?.type === 'COMBO') {
-        for (const component of product.components ?? []) potentialInventoryKeys.add(JSON.stringify([component.productId, component.variantId ?? null]))
+        const selectionsByIndex = new Map((line.comboSelections ?? []).map(selection => [selection.componentIndex, selection.variantId]))
+        const components = product.components ?? []
+        for (let componentIndex = 0; componentIndex < components.length; componentIndex += 1) {
+          const component = components[componentIndex]
+          potentialInventoryKeys.add(JSON.stringify([component.productId, component.variantId ?? selectionsByIndex.get(componentIndex) ?? null]))
+        }
       } else potentialInventoryKeys.add(JSON.stringify([line.productId, line.variantId]))
       if (potentialInventoryKeys.size > MAX_ORDER_INVENTORY_DEMANDS) throw new Error('ORDER_COMPLEXITY_LIMIT')
     }
@@ -251,7 +272,7 @@ export async function createOrder(input: CreateOrderInput, ip: string) {
     const resolvedLines = canonical.items.map(line => {
       const product = productById.get(line.productId)
       if (!product || !isProductPubliclyVisible(product, visibleCategories)) throw new Error('ORDER_PRODUCT_UNAVAILABLE')
-      return resolveOrderLine(product, line.variantId, line.quantity, new Date(nowMs), productById, visibleCategories)
+      return resolveOrderLine(product, line.variantId, line.quantity, new Date(nowMs), productById, visibleCategories, line.comboSelections)
     })
     const items = resolvedLines.map(line => line.item)
     const inventoryMap = new Map<string, InventoryDemand>()

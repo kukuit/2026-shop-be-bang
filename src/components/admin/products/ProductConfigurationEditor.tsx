@@ -9,9 +9,9 @@ const newId = (prefix: string) => `${prefix}_${crypto.randomUUID()}`
 
 export function ProductAttributesSection({ value, onChange }: { value: ProductAttributes; onChange: (value: ProductAttributes) => void }) {
   const set = (key: keyof ProductAttributes, nextValue: string) => onChange({ ...value, [key]: nextValue })
-  return <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+  return <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
     <h3 className="text-lg font-black">Đặc điểm sản phẩm</h3>
-    <div className="mt-5 grid gap-4 sm:grid-cols-2">
+    <div className="mt-4 grid gap-3 sm:grid-cols-2">
       <Field label="Đối tượng sử dụng"><select value={value.gender ?? ''} onChange={event => set('gender', event.target.value)} className="input"><option value="">Chưa chọn</option><option value="boy">Bé trai</option><option value="girl">Bé gái</option><option value="unisex">Unisex</option><option value="man">Nam</option><option value="woman">Nữ</option><option value="other">Khác</option></select></Field>
       <TextField label="Chất liệu" value={value.material ?? ''} onChange={next => set('material', next)} />
       <TextField label="Độ tuổi phù hợp" value={value.ageRange ?? ''} onChange={next => set('ageRange', next)} placeholder="Ví dụ: 2–6 tuổi" />
@@ -35,7 +35,7 @@ export function ProductSizeGuideSection({ rows, onChange, onRequestRemove }: { r
     ;[next[index], next[target]] = [next[target], next[index]]
     onChange(next)
   }
-  return <section id="product-size-guide" className="scroll-mt-6 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+  return <section id="product-size-guide" className="scroll-mt-36 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6 lg:scroll-mt-40">
     <div className="flex flex-wrap items-center justify-between gap-3"><div><h3 className="text-lg font-black">Hướng dẫn chọn size</h3><p className="mt-1 text-sm text-slate-500">Bảng này để trống nếu sản phẩm không có hướng dẫn size.</p></div><button type="button" onClick={() => onChange([...rows, { id: newId('guide'), size: '' }])} className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-pink-200 px-3 py-2 text-sm font-bold text-pink-700 hover:bg-pink-50"><Plus size={16} />Thêm dòng</button></div>
     {rows.length > 0 && <div className="mt-4 space-y-3">
       {rows.map((row, index) => <div key={row.id} className="rounded-2xl border border-slate-200 p-3 sm:p-4">
@@ -163,7 +163,7 @@ export function ProductVariantsSection({
   }))
   const guideText = (variant: ProductVariant) => [variant.color, variant.size].filter(Boolean).join(' / ') || 'Mặc định'
 
-  return <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+  return <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
     <h3 className="text-lg font-black">Phân loại sản phẩm</h3>
     <label className="mt-4 flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
       <input type="checkbox" checked={hasVariants} disabled={busy} onChange={event => onToggle(event.target.checked)} className="mt-0.5 h-5 w-5 accent-pink-500" />
