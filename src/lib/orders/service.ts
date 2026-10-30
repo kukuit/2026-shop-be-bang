@@ -10,6 +10,7 @@ import { getProductEffectivePrice } from '@/lib/products/pricing'
 import { productCategoryCollection } from '@/lib/product-categories/service'
 import type { Product, ProductComboComponent, ProductDiscount, ProductVariant } from '@/lib/products/types'
 import { canConfirmOrder, canTransitionOrder, fingerprintOrderPayload, nextOrderStatus, normalizeOrderSearchQuery, normalizeVietnamPhone, sanitizePublicOrder, searchPrefixes, shouldRestoreInventory, type OrderLineInput, type OrderStatus } from './model'
+import { hasOrderPriceChanges } from './model'
 
 const root = () => getAdminDb().collection('shopbebangcom').doc('store')
 const orders = () => root().collection('orders')
@@ -274,6 +275,8 @@ export async function createOrder(input: CreateOrderInput, ip: string) {
       if (!product || !isProductPubliclyVisible(product, visibleCategories)) throw new Error('ORDER_PRODUCT_UNAVAILABLE')
       return resolveOrderLine(product, line.variantId, line.quantity, new Date(nowMs), productById, visibleCategories, line.comboSelections)
     })
+    if (hasOrderPriceChanges(canonical.items, resolvedLines.map(line => line.item)))
+      throw new Error('ORDER_PRICE_CHANGED')
     const items = resolvedLines.map(line => line.item)
     const inventoryMap = new Map<string, InventoryDemand>()
     for (const line of resolvedLines) for (const demand of line.demands) {

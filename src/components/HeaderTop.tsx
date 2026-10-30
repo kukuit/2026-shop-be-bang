@@ -10,6 +10,7 @@ import { CartButton } from '@/components/cart/CartProvider'
 type Item = { label: string; href: string }
 
 const NAV_ITEMS: Item[] = [
+  { label: 'Tất cả sản phẩm', href: '/products' },
   { label: 'Trang chủ', href: '/' },
   { label: 'Mới về', href: '/#new-arrivals' },
   { label: 'Sale', href: '/#sale' },
@@ -55,10 +56,12 @@ export default function HeaderTop() {
   const pathname = usePathname() || '/'
   const [open, setOpen] = useState(false)
 
-  const isActive = (href: string) => href === '/' && pathname === '/'
+  const isActive = (href: string) => href === '/'
+    ? pathname === '/'
+    : href === '/products' && (pathname === '/products' || pathname.startsWith('/products/'))
 
   return (
-    <header className="sticky top-0 z-30 bg-white/80 backdrop-blur border-b">
+    <header className="sticky top-0 z-50 bg-white/80 backdrop-blur border-b">
       <div className={`${CONTAINER} flex h-16 items-center gap-3`}>
         <Link
           href="/"

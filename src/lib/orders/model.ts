@@ -4,10 +4,18 @@ export const ORDER_STATUSES = ['PENDING', 'CONFIRMED', 'SHIPPING', 'DELIVERED', 
 export type OrderStatus = typeof ORDER_STATUSES[number]
 export type PaymentStatus = 'UNPAID' | 'PAID'
 
-export interface OrderLineInput { productId: string; variantId: string | null; quantity: number; comboSelections?: ProductComboSelection[] }
+export interface OrderLineInput { productId: string; variantId: string | null; quantity: number; expectedUnitPrice?: number; comboSelections?: ProductComboSelection[] }
 
 export function calculateOrderSubtotal(lines: Array<{ unitPrice: number; quantity: number }>) {
   return lines.reduce((sum, line) => sum + line.unitPrice * line.quantity, 0)
+}
+
+export function hasOrderPriceChanges(
+  expected: readonly Pick<OrderLineInput, 'expectedUnitPrice'>[],
+  resolved: ReadonlyArray<{ unitPrice: number }>,
+) {
+  return expected.length !== resolved.length
+    || expected.some((line, index) => line.expectedUnitPrice !== resolved[index]?.unitPrice)
 }
 
 export function fingerprintOrderPayload(value: unknown) {

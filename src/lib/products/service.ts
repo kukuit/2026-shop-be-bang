@@ -4,10 +4,10 @@ import { FieldPath, FieldValue, Timestamp } from 'firebase-admin/firestore'
 import { getAdminDb } from '@/lib/firebaseAdmin'
 import { getCloudinary, isCloudinaryImageUrl, isProductImagePublicIdFor } from '@/lib/cloudinary'
 import { productCategoryCollection, listAllCategories, listPublicCategories } from '@/lib/product-categories/service'
-import type { Product, ProductAttributes, ProductComboComponent, ProductDiscount, ProductImage, ProductInput, PublicProduct, ResolvedProductComboComponent } from './types'
+import type { Product, ProductAttributes, ProductComboComponent, ProductDiscount, ProductImage, ProductInput, ProductPriceSummary, PublicProduct, ResolvedProductComboComponent } from './types'
 import { createProductSchema, updateProductSchema } from './validation'
 import { normalizeSearch } from './slug'
-import { getProductEffectivePrice, isProductOnSale } from './pricing'
+import { getProductEffectivePrice, isProductOnSale, resolveProductPricing } from './pricing'
 import { calculateComboPricing, getAvailableComboCount, validateComboComponents } from './combos'
 import { resolveVariantPrice } from './variants'
 import { invalidateProductCatalog } from './cache'
@@ -86,7 +86,7 @@ export function mapProduct(id: string, data: FirebaseFirestore.DocumentData): Pr
   }
 }
 
-function toPublicProduct(product: Product): PublicProduct {
+function toPublicProduct(product: Product, now = new Date()): PublicProduct {
   const { stock, sortOrder: _sortOrder, deletedAt: _deletedAt, isActive: _isActive, createdAt: _createdAt, updatedAt: _updatedAt, ...publicProduct } = product
   const ownImages = product.images.map(({ storagePath: _storagePath, ...image }) => image)
   const seenComboImageUrls = new Set<string>()
@@ -107,6 +107,7 @@ function toPublicProduct(product: Product): PublicProduct {
     thumbnail: product.thumbnail || ownImages[0]?.url || comboImages[0]?.url || '',
     images: ownImages.length ? ownImages : comboImages,
     inStock: stock > 0,
+    priceSummary: resolveProductPricing(product, product.variants, { now }),
     ...(product.type === 'COMBO' ? { availableCombos: product.stock } : {}),
     ...(comboImages.length ? { comboImageFallback: true } : {}),
   }
@@ -205,8 +206,8 @@ export function selectHomeNewArrivals<T>(products: T[]) {
   return products.slice(0, 4)
 }
 
-export function selectHomeSaleProducts<T extends Pick<Product, 'price' | 'salePrice' | 'saleStartAt' | 'saleEndAt'>>(products: T[], now: Date) {
-  return products.filter(product => isProductOnSale(product, now)).slice(0, 4)
+export function selectHomeSaleProducts<T extends Pick<Product, 'price' | 'salePrice' | 'saleStartAt' | 'saleEndAt'> & { priceSummary?: ProductPriceSummary }>(products: T[], now: Date) {
+  return products.filter(product => product.priceSummary?.hasActiveSale ?? isProductOnSale(product, now)).slice(0, 4)
 }
 
 function writeData(input: Omit<ProductInput, 'id'>) {
@@ -598,17 +599,58 @@ export async function softDeleteProduct(id: string) {
 
 async function queryPublicProducts(options: { categoryId?: string; filter?: 'new' | 'sale'; sort?: 'newest' | 'price-asc' | 'price-desc' | 'sort-order'; cursor?: string; limit?: number }) {
   const limit = Math.min(50, Math.max(1, options.limit ?? 20))
-  let query: FirebaseFirestore.Query = productCollection().where('isActive', '==', true).where('deletedAt', '==', null)
-  if (options.categoryId) query = query.where('categoryId', '==', options.categoryId)
-  if (options.filter === 'new') query = query.where('isNewArrival', '==', true)
-  if (options.filter === 'sale') query = query.where('salePrice', '>', 0).orderBy('salePrice', 'asc')
-  if (options.filter !== 'sale') {
-    if (options.filter === 'new') query = query.orderBy('arrivalAt', 'desc').orderBy('createdAt', 'desc')
-    else if (options.sort === 'price-asc') query = query.orderBy('price', 'asc')
-    else if (options.sort === 'price-desc') query = query.orderBy('price', 'desc')
-    else if (options.sort === 'sort-order') query = query.orderBy('sortOrder', 'asc').orderBy('createdAt', 'desc')
-    else query = query.orderBy('createdAt', 'desc')
-  } else query = query.orderBy('createdAt', 'desc')
+  let baseQuery: FirebaseFirestore.Query = productCollection().where('isActive', '==', true).where('deletedAt', '==', null)
+  if (options.categoryId) baseQuery = baseQuery.where('categoryId', '==', options.categoryId)
+  if (options.filter === 'new') baseQuery = baseQuery.where('isNewArrival', '==', true)
+
+  if (options.sort === 'price-asc' || options.sort === 'price-desc' || options.filter === 'sale') {
+    const [snapshot, categories] = await Promise.all([
+      baseQuery.orderBy(FieldPath.documentId(), 'asc').get(),
+      listPublicCategories(),
+    ])
+    const allowedCategories = new Set(categories.map(category => category.id))
+    const products = await hydrateComboProducts(snapshot.docs.map(document => mapProduct(document.id, document.data())), allowedCategories)
+    const now = new Date()
+    const rows = products
+      .filter(product => isProductPubliclyVisible(product, allowedCategories))
+      .map(product => ({ product, pricing: resolveProductPricing(product, product.variants, { now }) }))
+      .filter(row => options.filter !== 'sale' || row.pricing.hasActiveSale)
+
+    if (options.sort === 'price-asc' || options.sort === 'price-desc') {
+      const direction = options.sort === 'price-asc' ? 1 : -1
+      rows.sort((a, b) => {
+        if (a.pricing.minPrice === null || b.pricing.minPrice === null) {
+          if (a.pricing.minPrice === null && b.pricing.minPrice !== null) return 1
+          if (a.pricing.minPrice !== null && b.pricing.minPrice === null) return -1
+        }
+        const left = a.pricing.minPrice ?? 0
+        const right = b.pricing.minPrice ?? 0
+        return direction * (left - right)
+          || a.product.sortOrder - b.product.sortOrder
+          || (b.product.createdAt ?? '').localeCompare(a.product.createdAt ?? '')
+          || a.product.id.localeCompare(b.product.id)
+      })
+    } else {
+      rows.sort((a, b) => a.product.sortOrder - b.product.sortOrder
+        || (b.product.createdAt ?? '').localeCompare(a.product.createdAt ?? '')
+        || a.product.id.localeCompare(b.product.id))
+    }
+
+    const cursorId = decodeCursor(options.cursor)
+    const cursorIndex = cursorId ? rows.findIndex(row => row.product.id === cursorId) : -1
+    const start = cursorIndex < 0 ? 0 : cursorIndex + 1
+    const page = rows.slice(start, start + limit)
+    const last = page.at(-1)
+    return {
+      products: page.map(row => toPublicProduct(row.product, now)),
+      nextCursor: last && start + page.length < rows.length ? encodeCursor(last.product.id) : null,
+    }
+  }
+
+  let query = baseQuery
+  if (options.filter === 'new') query = query.orderBy('arrivalAt', 'desc').orderBy('createdAt', 'desc')
+  else if (options.sort === 'sort-order') query = query.orderBy('sortOrder', 'asc').orderBy('createdAt', 'desc')
+  else query = query.orderBy('createdAt', 'desc')
   query = query.orderBy(FieldPath.documentId(), 'asc')
   const cursorId = decodeCursor(options.cursor)
   if (cursorId) {
@@ -624,20 +666,15 @@ async function queryPublicProducts(options: { categoryId?: string; filter?: 'new
   const filtered = products.filter(product => isProductPubliclyVisible(product, allowedCategories)
     && (options.filter !== 'new' || product.isNewArrival)
     && (options.filter !== 'sale' || isProductOnSale(product, now)))
-  if (options.sort === 'price-asc' || options.sort === 'price-desc') {
-    filtered.sort((a, b) => {
-      const direction = options.sort === 'price-asc' ? 1 : -1
-      return direction * (a.price - b.price) || a.sortOrder - b.sortOrder || (b.createdAt ?? '').localeCompare(a.createdAt ?? '')
-    })
-  } else if (options.filter === 'sale' || options.filter === 'new') {
+  if (options.filter === 'new') {
     filtered.sort((a, b) => {
       const arrival = (b.arrivalAt ? new Date(b.arrivalAt).getTime() : 0) - (a.arrivalAt ? new Date(a.arrivalAt).getTime() : 0)
-      return options.filter === 'new' ? arrival || (b.createdAt ?? '').localeCompare(a.createdAt ?? '') : a.sortOrder - b.sortOrder || (b.createdAt ?? '').localeCompare(a.createdAt ?? '')
+      return arrival || (b.createdAt ?? '').localeCompare(a.createdAt ?? '')
     })
   }
   const last = docs.at(-1)
   return {
-    products: filtered.map(toPublicProduct),
+    products: filtered.map(product => toPublicProduct(product, now)),
     nextCursor: hasMore && last ? encodeCursor(last.id) : null,
   }
 }
@@ -665,13 +702,14 @@ const cachedHomeSaleCandidates = unstable_cache(async () => {
 export async function getHomeNewArrivals() {
   const categories = new Set((await listPublicCategories()).map(category => category.id))
   const products = await hydrateComboProducts(await cachedHomeNewArrivals(), categories)
-  return selectHomeNewArrivals(products.map(toPublicProduct))
+  return selectHomeNewArrivals(products.map(product => toPublicProduct(product)))
 }
 
 export async function getHomeSaleProducts() {
   const categories = new Set((await listPublicCategories()).map(category => category.id))
   const products = await hydrateComboProducts(await cachedHomeSaleCandidates(), categories)
-  return selectHomeSaleProducts(products.map(toPublicProduct), new Date())
+  const now = new Date()
+  return selectHomeSaleProducts(products.map(product => toPublicProduct(product, now)), now)
 }
 
 export async function getHomeBannerProduct() {

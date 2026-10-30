@@ -9,7 +9,7 @@ type Sort = 'newest' | 'price-asc' | 'price-desc'
 export default function ProductGrid({ initialProducts, initialCursor, categorySlug, endpoint }: {
   initialProducts: PublicProduct[]
   initialCursor: string | null
-  categorySlug: string
+  categorySlug?: string
   endpoint: string
 }) {
   const [products, setProducts] = useState(initialProducts)
@@ -55,8 +55,8 @@ export default function ProductGrid({ initialProducts, initialCursor, categorySl
     </div>
     {error && <p role="alert" className="mb-4 rounded-xl bg-rose-50 p-4 text-sm text-rose-700">{error}</p>}
     {products.length ? <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 lg:gap-6">{products.map(product => <ProductCard key={product.id} product={product} />)}</div>
-      : <p className="rounded-2xl border border-dashed border-zinc-200 bg-white p-10 text-center text-zinc-500">Danh mục hiện chưa có sản phẩm.</p>}
+      : <p className="rounded-2xl border border-dashed border-zinc-200 bg-white p-10 text-center text-zinc-500">{categorySlug ? 'Danh mục hiện chưa có sản phẩm.' : 'Hiện chưa có sản phẩm.'}</p>}
     {cursor && <div className="mt-8 text-center"><button disabled={loading} onClick={() => void loadMore()} className="rounded-xl border border-pink-200 bg-white px-6 py-3 font-bold text-pink-600 hover:bg-pink-50 disabled:opacity-50">{loading ? 'Đang tải…' : 'Xem thêm sản phẩm'}</button></div>}
-    <span className="sr-only">{categorySlug}</span>
+    {categorySlug && <span className="sr-only">{categorySlug}</span>}
   </>
 }

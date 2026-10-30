@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import ProductImageView from '@/components/products/ProductImageView'
-import { getProductDiscountPercent, getProductEffectivePrice, isProductOnSale } from '@/lib/products/pricing'
+import { useLiveProductPricing } from '@/components/products/useLiveProductPricing'
 import type { HomeBannerProduct } from '@/lib/products/types'
 
 function formatPrice(price: number) {
@@ -66,6 +66,11 @@ export default function HomeProductBanner() {
     </div>)}
   </div>
 
+  return <HomeProductBannerContent product={product} />
+}
+
+function HomeProductBannerContent({ product }: { product: HomeBannerProduct }) {
+  const { summary } = useLiveProductPricing(product)
   const images = product.images.slice(0, 3)
   const positions = images.length === 1
     ? [{ className: 'left-1/2 top-1/2 z-30 w-[48%] -translate-x-1/2 -translate-y-1/2 rotate-[2deg]', info: true }]
@@ -79,25 +84,31 @@ export default function HomeProductBanner() {
           { className: 'left-1/2 top-[40px] z-30 w-[38%] -translate-x-1/2 rotate-[1deg]', info: true },
           { className: 'right-1 top-[10px] z-20 w-[38%] rotate-[8deg]', info: false },
         ]
-  const now = new Date()
-  const onSale = isProductOnSale(product, now)
-  const price = getProductEffectivePrice(product, now)
+  const onSale = summary.hasActiveSale
+  const price = summary.displayPrice
+  const compareAtPrice = summary.priceType === 'SINGLE' ? summary.compareAtPrice : null
+  const discountPercent = compareAtPrice !== null && price !== null && compareAtPrice > price
+    ? Math.round(((compareAtPrice - price) / compareAtPrice) * 100)
+    : 0
+  const priceLabel = summary.priceType === 'UNAVAILABLE' ? 'Hết hàng'
+    : summary.priceType === 'RANGE' ? `${formatPrice(summary.minPrice!)} – ${formatPrice(summary.maxPrice!)}`
+      : formatPrice(price!)
 
   return <div role="group" aria-label={`Sản phẩm nổi bật: ${product.name}`} className="relative aspect-[16/10] w-full">
     {images.map((image, index) => <Link
       key={`${image.url}-${index}`}
       href={`/products/${product.slug}`}
-      aria-label={`${product.name}, ${formatPrice(price)}`}
+      aria-label={`${product.name}, ${priceLabel}`}
       className={`absolute ${positions[index].className}`}
     >
       <div className="relative aspect-[4/5] overflow-hidden rounded-[1.5rem] bg-white shadow-xl ring-4 ring-white transition-transform duration-200 hover:scale-[1.03] sm:rounded-[1.75rem]">
         <ProductImageView src={image.url} publicId={image.publicId} variant="card" alt={image.alt || product.name} sizes="(max-width: 768px) 42vw, 220px" className="object-cover" />
-        {onSale && positions[index].info && <span className="absolute right-2 top-2 rounded-full bg-rose-500 px-2 py-1 text-[10px] font-black text-white">-{getProductDiscountPercent(product, now)}%</span>}
+        {onSale && positions[index].info && <span className="absolute right-2 top-2 rounded-full bg-rose-500 px-2 py-1 text-[10px] font-black text-white">{discountPercent ? `-${discountPercent}%` : 'Giá ưu đãi'}</span>}
         {positions[index].info && <span className="absolute inset-x-1.5 bottom-1.5 rounded-xl bg-white/95 px-2.5 py-2 text-left shadow-md sm:inset-x-2 sm:bottom-2 sm:px-3">
           <span className="block truncate text-[10px] font-bold text-zinc-700 sm:text-xs">{product.name}</span>
           <span className="mt-0.5 flex flex-wrap items-baseline gap-x-1.5">
-            <span className="text-xs font-black text-pink-700 sm:text-sm">{formatPrice(price)}</span>
-            {onSale && <span className="text-[9px] text-zinc-400 line-through sm:text-[10px]">{formatPrice(product.price)}</span>}
+            <span className="text-xs font-black text-pink-700 sm:text-sm">{priceLabel}</span>
+            {compareAtPrice !== null && <span className="text-[9px] text-zinc-400 line-through sm:text-[10px]">{formatPrice(compareAtPrice)}</span>}
           </span>
         </span>}
       </div>

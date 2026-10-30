@@ -121,6 +121,22 @@ export interface Product {
   variants?: ProductVariant[]
 }
 
+export type ProductPriceType = 'SINGLE' | 'RANGE' | 'UNAVAILABLE'
+
+export interface ProductPriceSummary {
+  minPrice: number | null
+  maxPrice: number | null
+  displayPrice: number | null
+  priceType: ProductPriceType
+  available: boolean
+  defaultVariantId: string | null
+  hasActiveSale: boolean
+  compareAtPrice: number | null
+  currency: 'VND'
+  calculatedAt: string
+  nextPriceChangeAt: string | null
+}
+
 export type ProductInput = Omit<Product, 'createdAt' | 'updatedAt' | 'deletedAt'> & {
   id?: string
 }
@@ -130,6 +146,7 @@ export type PublicProductImage = Omit<ProductImage, 'storagePath'>
 export interface PublicProduct extends Omit<Product, 'stock' | 'sortOrder' | 'deletedAt' | 'isActive' | 'createdAt' | 'updatedAt' | 'images'> {
   images: PublicProductImage[]
   inStock: boolean
+  priceSummary?: ProductPriceSummary
   availableCombos?: number
   comboImageFallback?: boolean
 }
@@ -143,4 +160,8 @@ export interface HomeBannerProduct {
   salePrice: number | null
   saleStartAt: string | null
   saleEndAt: string | null
+  hasVariants?: boolean
+  variants?: ProductVariant[]
+  inStock?: boolean
+  priceSummary?: ProductPriceSummary
 }

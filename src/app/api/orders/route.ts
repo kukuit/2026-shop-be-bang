@@ -14,6 +14,7 @@ const schema = z.object({
     productId: z.string().trim().min(1).max(180).refine(value => !value.includes('/')),
     variantId: z.string().trim().max(180).refine(value => !value.includes('/')).nullable(),
     quantity: z.number().int().min(1).max(99),
+    expectedUnitPrice: z.number().int().min(1).max(Number.MAX_SAFE_INTEGER),
     comboSelections: z.array(z.object({ componentIndex: z.number().int().min(0).max(19), variantId: z.string().trim().min(1).max(180).refine(value => !value.includes('/')) }).strict()).max(20).optional(),
   }).strict()).min(1).max(25),
 }).strict()
@@ -35,6 +36,7 @@ function errorResponse(error: unknown) {
     ORDER_COMPLEXITY_LIMIT: ['Đơn hàng có quá nhiều loại sản phẩm thành phần. Vui lòng tách thành các đơn nhỏ hơn.', 400],
   }
   const [message, status] = mapped[code] ?? ['Không thể tạo đơn hàng lúc này. Vui lòng thử lại.', 500]
+  if (code === 'ORDER_PRICE_CHANGED') return json({ code, message: 'Giá một hoặc nhiều sản phẩm vừa thay đổi. Hãy xem lại tổng tiền mới và xác nhận trước khi đặt hàng.' }, 409)
   if (status === 500) console.error('[Orders] Create failed', error)
   return json({ message }, status)
 }

@@ -41,6 +41,9 @@ assert.equal(cart.mergeCartItem(cleanCart, { productId: 'dress-1', variantId: 'p
 assert.equal(orders.normalizeVietnamPhone('+84 981 353 619'), '0981353619')
 assert.equal(orders.normalizeVietnamPhone('123'), null)
 assert.equal(orders.calculateOrderSubtotal([{ unitPrice: 120000, quantity: 2 }, { unitPrice: 50000, quantity: 1 }]), 290000)
+assert.equal(orders.hasOrderPriceChanges([{ expectedUnitPrice: 55000 }], [{ unitPrice: 55000 }]), false)
+assert.equal(orders.hasOrderPriceChanges([{ expectedUnitPrice: 50000 }], [{ unitPrice: 55000 }]), true)
+assert.equal(orders.hasOrderPriceChanges([{}], [{ unitPrice: 55000 }]), true)
 
 const stablePayload = { customer: { name: 'Lan', phone: '0981353619' }, items: [{ productId: 'dress-1', variantId: 'pink-2', quantity: 1 }] }
 assert.equal(orders.fingerprintOrderPayload(stablePayload), orders.fingerprintOrderPayload(structuredClone(stablePayload)))
