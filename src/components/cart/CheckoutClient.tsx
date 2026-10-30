@@ -24,11 +24,14 @@ export default function CheckoutClient() {
   const [address, setAddress] = useState('')
   const [note, setNote] = useState('')
   const [shippingConsent, setShippingConsent] = useState(false)
+  const [priceConfirmationRequired, setPriceConfirmationRequired] = useState(false)
+  const [acceptedPriceFingerprint, setAcceptedPriceFingerprint] = useState('')
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const isBuyNow = Boolean(buyNowItems?.length)
   const checkoutItems = buyNowItems ?? cartItems
   const itemFingerprint = useMemo(() => JSON.stringify(checkoutItems), [checkoutItems])
+  const priceFingerprint = useMemo(() => JSON.stringify(resolvedLines.map(line => [line.key, line.quantity, line.unitPrice])), [resolvedLines])
 
   useEffect(() => {
     setBuyNowItems(readBuyNow().length ? readBuyNow() : null)
@@ -52,7 +55,8 @@ export default function CheckoutClient() {
   }, [initialized, hydrated, itemFingerprint, checkoutItems, resolutionAttempt])
 
   const subtotal = resolvedLines.reduce((sum, line) => sum + (line.lineTotal ?? 0), 0)
-  const ready = initialized && hydrated && !resolving && resolvedFingerprint === itemFingerprint && checkoutItems.length > 0 && resolvedLines.length === checkoutItems.length && resolvedLines.every(line => line.available)
+  const pricingReady = initialized && hydrated && !resolving && resolvedFingerprint === itemFingerprint && checkoutItems.length > 0 && resolvedLines.length === checkoutItems.length && resolvedLines.every(line => line.available)
+  const ready = pricingReady && (!priceConfirmationRequired || acceptedPriceFingerprint === priceFingerprint)
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -67,6 +71,7 @@ export default function CheckoutClient() {
         productId: item.productId,
         variantId: item.variantId,
         quantity: item.quantity,
+        expectedUnitPrice: resolvedLines.find(line => line.key === cartItemKey(item))?.unitPrice ?? 0,
         ...(item.comboSelections?.length ? { comboSelections: item.comboSelections } : {}),
       })),
     }
@@ -85,6 +90,10 @@ export default function CheckoutClient() {
       const result = await response.json()
       if (!response.ok) {
         setError(result.message ?? 'Không thể tạo đơn hàng. Vui lòng thử lại.')
+        if (result.code === 'ORDER_PRICE_CHANGED') {
+          setPriceConfirmationRequired(true)
+          setAcceptedPriceFingerprint('')
+        }
         void refresh()
         setResolutionAttempt(value => value + 1)
         return
@@ -111,6 +120,13 @@ export default function CheckoutClient() {
         <section className="border-t border-zinc-100 pt-5"><h2 className="text-lg font-black">Phương thức thanh toán</h2><div className="mt-3 rounded-xl border border-pink-200 bg-pink-50 p-4"><p className="font-bold text-pink-900">Thanh toán khi nhận hàng (COD)</p><p className="mt-1 text-sm text-pink-900/80">Trả tiền trực tiếp cho đơn vị giao hàng khi nhận sản phẩm.</p></div></section>
         <label className="flex cursor-pointer gap-3 rounded-xl border border-zinc-200 p-4 text-sm leading-6"><input type="checkbox" checked={shippingConsent} onChange={event => setShippingConsent(event.target.checked)} className="mt-1 h-4 w-4 accent-pink-600" /><span>Tôi đồng ý để shop liên hệ xác nhận phí vận chuyển và tổng thanh toán trước khi giao hàng.</span></label>
         {error && <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm font-semibold text-red-700">{error}</p>}
+        {priceConfirmationRequired && <label className="flex cursor-pointer gap-3 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm leading-6 text-amber-950">
+          <input type="checkbox" checked={acceptedPriceFingerprint === priceFingerprint && pricingReady} disabled={!pricingReady} onChange={event => {
+            setAcceptedPriceFingerprint(event.target.checked ? priceFingerprint : '')
+            if (event.target.checked) setError('')
+          }} className="mt-1 h-4 w-4 accent-amber-600" />
+          <span>Giá sản phẩm vừa cập nhật. Tôi đã xem lại tổng tiền mới ({money(subtotal)}) và đồng ý tiếp tục đặt hàng.</span>
+        </label>}
         <button type="submit" disabled={!ready || !shippingConsent || submitting} className="min-h-12 w-full rounded-xl bg-pink-600 px-5 py-3 font-black text-white hover:bg-pink-700 disabled:cursor-not-allowed disabled:bg-zinc-300">{submitting ? 'Đang gửi đơn…' : 'Đặt hàng COD'}</button>
       </form>
       <aside className="rounded-2xl border border-zinc-200 bg-white p-5 lg:sticky lg:top-24"><h2 className="text-lg font-black">Đơn hàng của bạn</h2><div className="mt-4 max-h-80 space-y-3 overflow-y-auto">{checkoutItems.map(item => {

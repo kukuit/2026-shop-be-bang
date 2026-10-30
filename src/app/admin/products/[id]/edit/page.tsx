@@ -12,5 +12,5 @@ export async function generateMetadata({ params }: { params: { id: string } }) {
 export default async function EditProductPage({ params }: { params: { id: string } }) {
   const product = await getAdminProduct(params.id)
   if (!product) notFound()
-  return <ProductForm product={product} />
+  return <ProductForm key={`${product.id}:${product.updatedAt ?? ''}`} product={product} />
 }

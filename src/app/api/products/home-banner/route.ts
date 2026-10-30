@@ -21,6 +21,10 @@ export async function GET() {
       salePrice: product.salePrice,
       saleStartAt: product.saleStartAt,
       saleEndAt: product.saleEndAt,
+      hasVariants: product.hasVariants,
+      variants: product.variants,
+      inStock: product.inStock,
+      priceSummary: product.priceSummary,
     } : null }, { headers: { 'Cache-Control': 'no-store' } })
   } catch (error) {
     console.error('[HomeProductBanner] Could not load products', error)

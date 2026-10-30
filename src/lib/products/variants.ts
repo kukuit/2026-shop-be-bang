@@ -6,7 +6,7 @@ import type {
   ProductVariantConfig,
   ProductVariantOption,
 } from './types'
-import { getProductEffectivePrice } from './pricing'
+import { getVariantEffectivePrice } from './pricing'
 import { slugify } from './slug'
 
 export const MAX_PRODUCT_VARIANTS = 100
@@ -204,7 +204,7 @@ export function resolveVariantPrice(
   variant: Pick<ProductVariant, 'price'> | null | undefined,
   now: Date,
 ) {
-  return variant?.price != null ? variant.price : getProductEffectivePrice(product, now)
+  return getVariantEffectivePrice(product, variant, now)
 }
 
 export function resolveVariantImage(

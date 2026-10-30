@@ -7,6 +7,7 @@ import type { ProductSizeGuide, ProductVariant, ProductVariantOption, PublicProd
 import { getProductDiscountPercent, getProductEffectivePrice, isProductOnSale } from '@/lib/products/pricing'
 import { calculateComboPricing } from '@/lib/products/combos'
 import { findSelectedVariant, resolveVariantImage, resolveVariantPrice } from '@/lib/products/variants'
+import { useLiveProductPricing } from '@/components/products/useLiveProductPricing'
 import { useCart } from '@/components/cart/CartProvider'
 import { BUY_NOW_STORAGE_KEY, type CartItem } from '@/lib/cart/model'
 import { useRouter } from 'next/navigation'
@@ -14,18 +15,31 @@ import { useRouter } from 'next/navigation'
 const priceText = (price: number) => `${new Intl.NumberFormat('vi-VN').format(price)}đ`
 const genderLabels: Record<string, string> = { boy: 'Bé trai', girl: 'Bé gái', unisex: 'Unisex', man: 'Nam', woman: 'Nữ', other: 'Khác' }
 
-export default function ProductDetailExperience({ product }: { product: PublicProduct }) {
+export default function ProductDetailExperience({ product, requestedVariantId }: { product: PublicProduct; requestedVariantId?: string }) {
   const router = useRouter()
   const { addItem, announce } = useCart()
+  const { now, summary } = useLiveProductPricing(product)
+  const isBuyableVariant = (variant: ProductVariant) => variant.stock > 0
+    && Number.isSafeInteger(resolveVariantPrice(product, variant, now))
+    && resolveVariantPrice(product, variant, now) > 0
+  const requestedVariant = product.variants?.find(variant => variant.id === requestedVariantId && isBuyableVariant(variant))
+  const initialVariant = requestedVariant ?? product.variants?.find(variant => variant.id === summary.defaultVariantId && isBuyableVariant(variant)) ?? null
+  const initialSelectionKey = `${product.id}:${requestedVariantId ?? ''}`
   const [quantity, setQuantity] = useState(1)
-  const [selectedColorId, setSelectedColorId] = useState<string>()
-  const [selectedSizeId, setSelectedSizeId] = useState<string>()
+  const [selectedColorId, setSelectedColorId] = useState<string | undefined>(initialVariant?.colorId)
+  const [selectedSizeId, setSelectedSizeId] = useState<string | undefined>(initialVariant?.sizeId)
+  const [selectionKey, setSelectionKey] = useState(initialSelectionKey)
   const [comboSelections, setComboSelections] = useState<Record<number, string>>({})
   const [sizeGuideOpen, setSizeGuideOpen] = useState(false)
   useEffect(() => setComboSelections({}), [product.id])
+  useEffect(() => {
+    if (selectionKey === initialSelectionKey) return
+    setSelectedColorId(initialVariant?.colorId)
+    setSelectedSizeId(initialVariant?.sizeId)
+    setSelectionKey(initialSelectionKey)
+  }, [initialSelectionKey, initialVariant, selectionKey])
   const colors = product.variantConfig?.colors ?? []
   const sizes = product.variantConfig?.sizes ?? []
-  const now = new Date()
   const onSale = isProductOnSale(product, now)
   const selectedVariant = product.hasVariants
     ? findSelectedVariant(product.variantConfig, product.variants, selectedColorId, selectedSizeId)
@@ -36,6 +50,8 @@ export default function ProductDetailExperience({ product }: { product: PublicPr
   const hasOwnVariantPrice = selectedVariant?.price != null
   const selectionComplete = !product.hasVariants || Boolean(selectedVariant)
   const stock = product.hasVariants ? selectedVariant?.stock : product.inStock ? 1 : 0
+  const selectedVariantAvailable = Boolean(selectedVariant && selectedVariant.stock > 0)
+  const selectedVariantOnSale = Boolean(selectedVariantAvailable && !hasOwnVariantPrice && onSale)
   const comboComponents = useMemo(() => product.type === 'COMBO' ? product.resolvedComponents ?? [] : [], [product.type, product.resolvedComponents])
   const comboVariantComponents = comboComponents.filter(component => component.hasVariants && !component.variantId)
   const comboChoicesComplete = comboVariantComponents.every(component => Boolean(component.variants?.some(variant => variant.id === comboSelections[component.componentIndex])))
@@ -63,7 +79,13 @@ export default function ProductDetailExperience({ product }: { product: PublicPr
   useEffect(() => {
     if (product.type === 'COMBO' && comboChoicesComplete && comboAvailable > 0 && quantity > comboAvailable) setQuantity(comboAvailable)
   }, [product.type, comboChoicesComplete, comboAvailable, quantity])
-  const maxQuantity = product.type === 'COMBO' ? comboChoicesComplete ? comboAvailable : product.availableCombos ?? 0 : 99
+  useEffect(() => {
+    if (product.hasVariants && selectedVariant && selectedVariant.stock > 0 && quantity > selectedVariant.stock)
+      setQuantity(selectedVariant.stock)
+  }, [product.hasVariants, selectedVariant, quantity])
+  const maxQuantity = product.type === 'COMBO'
+    ? comboChoicesComplete ? comboAvailable : product.availableCombos ?? 0
+    : product.hasVariants ? selectedVariant?.stock ?? 0 : 99
   const attributes = useMemo(() => Object.entries({
     material: product.attributes?.material,
     gender: product.attributes?.gender ? genderLabels[product.attributes.gender] ?? product.attributes.gender : undefined,
@@ -74,15 +96,34 @@ export default function ProductDetailExperience({ product }: { product: PublicPr
     careInstructions: product.attributes?.careInstructions,
   }).filter(([, value]) => typeof value === 'string' && value.trim()), [product.attributes])
   const displaySubtotal = product.type === 'COMBO' ? comboPricing?.subtotal ?? product.price : product.price
-  const displayPrice = product.type === 'COMBO' ? comboPricing?.finalPrice ?? getProductEffectivePrice(product, now) : selectedPrice
+  const displayPrice = product.type === 'COMBO' ? comboPricing?.finalPrice ?? getProductEffectivePrice(product, now)
+    : product.hasVariants
+      ? selectedVariant ? selectedVariantAvailable ? selectedPrice : null : summary.displayPrice
+      : product.inStock ? selectedPrice : null
   const discount = product.type === 'COMBO'
     ? comboPricing && comboPricing.subtotal > comboPricing.finalPrice ? Math.round((comboPricing.discountAmount / comboPricing.subtotal) * 100) : 0
-    : !hasOwnVariantPrice && onSale ? getProductDiscountPercent(product, now) : 0
+    : product.hasVariants
+      ? selectedVariantOnSale ? getProductDiscountPercent(product, now)
+        : !selectedVariant && summary.compareAtPrice !== null && summary.displayPrice !== null ? Math.round(((summary.compareAtPrice - summary.displayPrice) / summary.compareAtPrice) * 100) : 0
+      : summary.compareAtPrice !== null && displayPrice !== null ? Math.round(((summary.compareAtPrice - displayPrice) / summary.compareAtPrice) * 100) : 0
+  const compareAtPrice = product.type === 'COMBO' ? comboPricing?.subtotal ?? product.comboSubtotal ?? null
+    : product.hasVariants
+      ? selectedVariantOnSale ? product.price : !selectedVariant && summary.priceType === 'SINGLE' ? summary.compareAtPrice : null
+      : summary.compareAtPrice
+  const displayPriceText = product.type !== 'COMBO' && product.hasVariants && !selectedVariant
+    ? summary.priceType === 'UNAVAILABLE' ? 'Hết hàng'
+      : summary.priceType === 'RANGE' ? `${priceText(summary.minPrice!)} – ${priceText(summary.maxPrice!)}`
+        : priceText(summary.displayPrice!)
+    : displayPrice === null ? 'Hết hàng' : priceText(displayPrice)
   const comboSelectionsForCart = comboVariantComponents.flatMap(component => {
     const variantId = comboSelections[component.componentIndex]
     return variantId ? [{ componentIndex: component.componentIndex, variantId }] : []
   })
-  const canPurchase = selectionComplete && (product.type !== 'COMBO' || comboChoicesComplete && comboAvailable > 0)
+  const canPurchase = product.type === 'COMBO'
+    ? comboChoicesComplete && comboAvailable > 0
+    : product.hasVariants
+      ? selectionComplete && selectedVariantAvailable && Number.isSafeInteger(selectedPrice) && selectedPrice > 0
+      : summary.available
   const makeCartItem = (): CartItem => ({
     productId: product.id,
     variantId: selectedVariant?.id ?? null,
@@ -93,13 +134,13 @@ export default function ProductDetailExperience({ product }: { product: PublicPr
   return <article className="grid gap-8 lg:grid-cols-2 lg:gap-12">
     <ProductGallery name={product.name} thumbnail={product.thumbnail} images={product.images} preferredImageUrl={selectedImageUrl} />
     <div className="py-1 sm:py-4">
-      <div className="flex flex-wrap gap-2">{product.type === 'COMBO' && <span className="rounded-full bg-violet-50 px-3 py-1 text-xs font-bold text-violet-700">Combo sản phẩm</span>}{product.isNewArrival && <span className="rounded-full bg-pink-50 px-3 py-1 text-xs font-bold text-pink-700">Mới về</span>}{discount > 0 && <span className="rounded-full bg-rose-50 px-3 py-1 text-xs font-bold text-rose-700">Giảm {discount}%</span>}</div>
+      <div className="flex flex-wrap gap-2">{product.type === 'COMBO' && <span className="rounded-full bg-violet-50 px-3 py-1 text-xs font-bold text-violet-700">Combo sản phẩm</span>}{product.isNewArrival && <span className="rounded-full bg-pink-50 px-3 py-1 text-xs font-bold text-pink-700">Mới về</span>}{(discount > 0 || product.hasVariants && !selectedVariant && summary.hasActiveSale) && <span className="rounded-full bg-rose-50 px-3 py-1 text-xs font-bold text-rose-700">{discount > 0 ? `Giảm ${discount}%` : 'Giá ưu đãi'}</span>}</div>
       <h1 className="mt-3 text-3xl font-black tracking-tight sm:text-4xl">{product.name}</h1>
       {product.shortDescription && <p className="mt-4 text-lg leading-7 text-zinc-600">{product.shortDescription}</p>}
 
       <div className="mt-5 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        {discount > 0 && <span className="text-lg text-zinc-400 line-through">{priceText(displaySubtotal)}</span>}
-        <span className={`text-2xl font-black ${discount > 0 ? 'text-rose-600' : 'text-zinc-900'}`}>{priceText(displayPrice)}</span>
+        {compareAtPrice !== null && displayPrice !== null && compareAtPrice > displayPrice && <span className="text-lg text-zinc-400 line-through">{priceText(compareAtPrice)}</span>}
+        <span className={`text-2xl font-black ${discount > 0 ? 'text-rose-600' : 'text-zinc-900'}`}>{displayPriceText}</span>
       </div>
       {product.type === 'COMBO' && discount > 0 && <><p className="mt-1 text-sm font-bold text-emerald-700">Tiết kiệm {priceText(comboPricing?.discountAmount ?? product.discountAmount ?? 0)}</p>{displaySubtotal !== displayPrice && <p className="mt-1 text-sm text-zinc-400 line-through">{priceText(displaySubtotal)}</p>}</>}
       {product.type === 'COMBO' && comboComponents.length > 0 && <section className="mt-6 rounded-2xl border border-violet-100 bg-violet-50/60 p-4" aria-label="Sản phẩm trong combo"><h2 className="font-black text-violet-950">Combo gồm</h2><ul className="mt-3 space-y-4">{comboComponents.map(component => {

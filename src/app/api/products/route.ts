@@ -4,7 +4,7 @@ import { listPublicProducts } from '@/lib/products/service'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
-const headers = { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300' }
+const headers = { 'Cache-Control': 'private, no-store' }
 
 export async function GET(request: Request) {
   const params = new URL(request.url).searchParams

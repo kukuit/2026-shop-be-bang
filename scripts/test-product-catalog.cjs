@@ -25,6 +25,86 @@ test('Vietnamese slug and sale pricing cover valid sale windows and exact bounda
   assert.equal(pricing.getProductDiscountPercent({ ...product, salePrice: 299000 }, new Date()), 0)
 })
 
+test('price summaries show only purchasable variants and preserve inherited and sale prices', () => {
+  const { resolveProductPricing } = loadDomain()('src/lib/products/pricing.ts')
+  const now = new Date('2026-10-20T12:00:00.000Z')
+  const base = { price: 50000, salePrice: null, saleStartAt: null, saleEndAt: null, stock: 3, type: 'SIMPLE' }
+
+  const simple = resolveProductPricing(base, [], { now })
+  assert.equal(simple.priceType, 'SINGLE')
+  assert.equal(simple.displayPrice, 50000)
+
+  const range = resolveProductPricing({ ...base, hasVariants: true }, [
+    { id: 'size-8', price: 50000, stock: 4 },
+    { id: 'size-10', price: 55000, stock: 5 },
+  ], { now })
+  assert.equal(range.priceType, 'RANGE')
+  assert.equal(range.minPrice, 50000)
+  assert.equal(range.maxPrice, 55000)
+  assert.equal(range.defaultVariantId, 'size-8')
+
+  const oneAvailableVariant = resolveProductPricing({ ...base, hasVariants: true }, [
+    { id: 'size-10', price: 55000, stock: 5 },
+  ], { now })
+  assert.equal(oneAvailableVariant.priceType, 'SINGLE')
+  assert.equal(oneAvailableVariant.displayPrice, 55000)
+
+  const oneAvailablePrice = resolveProductPricing({ ...base, hasVariants: true }, [
+    { id: 'size-8', price: 50000, stock: 0 },
+    { id: 'size-10', price: 55000, stock: 5 },
+    { id: 'size-12', price: 60000, stock: 10 },
+  ], { now })
+  assert.equal(oneAvailablePrice.minPrice, 55000)
+  assert.equal(oneAvailablePrice.maxPrice, 60000)
+  assert.equal(oneAvailablePrice.defaultVariantId, 'size-10')
+
+  const samePrice = resolveProductPricing({ ...base, hasVariants: true }, [
+    { id: 'red', price: 55000, stock: 3 },
+    { id: 'blue', price: 55000, stock: 2 },
+  ], { now })
+  assert.equal(samePrice.priceType, 'SINGLE')
+  assert.equal(samePrice.displayPrice, 55000)
+
+  const soldOut = resolveProductPricing({ ...base, hasVariants: true }, [
+    { id: 'size-8', price: 50000, stock: 0 },
+  ], { now })
+  assert.equal(soldOut.priceType, 'UNAVAILABLE')
+  assert.equal(soldOut.available, false)
+  assert.equal(soldOut.displayPrice, null)
+
+  const inheritedSale = resolveProductPricing({ ...base, salePrice: 45000, hasVariants: true }, [
+    { id: 'inherited', price: null, stock: 2 },
+  ], { now })
+  assert.equal(inheritedSale.displayPrice, 45000)
+  assert.equal(inheritedSale.compareAtPrice, 50000)
+  assert.equal(inheritedSale.hasActiveSale, true)
+
+  const mixedSale = resolveProductPricing({ ...base, salePrice: 45000, hasVariants: true }, [
+    { id: 'inherited', price: null, stock: 2 },
+    { id: 'fixed', price: 55000, stock: 2 },
+  ], { now })
+  assert.equal(mixedSale.minPrice, 45000)
+  assert.equal(mixedSale.maxPrice, 55000)
+  assert.equal(mixedSale.hasActiveSale, true)
+  assert.equal(mixedSale.compareAtPrice, null)
+
+  const explicitZero = resolveProductPricing({ ...base, hasVariants: true }, [
+    { id: 'zero', price: 0, stock: 2 },
+  ], { now })
+  assert.equal(explicitZero.priceType, 'UNAVAILABLE')
+  assert.equal(explicitZero.displayPrice, null)
+
+  const scheduledSale = resolveProductPricing({ ...base, salePrice: 45000, saleStartAt: '2026-10-21T00:00:00.000Z' }, [], { now })
+  assert.equal(scheduledSale.displayPrice, 50000)
+  assert.equal(scheduledSale.hasActiveSale, false)
+  assert.equal(scheduledSale.nextPriceChangeAt, '2026-10-21T00:00:00.000Z')
+
+  const endingSale = resolveProductPricing({ ...base, salePrice: 45000, saleEndAt: '2026-10-20T12:00:00.000Z' }, [], { now })
+  assert.equal(endingSale.displayPrice, 45000)
+  assert.equal(endingSale.nextPriceChangeAt, '2026-10-20T12:00:00.001Z')
+  assert.equal(resolveProductPricing({ ...base, salePrice: 45000, saleEndAt: '2026-10-20T11:59:59.999Z' }, [], { now }).displayPrice, 50000)
+})
+
 test('product and category schemas reject invalid sale data and internal write fields', () => {
   const load = loadDomain()
   const { createProductSchema, updateProductSchema } = load('src/lib/products/validation.ts')
@@ -215,6 +295,30 @@ test('legacy migration plan is deterministic, maps sales correctly and skips alr
   const second = planLegacyProducts(legacy.newArrivalProducts, legacy.saleProducts, categoryIds, new Set(first.map(product => product.id)))
   assert.equal(second.filter(product => product.action === 'create').length, 0)
   assert.equal(second.filter(product => product.action === 'skip').length, 8)
+})
+
+test('checkout revalidates its displayed unit price and returns a confirmation conflict when it changed', async () => {
+  let received
+  const load = createLoader({
+    '@/lib/auth/request-security': { rejectCrossSiteMutation: () => null },
+    '@/lib/orders/service': { createOrder: async input => { received = input; throw new Error('ORDER_PRICE_CHANGED') } },
+  })
+  const route = load('src/app/api/orders/route.ts')
+  const request = body => new Request('http://localhost/api/orders', {
+    method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body),
+  })
+  const body = {
+    idempotencyKey: '12345678-1234-1234-1234-123456789012', shippingConsent: true,
+    customer: { name: 'Lan', phone: '0981353619', address: '12 Duong Hoa Hong', note: '' },
+    items: [{ productId: 'dress-1', variantId: 'size-10', quantity: 1, expectedUnitPrice: 55000 }],
+  }
+  const response = await route.POST(request(body))
+  assert.equal(response.status, 409)
+  assert.equal((await response.json()).code, 'ORDER_PRICE_CHANGED')
+  assert.equal(received.items[0].expectedUnitPrice, 55000)
+
+  const missingPrice = await route.POST(request({ ...body, items: [{ productId: 'dress-1', variantId: 'size-10', quantity: 1 }] }))
+  assert.equal(missingPrice.status, 400)
 })
 
 test('Admin product mutation route rejects non-admin before calling the write service', async () => {
