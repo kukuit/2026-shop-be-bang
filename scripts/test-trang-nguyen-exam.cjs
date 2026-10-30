@@ -270,49 +270,42 @@ function main() {
 
     const templates = exam.questions.map(question => question.templateId)
     assert.equal(new Set(templates).size, 30, `seed ${index} should use every template once`)
-    assert.equal(exam.questions[0].templateId, 'T01', `seed ${index} should put the new generator in question 1`)
-    assert.equal(exam.questions[0].data.generator, 'FIND_TARGET_LETTER_IN_OBJECT')
-    assert.equal(exam.questions[1].templateId, 'T02', `seed ${index} should put the bubble generator in question 2`)
-    assert.equal(exam.questions[1].data.generator, 'FIND_TARGET_LETTER_IN_OBJECT_IMAGE')
-    assert.equal(exam.questions[2].templateId, 'T03', `seed ${index} should put T03 in question 3`)
-    assert.equal(exam.questions[3].templateId, 'T04', `seed ${index} should put T04 in question 4`)
-    assert.notEqual(exam.questions[2].data.target, exam.questions[3].data.target, `seed ${index} should use different question 3 and 4 targets`)
-    assert.equal(exam.questions[4].templateId, 'T05', `seed ${index} should put T05 in question 5`)
-    assert.equal(exam.questions[4].data.generator, 'FIND_LETTER_IN_ANIMAL_NAME')
-    assert.equal(exam.questions[5].templateId, 'T06', `seed ${index} should put the tone generator in question 6`)
-    assert.equal(exam.questions[5].data.generator, 'IDENTIFY_TONE_FROM_SYLLABLE')
-    assert.equal(exam.questions[6].templateId, 'T07', `seed ${index} should put the animal generator in question 7`)
-    assert.equal(exam.questions[6].data.generator, 'FIND_ANIMAL_BY_NAME')
-    assert.equal(exam.questions[7].templateId, 'T08', `seed ${index} should put object recognition in question 8`)
-    assert.equal(exam.questions[7].data.generator, 'FIND_OBJECT_BY_NAME')
-    assert.equal(exam.questions[8].templateId, 'T09', `seed ${index} should put flower recognition in question 9`)
-    assert.equal(exam.questions[8].data.generator, 'FIND_FLOWER_BY_IMAGE')
-    assert.equal(exam.questions[9].templateId, 'T10', `seed ${index} should put multi-select letter recognition in question 10`)
-    assert.equal(exam.questions[9].data.generator, 'RECOGNIZE_LETTERS_IN_IMAGE')
-    assert.equal(exam.questions[10].templateId, 'T11', `seed ${index} should put number recognition in question 11`)
-    assert.equal(exam.questions[10].data.generator, 'RECOGNIZE_NUMBER_ON_CARD')
-    assert.equal(exam.questions[11].templateId, 'T12', `seed ${index} should put letter input in question 12`)
-    assert.equal(exam.questions[11].data.generator, 'FILL_LETTER_IN_BLANK')
-    assert.equal(exam.questions[12].templateId, 'T13', `seed ${index} should put count-letter input in question 13`)
-    assert.equal(exam.questions[12].data.generator, 'COUNT_TARGET_LETTER')
-    assert.equal(exam.questions[13].templateId, 'T14', `seed ${index} should put hidden-letter input in question 14`)
-    assert.equal(exam.questions[13].data.generator, 'FIND_HIDDEN_LETTER')
-    assert.equal(exam.questions[14].templateId, 'T15', `seed ${index} should put rotated-letter input in question 15`)
-    assert.equal(exam.questions[14].type, 'rotated-letter-input')
-    assert.equal(exam.questions[14].data.generator, 'ROTATED_LETTER_INPUT')
-    assert.equal(exam.questions[15].templateId, 'T16', `seed ${index} should put two-group matching in question 16`)
-    assert.equal(exam.questions[15].type, 'drag-match')
-    assert.equal(exam.questions[15].data.generator, 'MATCH_SAME_LETTER_TWO_GROUPS')
-    assert.equal(exam.questions[16].templateId, 'T17', `seed ${index} should put lowercase-uppercase matching in question 17`)
-    assert.equal(exam.questions[16].type, 'drag-match')
-    assert.equal(exam.questions[16].data.generator, 'MATCH_LOWER_UPPER_CASE')
-    assert.equal(exam.questions[17].templateId, 'T18', `seed ${index} should put image-to-sound matching in question 18`)
-    assert.equal(exam.questions[17].type, 'drag-match')
-    assert.equal(exam.questions[17].data.generator, 'MATCH_IMAGE_WITH_SOUND')
-    assert.equal(exam.questions[18].templateId, 'T19', `seed ${index} should put object image-to-audio matching in question 19`)
-    assert.equal(exam.questions[18].type, 'drag-match')
-    assert.equal(exam.questions[18].data.generator, 'MATCH_OBJECT_WITH_NAME')
-    const q20 = exam.questions[19]
+    const questionByTemplate = new Map(exam.questions.map(question => [question.templateId, question]))
+    for (let questionIndex = 0; questionIndex < exam.questions.length; questionIndex += 1) {
+      const question = exam.questions[questionIndex]
+      const templateNumber = Number(question.templateId.slice(1))
+      assert.equal(question.number, questionIndex + 1, `seed ${index} should label displayed question ${questionIndex + 1}`)
+      assert.equal(Math.floor((templateNumber - 1) / 5), Math.floor(questionIndex / 5),
+        `seed ${index} should keep ${question.templateId} inside its assigned five-question group`)
+    }
+    const expectedTemplateGenerators = {
+      T01: 'FIND_TARGET_LETTER_IN_OBJECT',
+      T02: 'FIND_TARGET_LETTER_IN_OBJECT_IMAGE',
+      T03: 'HEAR_AND_IDENTIFY_LETTER',
+      T04: 'HEAR_AND_IDENTIFY_LETTER',
+      T05: 'FIND_LETTER_IN_ANIMAL_NAME',
+      T06: 'IDENTIFY_TONE_FROM_SYLLABLE',
+      T07: 'FIND_ANIMAL_BY_NAME',
+      T08: 'FIND_OBJECT_BY_NAME',
+      T09: 'FIND_FLOWER_BY_IMAGE',
+      T10: 'RECOGNIZE_LETTERS_IN_IMAGE',
+      T11: 'RECOGNIZE_NUMBER_ON_CARD',
+      T12: 'FILL_LETTER_IN_BLANK',
+      T13: 'COUNT_TARGET_LETTER',
+      T14: 'FIND_HIDDEN_LETTER',
+      T15: 'ROTATED_LETTER_INPUT',
+      T16: 'MATCH_SAME_LETTER_TWO_GROUPS',
+      T17: 'MATCH_LOWER_UPPER_CASE',
+      T18: 'MATCH_IMAGE_WITH_SOUND',
+      T19: 'MATCH_OBJECT_WITH_NAME',
+      T20: 'CLASSIFY_NUMBER_AND_LETTER',
+    }
+    for (const [templateId, generator] of Object.entries(expectedTemplateGenerators)) {
+      assert.equal(questionByTemplate.get(templateId)?.data.generator, generator, `seed ${index} should preserve ${templateId}`)
+    }
+    assert.notEqual(questionByTemplate.get('T03').data.target, questionByTemplate.get('T04').data.target,
+      `seed ${index} should keep the T03 and T04 targets distinct`)
+    const q20 = questionByTemplate.get('T20')
     const q20Data = q20.data
     assert.equal(q20.templateId, 'T20', 'question 20 should use its assigned template')
     assert.equal(q20.type, 'categorize')

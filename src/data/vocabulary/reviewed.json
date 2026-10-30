@@ -1,0 +1,1052 @@
+[
+  {
+    "id": "en-you",
+    "word": "you",
+    "senses": [
+      {
+        "id": "personal-pronoun",
+        "meaningVi": "bạn",
+        "partOfSpeech": "pronoun",
+        "categories": [
+          "pronouns"
+        ]
+      }
+    ],
+    "frequencyRank": 1,
+    "frequencyTier": 1,
+    "sourceRank": 1,
+    "sourceFrequencyCount": 28787591,
+    "categories": [
+      "pronouns"
+    ],
+    "visualType": "abstract",
+    "status": "published",
+    "meaningVi": "bạn",
+    "partOfSpeech": "pronoun"
+  },
+  {
+    "id": "en-i",
+    "word": "i",
+    "senses": [
+      {
+        "id": "personal-pronoun",
+        "meaningVi": "tôi",
+        "partOfSpeech": "pronoun",
+        "categories": [
+          "pronouns"
+        ]
+      }
+    ],
+    "frequencyRank": 2,
+    "frequencyTier": 1,
+    "sourceRank": 2,
+    "sourceFrequencyCount": 27086011,
+    "categories": [
+      "pronouns"
+    ],
+    "visualType": "abstract",
+    "status": "published",
+    "meaningVi": "tôi",
+    "partOfSpeech": "pronoun"
+  },
+  {
+    "id": "en-it",
+    "word": "it",
+    "senses": [
+      {
+        "id": "personal-pronoun",
+        "meaningVi": "nó",
+        "partOfSpeech": "pronoun",
+        "categories": [
+          "pronouns"
+        ]
+      }
+    ],
+    "frequencyRank": 7,
+    "frequencyTier": 1,
+    "sourceRank": 7,
+    "sourceFrequencyCount": 13631703,
+    "categories": [
+      "pronouns"
+    ],
+    "visualType": "abstract",
+    "status": "published",
+    "meaningVi": "nó",
+    "partOfSpeech": "pronoun"
+  },
+  {
+    "id": "en-we",
+    "word": "we",
+    "senses": [
+      {
+        "id": "personal-pronoun",
+        "meaningVi": "chúng tôi",
+        "partOfSpeech": "pronoun",
+        "categories": [
+          "pronouns"
+        ]
+      }
+    ],
+    "frequencyRank": 15,
+    "frequencyTier": 1,
+    "sourceRank": 15,
+    "sourceFrequencyCount": 6755687,
+    "categories": [
+      "pronouns"
+    ],
+    "visualType": "abstract",
+    "status": "published",
+    "meaningVi": "chúng tôi",
+    "partOfSpeech": "pronoun"
+  },
+  {
+    "id": "en-he",
+    "word": "he",
+    "senses": [
+      {
+        "id": "personal-pronoun",
+        "meaningVi": "anh ấy",
+        "partOfSpeech": "pronoun",
+        "categories": [
+          "pronouns"
+        ]
+      }
+    ],
+    "frequencyRank": 18,
+    "frequencyTier": 1,
+    "sourceRank": 18,
+    "sourceFrequencyCount": 5516364,
+    "categories": [
+      "pronouns"
+    ],
+    "visualType": "abstract",
+    "status": "published",
+    "meaningVi": "anh ấy",
+    "partOfSpeech": "pronoun"
+  },
+  {
+    "id": "en-they",
+    "word": "they",
+    "senses": [
+      {
+        "id": "personal-pronoun",
+        "meaningVi": "họ",
+        "partOfSpeech": "pronoun",
+        "categories": [
+          "pronouns"
+        ]
+      }
+    ],
+    "frequencyRank": 42,
+    "frequencyTier": 1,
+    "sourceRank": 42,
+    "sourceFrequencyCount": 3060204,
+    "categories": [
+      "pronouns"
+    ],
+    "visualType": "abstract",
+    "status": "published",
+    "meaningVi": "họ",
+    "partOfSpeech": "pronoun"
+  },
+  {
+    "id": "en-she",
+    "word": "she",
+    "senses": [
+      {
+        "id": "personal-pronoun",
+        "meaningVi": "cô ấy",
+        "partOfSpeech": "pronoun",
+        "categories": [
+          "pronouns"
+        ]
+      }
+    ],
+    "frequencyRank": 46,
+    "frequencyTier": 1,
+    "sourceRank": 46,
+    "sourceFrequencyCount": 2778359,
+    "categories": [
+      "pronouns"
+    ],
+    "visualType": "abstract",
+    "status": "published",
+    "meaningVi": "cô ấy",
+    "partOfSpeech": "pronoun"
+  },
+  {
+    "id": "en-cat",
+    "word": "cat",
+    "senses": [
+      {
+        "id": "animal",
+        "meaningVi": "con mèo",
+        "partOfSpeech": "noun",
+        "categories": [
+          "animals"
+        ]
+      }
+    ],
+    "frequencyRank": 1041,
+    "frequencyTier": 8,
+    "sourceRank": 1041,
+    "sourceFrequencyCount": 51175,
+    "categories": [
+      "animals"
+    ],
+    "visualType": "object",
+    "status": "published",
+    "meaningVi": "con mèo",
+    "partOfSpeech": "noun"
+  },
+  {
+    "id": "en-dog",
+    "word": "dog",
+    "senses": [
+      {
+        "id": "animal",
+        "meaningVi": "con chó",
+        "partOfSpeech": "noun",
+        "categories": [
+          "animals"
+        ]
+      }
+    ],
+    "frequencyRank": 538,
+    "frequencyTier": 6,
+    "sourceRank": 538,
+    "sourceFrequencyCount": 125769,
+    "categories": [
+      "animals"
+    ],
+    "visualType": "object",
+    "status": "published",
+    "meaningVi": "con chó",
+    "partOfSpeech": "noun"
+  },
+  {
+    "id": "en-horse",
+    "word": "horse",
+    "senses": [
+      {
+        "id": "animal",
+        "meaningVi": "con ngựa",
+        "partOfSpeech": "noun",
+        "categories": [
+          "animals"
+        ]
+      }
+    ],
+    "frequencyRank": 869,
+    "frequencyTier": 7,
+    "sourceRank": 869,
+    "sourceFrequencyCount": 62923,
+    "categories": [
+      "animals"
+    ],
+    "visualType": "object",
+    "status": "published",
+    "meaningVi": "con ngựa",
+    "partOfSpeech": "noun"
+  },
+  {
+    "id": "en-bird",
+    "word": "bird",
+    "senses": [
+      {
+        "id": "animal",
+        "meaningVi": "con chim",
+        "partOfSpeech": "noun",
+        "categories": [
+          "animals"
+        ]
+      }
+    ],
+    "frequencyRank": 1350,
+    "frequencyTier": 8,
+    "sourceRank": 1350,
+    "sourceFrequencyCount": 37711,
+    "categories": [
+      "animals"
+    ],
+    "visualType": "object",
+    "status": "published",
+    "meaningVi": "con chim",
+    "partOfSpeech": "noun"
+  },
+  {
+    "id": "en-fish",
+    "word": "fish",
+    "senses": [
+      {
+        "id": "animal",
+        "meaningVi": "con cá",
+        "partOfSpeech": "noun",
+        "categories": [
+          "animals"
+        ]
+      }
+    ],
+    "frequencyRank": 888,
+    "frequencyTier": 7,
+    "sourceRank": 888,
+    "sourceFrequencyCount": 61813,
+    "categories": [
+      "animals"
+    ],
+    "visualType": "object",
+    "status": "published",
+    "meaningVi": "con cá",
+    "partOfSpeech": "noun"
+  },
+  {
+    "id": "en-cow",
+    "word": "cow",
+    "senses": [
+      {
+        "id": "animal",
+        "meaningVi": "con bò",
+        "partOfSpeech": "noun",
+        "categories": [
+          "animals"
+        ]
+      }
+    ],
+    "frequencyRank": 2377,
+    "frequencyTier": 9,
+    "sourceRank": 2377,
+    "sourceFrequencyCount": 18392,
+    "categories": [
+      "animals"
+    ],
+    "visualType": "object",
+    "status": "published",
+    "meaningVi": "con bò",
+    "partOfSpeech": "noun"
+  },
+  {
+    "id": "en-chicken",
+    "word": "chicken",
+    "senses": [
+      {
+        "id": "animal",
+        "meaningVi": "con gà",
+        "partOfSpeech": "noun",
+        "categories": [
+          "animals"
+        ]
+      }
+    ],
+    "frequencyRank": 1224,
+    "frequencyTier": 8,
+    "sourceRank": 1224,
+    "sourceFrequencyCount": 41996,
+    "categories": [
+      "animals"
+    ],
+    "visualType": "object",
+    "status": "published",
+    "meaningVi": "con gà",
+    "partOfSpeech": "noun"
+  },
+  {
+    "id": "en-bear",
+    "word": "bear",
+    "senses": [
+      {
+        "id": "animal",
+        "meaningVi": "con gấu",
+        "partOfSpeech": "noun",
+        "categories": [
+          "animals"
+        ]
+      }
+    ],
+    "frequencyRank": 1077,
+    "frequencyTier": 8,
+    "sourceRank": 1077,
+    "sourceFrequencyCount": 48674,
+    "categories": [
+      "animals"
+    ],
+    "visualType": "object",
+    "status": "published",
+    "meaningVi": "con gấu",
+    "partOfSpeech": "noun"
+  },
+  {
+    "id": "en-coffee",
+    "word": "coffee",
+    "senses": [
+      {
+        "id": "drink",
+        "meaningVi": "cà phê",
+        "partOfSpeech": "noun",
+        "categories": [
+          "food-drink"
+        ]
+      }
+    ],
+    "frequencyRank": 666,
+    "frequencyTier": 6,
+    "sourceRank": 666,
+    "sourceFrequencyCount": 89650,
+    "categories": [
+      "food-drink"
+    ],
+    "visualType": "object",
+    "status": "published",
+    "meaningVi": "cà phê",
+    "partOfSpeech": "noun"
+  },
+  {
+    "id": "en-tea",
+    "word": "tea",
+    "senses": [
+      {
+        "id": "drink",
+        "meaningVi": "trà",
+        "partOfSpeech": "noun",
+        "categories": [
+          "food-drink"
+        ]
+      }
+    ],
+    "frequencyRank": 928,
+    "frequencyTier": 7,
+    "sourceRank": 928,
+    "sourceFrequencyCount": 59277,
+    "categories": [
+      "food-drink"
+    ],
+    "visualType": "object",
+    "status": "published",
+    "meaningVi": "trà",
+    "partOfSpeech": "noun"
+  },
+  {
+    "id": "en-cake",
+    "word": "cake",
+    "senses": [
+      {
+        "id": "food",
+        "meaningVi": "bánh ngọt",
+        "partOfSpeech": "noun",
+        "categories": [
+          "food-drink"
+        ]
+      }
+    ],
+    "frequencyRank": 1494,
+    "frequencyTier": 8,
+    "sourceRank": 1494,
+    "sourceFrequencyCount": 33256,
+    "categories": [
+      "food-drink"
+    ],
+    "visualType": "object",
+    "status": "published",
+    "meaningVi": "bánh ngọt",
+    "partOfSpeech": "noun"
+  },
+  {
+    "id": "en-milk",
+    "word": "milk",
+    "senses": [
+      {
+        "id": "drink",
+        "meaningVi": "sữa",
+        "partOfSpeech": "noun",
+        "categories": [
+          "food-drink"
+        ]
+      }
+    ],
+    "frequencyRank": 1473,
+    "frequencyTier": 8,
+    "sourceRank": 1473,
+    "sourceFrequencyCount": 33863,
+    "categories": [
+      "food-drink"
+    ],
+    "visualType": "object",
+    "status": "published",
+    "meaningVi": "sữa",
+    "partOfSpeech": "noun"
+  },
+  {
+    "id": "en-bread",
+    "word": "bread",
+    "senses": [
+      {
+        "id": "food",
+        "meaningVi": "bánh mì",
+        "partOfSpeech": "noun",
+        "categories": [
+          "food-drink"
+        ]
+      }
+    ],
+    "frequencyRank": 1882,
+    "frequencyTier": 8,
+    "sourceRank": 1882,
+    "sourceFrequencyCount": 24828,
+    "categories": [
+      "food-drink"
+    ],
+    "visualType": "object",
+    "status": "published",
+    "meaningVi": "bánh mì",
+    "partOfSpeech": "noun"
+  },
+  {
+    "id": "en-egg",
+    "word": "egg",
+    "senses": [
+      {
+        "id": "food",
+        "meaningVi": "quả trứng",
+        "partOfSpeech": "noun",
+        "categories": [
+          "food-drink"
+        ]
+      }
+    ],
+    "frequencyRank": 2323,
+    "frequencyTier": 9,
+    "sourceRank": 2323,
+    "sourceFrequencyCount": 19000,
+    "categories": [
+      "food-drink"
+    ],
+    "visualType": "object",
+    "status": "published",
+    "meaningVi": "quả trứng",
+    "partOfSpeech": "noun"
+  },
+  {
+    "id": "en-rice",
+    "word": "rice",
+    "senses": [
+      {
+        "id": "cooked-rice",
+        "meaningVi": "cơm",
+        "partOfSpeech": "noun",
+        "categories": [
+          "food-drink"
+        ]
+      }
+    ],
+    "frequencyRank": 2371,
+    "frequencyTier": 9,
+    "sourceRank": 2371,
+    "sourceFrequencyCount": 18503,
+    "categories": [
+      "food-drink"
+    ],
+    "visualType": "object",
+    "status": "published",
+    "meaningVi": "cơm",
+    "partOfSpeech": "noun"
+  },
+  {
+    "id": "en-apple",
+    "word": "apple",
+    "senses": [
+      {
+        "id": "fruit",
+        "meaningVi": "quả táo",
+        "partOfSpeech": "noun",
+        "categories": [
+          "food-drink"
+        ]
+      }
+    ],
+    "frequencyRank": 2628,
+    "frequencyTier": 9,
+    "sourceRank": 2628,
+    "sourceFrequencyCount": 16192,
+    "categories": [
+      "food-drink"
+    ],
+    "visualType": "object",
+    "status": "published",
+    "meaningVi": "quả táo",
+    "partOfSpeech": "noun"
+  },
+  {
+    "id": "en-orange",
+    "word": "orange",
+    "senses": [
+      {
+        "id": "fruit",
+        "meaningVi": "quả cam",
+        "partOfSpeech": "noun",
+        "categories": [
+          "food-drink"
+        ]
+      }
+    ],
+    "frequencyRank": 2954,
+    "frequencyTier": 9,
+    "sourceRank": 2954,
+    "sourceFrequencyCount": 13738,
+    "categories": [
+      "food-drink"
+    ],
+    "visualType": "object",
+    "status": "published",
+    "meaningVi": "quả cam",
+    "partOfSpeech": "noun"
+  },
+  {
+    "id": "en-car",
+    "word": "car",
+    "senses": [
+      {
+        "id": "vehicle",
+        "meaningVi": "xe ô tô",
+        "partOfSpeech": "noun",
+        "categories": [
+          "vehicles"
+        ]
+      }
+    ],
+    "frequencyRank": 249,
+    "frequencyTier": 4,
+    "sourceRank": 249,
+    "sourceFrequencyCount": 330261,
+    "categories": [
+      "vehicles"
+    ],
+    "visualType": "object",
+    "status": "published",
+    "meaningVi": "xe ô tô",
+    "partOfSpeech": "noun"
+  },
+  {
+    "id": "en-bus",
+    "word": "bus",
+    "senses": [
+      {
+        "id": "vehicle",
+        "meaningVi": "xe buýt",
+        "partOfSpeech": "noun",
+        "categories": [
+          "vehicles"
+        ]
+      }
+    ],
+    "frequencyRank": 1103,
+    "frequencyTier": 8,
+    "sourceRank": 1103,
+    "sourceFrequencyCount": 47534,
+    "categories": [
+      "vehicles"
+    ],
+    "visualType": "object",
+    "status": "published",
+    "meaningVi": "xe buýt",
+    "partOfSpeech": "noun"
+  },
+  {
+    "id": "en-train",
+    "word": "train",
+    "senses": [
+      {
+        "id": "vehicle",
+        "meaningVi": "tàu hỏa",
+        "partOfSpeech": "noun",
+        "categories": [
+          "vehicles"
+        ]
+      }
+    ],
+    "frequencyRank": 787,
+    "frequencyTier": 7,
+    "sourceRank": 787,
+    "sourceFrequencyCount": 70974,
+    "categories": [
+      "vehicles"
+    ],
+    "visualType": "object",
+    "status": "published",
+    "meaningVi": "tàu hỏa",
+    "partOfSpeech": "noun"
+  },
+  {
+    "id": "en-bike",
+    "word": "bike",
+    "senses": [
+      {
+        "id": "bicycle",
+        "meaningVi": "xe đạp",
+        "partOfSpeech": "noun",
+        "categories": [
+          "vehicles"
+        ]
+      }
+    ],
+    "frequencyRank": 1919,
+    "frequencyTier": 8,
+    "sourceRank": 1919,
+    "sourceFrequencyCount": 24233,
+    "categories": [
+      "vehicles"
+    ],
+    "visualType": "object",
+    "status": "published",
+    "meaningVi": "xe đạp",
+    "partOfSpeech": "noun"
+  },
+  {
+    "id": "en-plane",
+    "word": "plane",
+    "senses": [
+      {
+        "id": "aircraft",
+        "meaningVi": "máy bay",
+        "partOfSpeech": "noun",
+        "categories": [
+          "vehicles"
+        ]
+      }
+    ],
+    "frequencyRank": 1064,
+    "frequencyTier": 8,
+    "sourceRank": 1064,
+    "sourceFrequencyCount": 49704,
+    "categories": [
+      "vehicles"
+    ],
+    "visualType": "object",
+    "status": "published",
+    "meaningVi": "máy bay",
+    "partOfSpeech": "noun"
+  },
+  {
+    "id": "en-truck",
+    "word": "truck",
+    "senses": [
+      {
+        "id": "vehicle",
+        "meaningVi": "xe tải",
+        "partOfSpeech": "noun",
+        "categories": [
+          "vehicles"
+        ]
+      }
+    ],
+    "frequencyRank": 1075,
+    "frequencyTier": 8,
+    "sourceRank": 1075,
+    "sourceFrequencyCount": 48807,
+    "categories": [
+      "vehicles"
+    ],
+    "visualType": "object",
+    "status": "published",
+    "meaningVi": "xe tải",
+    "partOfSpeech": "noun"
+  },
+  {
+    "id": "en-house",
+    "word": "house",
+    "senses": [
+      {
+        "id": "building",
+        "meaningVi": "ngôi nhà",
+        "partOfSpeech": "noun",
+        "categories": [
+          "home"
+        ]
+      }
+    ],
+    "frequencyRank": 213,
+    "frequencyTier": 4,
+    "sourceRank": 213,
+    "sourceFrequencyCount": 388585,
+    "categories": [
+      "home"
+    ],
+    "visualType": "scene",
+    "status": "published",
+    "meaningVi": "ngôi nhà",
+    "partOfSpeech": "noun"
+  },
+  {
+    "id": "en-room",
+    "word": "room",
+    "senses": [
+      {
+        "id": "space",
+        "meaningVi": "căn phòng",
+        "partOfSpeech": "noun",
+        "categories": [
+          "home"
+        ]
+      }
+    ],
+    "frequencyRank": 275,
+    "frequencyTier": 4,
+    "sourceRank": 275,
+    "sourceFrequencyCount": 290206,
+    "categories": [
+      "home"
+    ],
+    "visualType": "scene",
+    "status": "published",
+    "meaningVi": "căn phòng",
+    "partOfSpeech": "noun"
+  },
+  {
+    "id": "en-bed",
+    "word": "bed",
+    "senses": [
+      {
+        "id": "furniture",
+        "meaningVi": "cái giường",
+        "partOfSpeech": "noun",
+        "categories": [
+          "home"
+        ]
+      }
+    ],
+    "frequencyRank": 524,
+    "frequencyTier": 6,
+    "sourceRank": 524,
+    "sourceFrequencyCount": 131445,
+    "categories": [
+      "home"
+    ],
+    "visualType": "object",
+    "status": "published",
+    "meaningVi": "cái giường",
+    "partOfSpeech": "noun"
+  },
+  {
+    "id": "en-table",
+    "word": "table",
+    "senses": [
+      {
+        "id": "furniture",
+        "meaningVi": "cái bàn",
+        "partOfSpeech": "noun",
+        "categories": [
+          "home"
+        ]
+      }
+    ],
+    "frequencyRank": 816,
+    "frequencyTier": 7,
+    "sourceRank": 816,
+    "sourceFrequencyCount": 67702,
+    "categories": [
+      "home"
+    ],
+    "visualType": "object",
+    "status": "published",
+    "meaningVi": "cái bàn",
+    "partOfSpeech": "noun"
+  },
+  {
+    "id": "en-chair",
+    "word": "chair",
+    "senses": [
+      {
+        "id": "furniture",
+        "meaningVi": "cái ghế",
+        "partOfSpeech": "noun",
+        "categories": [
+          "home"
+        ]
+      }
+    ],
+    "frequencyRank": 1590,
+    "frequencyTier": 8,
+    "sourceRank": 1590,
+    "sourceFrequencyCount": 30826,
+    "categories": [
+      "home"
+    ],
+    "visualType": "object",
+    "status": "published",
+    "meaningVi": "cái ghế",
+    "partOfSpeech": "noun"
+  },
+  {
+    "id": "en-door",
+    "word": "door",
+    "senses": [
+      {
+        "id": "opening",
+        "meaningVi": "cánh cửa",
+        "partOfSpeech": "noun",
+        "categories": [
+          "home"
+        ]
+      }
+    ],
+    "frequencyRank": 297,
+    "frequencyTier": 4,
+    "sourceRank": 297,
+    "sourceFrequencyCount": 261118,
+    "categories": [
+      "home"
+    ],
+    "visualType": "object",
+    "status": "published",
+    "meaningVi": "cánh cửa",
+    "partOfSpeech": "noun"
+  },
+  {
+    "id": "en-man",
+    "word": "man",
+    "senses": [
+      {
+        "id": "person",
+        "meaningVi": "người đàn ông",
+        "partOfSpeech": "noun",
+        "categories": [
+          "people"
+        ]
+      }
+    ],
+    "frequencyRank": 99,
+    "frequencyTier": 2,
+    "sourceRank": 99,
+    "sourceFrequencyCount": 1173588,
+    "categories": [
+      "people"
+    ],
+    "visualType": "abstract",
+    "status": "published",
+    "meaningVi": "người đàn ông",
+    "partOfSpeech": "noun"
+  },
+  {
+    "id": "en-father",
+    "word": "father",
+    "senses": [
+      {
+        "id": "parent",
+        "meaningVi": "bố",
+        "partOfSpeech": "noun",
+        "categories": [
+          "people"
+        ]
+      }
+    ],
+    "frequencyRank": 194,
+    "frequencyTier": 3,
+    "sourceRank": 194,
+    "sourceFrequencyCount": 437537,
+    "categories": [
+      "people"
+    ],
+    "visualType": "abstract",
+    "status": "published",
+    "meaningVi": "bố",
+    "partOfSpeech": "noun"
+  },
+  {
+    "id": "en-mother",
+    "word": "mother",
+    "senses": [
+      {
+        "id": "parent",
+        "meaningVi": "mẹ",
+        "partOfSpeech": "noun",
+        "categories": [
+          "people"
+        ]
+      }
+    ],
+    "frequencyRank": 226,
+    "frequencyTier": 4,
+    "sourceRank": 226,
+    "sourceFrequencyCount": 372846,
+    "categories": [
+      "people"
+    ],
+    "visualType": "abstract",
+    "status": "published",
+    "meaningVi": "mẹ",
+    "partOfSpeech": "noun"
+  },
+  {
+    "id": "en-woman",
+    "word": "woman",
+    "senses": [
+      {
+        "id": "person",
+        "meaningVi": "người phụ nữ",
+        "partOfSpeech": "noun",
+        "categories": [
+          "people"
+        ]
+      }
+    ],
+    "frequencyRank": 253,
+    "frequencyTier": 4,
+    "sourceRank": 253,
+    "sourceFrequencyCount": 324673,
+    "categories": [
+      "people"
+    ],
+    "visualType": "abstract",
+    "status": "published",
+    "meaningVi": "người phụ nữ",
+    "partOfSpeech": "noun"
+  },
+  {
+    "id": "en-friend",
+    "word": "friend",
+    "senses": [
+      {
+        "id": "person",
+        "meaningVi": "người bạn",
+        "partOfSpeech": "noun",
+        "categories": [
+          "people"
+        ]
+      }
+    ],
+    "frequencyRank": 260,
+    "frequencyTier": 4,
+    "sourceRank": 260,
+    "sourceFrequencyCount": 308204,
+    "categories": [
+      "people"
+    ],
+    "visualType": "abstract",
+    "status": "published",
+    "meaningVi": "người bạn",
+    "partOfSpeech": "noun"
+  },
+  {
+    "id": "en-child",
+    "word": "child",
+    "senses": [
+      {
+        "id": "person",
+        "meaningVi": "đứa trẻ",
+        "partOfSpeech": "noun",
+        "categories": [
+          "people"
+        ]
+      }
+    ],
+    "frequencyRank": 469,
+    "frequencyTier": 5,
+    "sourceRank": 469,
+    "sourceFrequencyCount": 151864,
+    "categories": [
+      "people"
+    ],
+    "visualType": "abstract",
+    "status": "published",
+    "meaningVi": "đứa trẻ",
+    "partOfSpeech": "noun"
+  }
+]

@@ -7,6 +7,7 @@ import { TIENG_VIET_1_WEEK_1 } from '@/app/game/lop-1/tieng-viet/tuan-1/lesson'
 import { TIENG_VIET_1_WEEK_2 } from '@/app/game/lop-1/tieng-viet/tuan-2/lesson'
 import { TIENG_VIET_1_WEEK_3 } from '@/app/game/lop-1/tieng-viet/tuan-3/lesson'
 import { TIENG_VIET_1_WEEK_4 } from '@/app/game/lop-1/tieng-viet/tuan-4/lesson'
+import { VOCABULARY_3000_LESSON } from '@/app/game/vocabulary/lesson'
 
 export const LESSON_CATALOG = {
   [TOAN_2_BAI_1.lessonId]: TOAN_2_BAI_1,
@@ -18,6 +19,7 @@ export const LESSON_CATALOG = {
   [TIENG_VIET_1_WEEK_2.lessonId]: TIENG_VIET_1_WEEK_2,
   [TIENG_VIET_1_WEEK_3.lessonId]: TIENG_VIET_1_WEEK_3,
   [TIENG_VIET_1_WEEK_4.lessonId]: TIENG_VIET_1_WEEK_4,
+  [VOCABULARY_3000_LESSON.lessonId]: VOCABULARY_3000_LESSON,
 } as const
 
 export const LESSON_IDS = {
@@ -30,6 +32,7 @@ export const LESSON_IDS = {
   TIENG_VIET_1_WEEK_2: TIENG_VIET_1_WEEK_2.lessonId,
   TIENG_VIET_1_WEEK_3: TIENG_VIET_1_WEEK_3.lessonId,
   TIENG_VIET_1_WEEK_4: TIENG_VIET_1_WEEK_4.lessonId,
+  VOCABULARY_3000: VOCABULARY_3000_LESSON.lessonId,
 } as const
 
 export type LessonId = keyof typeof LESSON_CATALOG

@@ -1,0 +1,99 @@
+.page {
+  min-height: 100dvh;
+  padding: clamp(16px, 3vw, 36px);
+  color: #183047;
+  background:
+    radial-gradient(circle at 9% 6%, rgb(254 240 138 / 48%), transparent 23rem),
+    radial-gradient(circle at 92% 10%, rgb(186 230 253 / 62%), transparent 27rem),
+    linear-gradient(180deg, #f2fbff 0%, #f7fbf4 100%);
+  font-family: "Game Nunito", "Nunito", Arial, sans-serif;
+}
+
+.shell { width: min(100%, 1000px); margin: 0 auto; }
+.backLink { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; color: #2563eb; font-size: 15px; font-weight: 800; text-decoration: none; }
+.backLink:hover { color: #1d4ed8; text-decoration: underline; }
+.header { padding: 12px 0 24px; }
+.eyebrow { color: #0f766e; font-size: 13px; font-weight: 900; letter-spacing: .12em; }
+.header h1 { margin: 8px 0 5px; color: #164e63; font-size: clamp(32px, 7vw, 48px); font-weight: 1000; letter-spacing: -.04em; line-height: 1.05; }
+.header > p { max-width: 680px; margin: 0; color: #486174; font-size: 17px; font-weight: 650; line-height: 1.55; }
+.sourceSummary { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
+.sourceSummary span { padding: 9px 13px; border: 1px solid #d6e9ee; border-radius: 999px; background: rgb(255 255 255 / 83%); color: #466174; font-size: 13px; font-weight: 700; }
+.sourceSummary strong { color: #0f766e; font-size: 16px; }
+.header .sourceNote { margin-top: 10px; color: #667f90; font-size: 12px; }
+.section { margin-top: 16px; padding: clamp(16px, 3vw, 24px); border: 1px solid #dcebf0; border-radius: 24px; background: rgb(255 255 255 / 90%); box-shadow: 0 12px 30px rgb(17 75 95 / 7%); }
+.sectionHeading { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 16px; }
+.stepNumber { display: grid; flex: none; width: 34px; height: 34px; place-items: center; border-radius: 50%; background: #cffafe; color: #0e7490; font-size: 16px; font-weight: 1000; }
+.sectionHeading h2 { margin: 0; color: #164e63; font-size: 20px; font-weight: 900; line-height: 1.25; }
+.sectionHeading p { margin: 4px 0 0; color: #607689; font-size: 14px; line-height: 1.45; }
+.modeChoices { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.modeChoice { display: flex; min-height: 92px; flex-direction: column; align-items: flex-start; justify-content: center; gap: 7px; padding: 14px; border: 2px solid #e1ebf0; border-radius: 16px; background: #fff; color: #526b7e; text-align: left; transition: border-color 140ms ease, background 140ms ease, transform 140ms ease; }
+.modeChoice strong { color: #24485e; font-size: 15px; font-weight: 900; }
+.modeChoice span { font-size: 13px; line-height: 1.35; }
+.modeChoice:hover:not(:disabled) { transform: translateY(-1px); border-color: #7dd3fc; }
+.modeChoice:disabled { cursor: not-allowed; opacity: .5; }
+.selected { border-color: #0ea5e9 !important; background: #effaff !important; box-shadow: 0 0 0 2px rgb(14 165 233 / 10%); }
+.tierGrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.tierCard { display: flex; min-width: 0; min-height: 126px; flex-direction: column; align-items: flex-start; gap: 4px; padding: 13px; border: 2px solid #e2eaf0; border-radius: 16px; background: white; color: #264459; text-align: left; transition: border-color 140ms ease, background 140ms ease, transform 140ms ease; }
+.tierCard:hover { transform: translateY(-1px); border-color: #5eead4; }
+.selectedTier { border-color: #10b981; background: #f0fdf8; box-shadow: 0 0 0 2px rgb(16 185 129 / 10%); }
+.tierNumber { color: #0f766e; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: .07em; }
+.tierCard > strong { color: #17475c; font-size: 19px; font-weight: 1000; }
+.rankRange { color: #6d8191; font-size: 12px; }
+.tierAvailability { margin-top: 4px; color: #0b7669; font-size: 12px; font-weight: 900; }
+.tierSource { color: #75899a; font-size: 11px; }
+.gameModes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.gameMode { position: relative; display: flex; min-height: 132px; align-items: flex-start; gap: 12px; padding: 16px 14px; border: 2px solid #e2eaf0; border-radius: 17px; background: #fff; color: #0e7490; text-align: left; transition: border-color 140ms ease, background 140ms ease, transform 140ms ease; }
+.gameMode > svg { flex: none; margin-top: 2px; }
+.gameMode > span { display: grid; gap: 5px; color: #607689; }
+.gameMode strong { color: #21475b; font-size: 15px; font-weight: 900; }
+.gameMode small { font-size: 12px; line-height: 1.4; }
+.gameMode:hover:not(:disabled) { transform: translateY(-1px); border-color: #7dd3fc; }
+.gameMode:disabled { cursor: not-allowed; }
+.disabled { background: #f7f9fa; color: #90a3b1; opacity: .55; }
+.modeCount { color: #0f766e; font-weight: 800; }
+.modeCheck { position: absolute; top: 10px; right: 10px; color: #059669; }
+.inlineNote { margin: 12px 0 0; color: #667f90; font-size: 12px; line-height: 1.5; }
+.playBar { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-top: 16px; padding: 18px clamp(16px, 3vw, 24px); border: 1px solid #bae6d8; border-radius: 20px; background: linear-gradient(110deg, #ecfdf5, #f0f9ff); }
+.playBar > div { display: grid; gap: 4px; }
+.playBar strong { color: #166534; font-size: 17px; font-weight: 1000; }
+.playBar span, .playBar small { color: #557366; font-size: 13px; line-height: 1.4; }
+.playButton { flex: none; min-height: 52px; padding: 0 24px; border: 0; border-radius: 15px; background: #0f9f6e; box-shadow: 0 4px 0 #087a54; color: white; font-size: 16px; font-weight: 1000; transition: transform 120ms ease, filter 120ms ease; }
+.playButton:hover:not(:disabled) { transform: translateY(-1px); filter: brightness(1.05); }
+.playButton:disabled { cursor: not-allowed; background: #9bbab0; box-shadow: 0 4px 0 #819f95; }
+.error { margin: 12px 0 0; padding: 12px 14px; border: 1px solid #fecaca; border-radius: 12px; background: #fff7f7; color: #b91c1c; font-size: 14px; font-weight: 750; }
+
+.resultSummary { display: grid; gap: 12px; margin-top: 14px; text-align: left; }
+.resultStats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.resultStats span { display: grid; gap: 2px; padding: 8px 4px; border-radius: 12px; background: #f0f9ff; }
+.resultStats strong { color: #075985; font-size: 16px; font-weight: 1000; }
+.resultStats small { color: #567287; font-size: 10px; font-weight: 750; }
+.attemptSummary { margin: 0; color: #567287; font-size: 12px; font-weight: 750; text-align: center; }
+.missedList { padding: 10px 11px; border: 1px solid #e5eef2; border-radius: 13px; background: #f8fcfd; }
+.missedList h3 { margin: 0 0 6px; color: #164e63; font-size: 14px; font-weight: 900; }
+.missedList ul { display: grid; max-height: 190px; gap: 3px; overflow-y: auto; padding: 0; margin: 0; list-style: none; }
+.missedList li { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 5px 2px; border-bottom: 1px solid #e6eef2; }
+.missedList li:last-child { border-bottom: 0; }
+.missedList li > span { display: grid; min-width: 0; text-align: left; }
+.missedList li strong { color: #1e4b62; font-size: 14px; }
+.missedList li small { overflow: hidden; color: #708493; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.missedList li button { display: grid; flex: none; width: 40px; height: 40px; place-items: center; border: 1px solid #bae6fd; border-radius: 50%; background: #e0f2fe; color: #0369a1; }
+.missedList li button:disabled { opacity: .45; }
+.noMissedWords { margin: 0; color: #047857; font-size: 13px; font-weight: 800; text-align: center; }
+
+@media (max-width: 700px) {
+  .modeChoices, .gameModes { grid-template-columns: 1fr; }
+  .modeChoice { min-height: 74px; }
+  .gameMode { min-height: 90px; }
+  .tierGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .playBar { align-items: stretch; flex-direction: column; }
+  .playButton { width: 100%; }
+}
+
+@media (max-width: 360px) {
+  .tierGrid { grid-template-columns: 1fr; }
+  .sourceSummary { display: grid; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .modeChoice, .tierCard, .gameMode, .playButton { transition: none; }
+}

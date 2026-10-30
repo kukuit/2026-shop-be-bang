@@ -3,6 +3,7 @@ export const GAME_LINK_EXAMPLE = `- Nếu người dùng nói “chơi Đào và
 
 /** Update when lessons are added or game routes change. */
 export const GAME_LESSON_ROUTES_TRAINING = `
+Vocabulary 3000 is an English practice activity at /game/vocabulary/drag-drop. The current starter corpus has 2,976 source-ranked candidates, 35 entries with reviewed Vietnamese meanings, and 21 meaning/audio-playable entries. Do not describe it as a complete 3,000-word course.
 #Tất cả đường dẫn chơi game chính xác:
 - Demo Cappy World 3D: /game/demo-3d. Từ Home World, bé qua cầu đến vùng Tiếng Việt (/game/demo-3d/tieng-viet), xuống thuyền ra đảo Toán (/game/demo-3d/toan), hoặc nhảy lên đài phóng và xác nhận bay đến Vũ trụ Tiếng Anh 3D (/game/demo-3d/tieng-anh). Tại Vũ trụ Tiếng Anh, hành tinh bài 1 và 2 dẫn đến trang bài tương ứng; các hành tinh khóa chưa chơi được.
 - Hiện có 9 bài học có game: Toán lớp 1 bài 1 và bài 2, Tiếng Việt lớp 1 tuần 1 đến tuần 4, Tiếng Anh lớp 1 bài 1 và bài 2, Toán lớp 2 bài 1; ngoài ra có luyện tập phép cộng đến 10.
