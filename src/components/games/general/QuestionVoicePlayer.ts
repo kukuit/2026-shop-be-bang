@@ -6,7 +6,7 @@ export class QuestionVoicePlayer {
   private audio?: HTMLAudioElement
   private activeAudio = new Set<HTMLAudioElement>()
 
-  private queue: Array<{ src?: string; text?: string; playbackRate?: number; pauseAfterMs?: number }> = []
+  private queue: Array<{ src?: string; text?: string; language?: string; playbackRate?: number; pauseAfterMs?: number }> = []
   private blocked = false
   private pauseTimer?: ReturnType<typeof setTimeout>
   private pauseDeadline = 0
@@ -15,6 +15,7 @@ export class QuestionVoicePlayer {
   private utterance?: SpeechSynthesisUtterance
   private speechText?: string
   private speechPauseAfterMs = 0
+  private speechLanguage = 'vi-VN'
   private cancelVoiceWait?: () => void
   private composed?: ComposedAudioPlayer
   private composedActive = false
@@ -43,9 +44,9 @@ export class QuestionVoicePlayer {
     })
   }
 
-  play(sources: Array<string | undefined>, fallback?: { instruction?: string; target?: string }) {
+  play(sources: Array<string | undefined>, fallback?: { instruction?: string; target?: string }, fallbackLanguage = 'vi-VN') {
     const texts = [fallback?.instruction, fallback?.target]
-    const sequence = sources.map((src, index) => ({ src, text: texts[index] ?? '' }))
+    const sequence = sources.map((src, index) => ({ src, text: texts[index] ?? '', language: fallbackLanguage }))
     if (sources.length > 1 && sources.every((src): src is string => Boolean(src))) {
       this.playComposedSequence(sources.map((src, index) => ({ src, text: texts[index] ?? '' })))
       return
@@ -53,10 +54,14 @@ export class QuestionVoicePlayer {
     this.playSequence(sequence)
   }
 
-  playSequence(sequence: Array<{ src?: string; text?: string; playbackRate?: number }>) {
+  playSequence(sequence: Array<{ src?: string; text?: string; language?: string; playbackRate?: number }>) {
     this.stop()
     this.queue = sequence.filter(item => item.src || item.text)
     this.next()
+  }
+
+  playText(text: string, language = 'en-US') {
+    this.playSequence([{ text, language }])
   }
 
   setBlocked(blocked: boolean) {
@@ -70,7 +75,7 @@ export class QuestionVoicePlayer {
     }
     if (this.speechText) {
       if (blocked) this.cancelSpeech()
-      else if (!this.utterance) this.speak(this.speechText, this.speechPauseAfterMs)
+      else if (!this.utterance) this.speak(this.speechText, this.speechPauseAfterMs, this.speechLanguage)
       return
     }
     if (this.waitingForNext) {
@@ -115,8 +120,8 @@ export class QuestionVoicePlayer {
     const item = this.queue.shift()
     if (!item) { this.audio = undefined; return }
 
-    const { src, text, playbackRate = 1, pauseAfterMs = 0 } = item
-    if (!src) { if (text) this.speak(text, pauseAfterMs); else this.advance(pauseAfterMs); return }
+    const { src, text, language, playbackRate = 1, pauseAfterMs = 0 } = item
+    if (!src) { if (text) this.speak(text, pauseAfterMs, language); else this.advance(pauseAfterMs); return }
     const audio = new Audio(src)
     this.audio = audio
     this.activeAudio.add(audio)
@@ -140,7 +145,7 @@ export class QuestionVoicePlayer {
       audio.onended = audio.onerror = null
       audio.pause()
       this.audio = undefined
-      this.speak(text, pauseAfterMs)
+      this.speak(text, pauseAfterMs, language)
     }
     void audio.play().catch(() => {
       if (!this.blocked && this.audio === audio) audio.onerror?.(new Event('error'))
@@ -156,32 +161,34 @@ export class QuestionVoicePlayer {
     window.speechSynthesis.cancel()
   }
 
-  private speak(text: string, pauseAfterMs = 0) {
+  private speak(text: string, pauseAfterMs = 0, language = 'vi-VN') {
     if (typeof window === 'undefined' || !('speechSynthesis' in window)) { this.advance(pauseAfterMs); return }
     this.speechText = text
     this.speechPauseAfterMs = pauseAfterMs
+    this.speechLanguage = language
     if (this.blocked) return
     if (this.cancelVoiceWait) return
     const synth = window.speechSynthesis
-    const findVietnameseVoice = () => {
+    const languagePrefix = language.toLowerCase().replace('_', '-').split('-')[0]
+    const findLanguageVoice = () => {
       const voices = synth.getVoices()
-      return voices.find(candidate => candidate.lang.toLowerCase().replace('_', '-') === 'vi-vn')
-        ?? voices.find(candidate => /^vi(?:[-_]|$)/i.test(candidate.lang))
+      return voices.find(candidate => candidate.lang.toLowerCase().replace('_', '-') === language.toLowerCase().replace('_', '-'))
+        ?? voices.find(candidate => candidate.lang.toLowerCase().replace('_', '-').startsWith(`${languagePrefix}-`))
     }
-    const voice = findVietnameseVoice()
-    if (voice) { this.speakWithVoice(text, voice, pauseAfterMs); return }
+    const voice = findLanguageVoice()
+    if (voice) { this.speakWithVoice(text, voice, pauseAfterMs, language); return }
 
     // Some browsers populate their voices asynchronously, including remote voices.
     const onVoicesChanged = () => {
-      const loadedVoice = findVietnameseVoice()
+      const loadedVoice = findLanguageVoice()
       if (!loadedVoice) return
       cleanup()
-      this.speakWithVoice(text, loadedVoice, pauseAfterMs)
+      this.speakWithVoice(text, loadedVoice, pauseAfterMs, language)
     }
     const timer = setTimeout(() => {
       cleanup()
-      // Let the engine resolve vi-VN if it does not expose a Vietnamese voice.
-      this.speakWithVoice(text, findVietnameseVoice(), pauseAfterMs)
+      // Let the browser resolve the requested locale if it has no matching voice in its list.
+      this.speakWithVoice(text, findLanguageVoice(), pauseAfterMs, language)
     }, 1500)
     const cleanup = () => {
       clearTimeout(timer)
@@ -193,9 +200,9 @@ export class QuestionVoicePlayer {
     onVoicesChanged()
   }
 
-  private speakWithVoice(text: string, voice: SpeechSynthesisVoice | undefined, pauseAfterMs: number) {
+  private speakWithVoice(text: string, voice: SpeechSynthesisVoice | undefined, pauseAfterMs: number, language = 'vi-VN') {
     const utterance = new SpeechSynthesisUtterance(text)
-    utterance.lang = 'vi-VN'
+    utterance.lang = language
     utterance.rate = .85
     if (voice) utterance.voice = voice
     this.utterance = utterance

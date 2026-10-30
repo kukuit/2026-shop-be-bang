@@ -1,0 +1,89 @@
+{
+  "source": {
+    "name": "FrequencyWords, English 2018 OpenSubtitles list",
+    "author": "Hermit Dave",
+    "version": "2018",
+    "commit": "525f9b560de45753a5ea01069454e72e9aa541c6",
+    "sourceFile": "content/2018/en/en_50k.txt",
+    "url": "https://github.com/hermitdave/FrequencyWords/tree/525f9b560de45753a5ea01069454e72e9aa541c6/content/2018/en",
+    "license": "CC BY-SA 4.0",
+    "sourceSha256": "5351ff405b1126ef555791dd4d9798a48e3e9a501a9fc481a9da957752cfb458",
+    "rankDefinition": "Original 1-based line position in the pinned frequency-sorted list; entries are filtered without renumbering."
+  },
+  "targetRankCount": 3000,
+  "importedCandidateCount": 2976,
+  "excludedPositionCount": 24,
+  "excludedSourceRanks": [
+    6,
+    10,
+    26,
+    32,
+    44,
+    63,
+    104,
+    177,
+    492,
+    550,
+    579,
+    737,
+    1167,
+    1287,
+    1426,
+    1606,
+    2055,
+    2346,
+    2465,
+    2564,
+    2717,
+    2832,
+    2854,
+    2898
+  ],
+  "frequencyBands": {
+    "1": {
+      "minRank": 1,
+      "maxRank": 50,
+      "candidateCount": 45
+    },
+    "2": {
+      "minRank": 51,
+      "maxRank": 100,
+      "candidateCount": 49
+    },
+    "3": {
+      "minRank": 101,
+      "maxRank": 200,
+      "candidateCount": 98
+    },
+    "4": {
+      "minRank": 201,
+      "maxRank": 300,
+      "candidateCount": 100
+    },
+    "5": {
+      "minRank": 301,
+      "maxRank": 500,
+      "candidateCount": 199
+    },
+    "6": {
+      "minRank": 501,
+      "maxRank": 750,
+      "candidateCount": 247
+    },
+    "7": {
+      "minRank": 751,
+      "maxRank": 1000,
+      "candidateCount": 250
+    },
+    "8": {
+      "minRank": 1001,
+      "maxRank": 2000,
+      "candidateCount": 996
+    },
+    "9": {
+      "minRank": 2001,
+      "maxRank": 3000,
+      "candidateCount": 992
+    }
+  }
+}

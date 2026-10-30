@@ -16,6 +16,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
       '/game/lop-1/toan/bai-2', '/game/lop-1/toan/bai-2/drag-drop',
       '/game/lop-1/toan/bai-2/gold-mining', '/game/lop-1/toan/bai-2/racing',
       '/game/lop-1/toan/bai-2/bubble-shooter',
+      '/game/vocabulary/drag-drop',
     ].map((path) => ({ url: `${baseUrl}${path}`, lastModified: now, changeFrequency: 'weekly' as const, priority: 0.7 })),
   ]
 

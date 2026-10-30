@@ -40,6 +40,9 @@
     "test:ai-task": "node scripts/test-ai-task.cjs",
     "test:ai-task:teaching": "node scripts/test-ai-task-teaching.cjs",
     "test:ai-task:offline": "node scripts/test-ai-task-offline.cjs",
+    "vocabulary:import": "node scripts/vocabulary/import-vocabulary.mjs",
+    "vocabulary:validate": "node scripts/vocabulary/validate-vocabulary.mjs",
+    "vocabulary:sprites": "node scripts/vocabulary/package-sprite-sheets.mjs",
     "teaching:migrate-pricing": "node scripts/migrate-teaching-pricing.cjs",
     "test:ai-task:recognition": "node scripts/test-ai-task-recognition.cjs",
     "test:ai-task:browser": "node scripts/test-ai-task-browser.cjs"

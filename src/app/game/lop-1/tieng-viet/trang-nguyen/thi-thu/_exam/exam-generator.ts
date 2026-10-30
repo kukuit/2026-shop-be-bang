@@ -1,5 +1,5 @@
-import { LEGACY_MOCK_EXAM_VERSION, MOCK_EXAM_DURATION_SECONDS, MOCK_EXAM_ID, MOCK_EXAM_QUESTION_COUNT, MOCK_EXAM_TITLE, MOCK_EXAM_VERSION, isSupportedMockExamVersion } from './config'
-import { createSeededRandom, stableHash } from './shuffle'
+import { LEGACY_MOCK_EXAM_VERSION, MOCK_EXAM_DURATION_SECONDS, MOCK_EXAM_ID, MOCK_EXAM_QUESTION_COUNT, MOCK_EXAM_TITLE, MOCK_EXAM_VERSION, PREVIOUS_MOCK_EXAM_VERSION, isSupportedMockExamVersion } from './config'
+import { createSeededRandom, shuffle, stableHash } from './shuffle'
 import {
   TONE_LABELS,
   TONE_SYLLABLE_BANK,
@@ -45,37 +45,35 @@ const BLOCK_COUNT = 6
 
 export function validateGeneratedExam(exam: GeneratedExamDefinition): void {
   if (exam.questions.length !== MOCK_EXAM_QUESTION_COUNT) throw new Error('A Trang Nguyên exam must contain exactly 30 questions')
-  if (exam.questions[1]?.templateId !== 'T02' || exam.questions[2]?.templateId !== 'T03' || exam.questions[3]?.templateId !== 'T04')
-    throw new Error('Questions 2 through 4 must use their assigned question generators')
-  if (exam.questions[5]?.templateId !== 'T06') throw new Error('Question 6 must use IDENTIFY_TONE_FROM_SYLLABLE')
-  if (exam.questions[6]?.templateId !== 'T07') throw new Error('Question 7 must use FIND_ANIMAL_BY_NAME')
-  if (exam.questions[7]?.templateId !== 'T08') throw new Error('Question 8 must use FIND_OBJECT_BY_NAME')
-  if (exam.questions[8]?.templateId !== 'T09' || exam.questions[8]?.data?.generator !== 'FIND_FLOWER_BY_IMAGE')
-    throw new Error('Question 9 must use FIND_FLOWER_BY_IMAGE')
-  if (exam.questions[9]?.templateId !== 'T10' || exam.questions[9]?.data?.generator !== 'RECOGNIZE_LETTERS_IN_IMAGE')
-    throw new Error('Question 10 must use RECOGNIZE_LETTERS_IN_IMAGE')
-  if (exam.questions[10]?.templateId !== 'T11' || exam.questions[10]?.data?.generator !== 'RECOGNIZE_NUMBER_ON_CARD')
-    throw new Error('Question 11 must use RECOGNIZE_NUMBER_ON_CARD')
-  if (exam.questions[11]?.templateId !== 'T12' || exam.questions[11]?.data?.generator !== 'FILL_LETTER_IN_BLANK')
-    throw new Error('Question 12 must use FILL_LETTER_IN_BLANK')
-  if (exam.questions[12]?.templateId !== 'T13' || exam.questions[12]?.data?.generator !== 'COUNT_TARGET_LETTER')
-    throw new Error('Question 13 must use COUNT_TARGET_LETTER')
-  if (exam.questions[13]?.templateId !== 'T14' || exam.questions[13]?.data?.generator !== 'FIND_HIDDEN_LETTER')
-    throw new Error('Question 14 must use FIND_HIDDEN_LETTER')
-  if (exam.questions[14]?.templateId !== 'T15' || exam.questions[14]?.data?.generator !== 'ROTATED_LETTER_INPUT')
-    throw new Error('Question 15 must use ROTATED_LETTER_INPUT')
-  if (exam.questions[15]?.templateId !== 'T16' || exam.questions[15]?.data?.generator !== 'MATCH_SAME_LETTER_TWO_GROUPS')
-    throw new Error('Question 16 must use MATCH_SAME_LETTER_TWO_GROUPS')
-  if (exam.questions[16]?.templateId !== 'T17' || exam.questions[16]?.data?.generator !== 'MATCH_LOWER_UPPER_CASE')
-    throw new Error('Question 17 must use MATCH_LOWER_UPPER_CASE')
-  if (exam.questions[17]?.templateId !== 'T18' || exam.questions[17]?.data?.generator !== 'MATCH_IMAGE_WITH_SOUND')
-    throw new Error('Question 18 must use MATCH_IMAGE_WITH_SOUND')
-  if (exam.questions[18]?.templateId !== 'T19' || exam.questions[18]?.data?.generator !== 'MATCH_OBJECT_WITH_NAME')
-    throw new Error('Question 19 must use MATCH_OBJECT_WITH_NAME')
-  if (exam.questions[19]?.templateId !== 'T20' || exam.questions[19]?.data?.generator !== 'CLASSIFY_NUMBER_AND_LETTER')
-    throw new Error('Question 20 must use CLASSIFY_NUMBER_AND_LETTER')
-  const question3Target = exam.questions[2].data?.target
-  const question4Target = exam.questions[3].data?.target
+  const questionByTemplate = new Map<string, GeneratedExamQuestion>(
+    exam.questions.map(question => [question.templateId, question] as const),
+  )
+  const expectedGenerators: Record<string, string> = {
+    T02: 'FIND_TARGET_LETTER_IN_OBJECT_IMAGE',
+    T03: 'HEAR_AND_IDENTIFY_LETTER',
+    T04: 'HEAR_AND_IDENTIFY_LETTER',
+    T06: 'IDENTIFY_TONE_FROM_SYLLABLE',
+    T07: 'FIND_ANIMAL_BY_NAME',
+    T08: 'FIND_OBJECT_BY_NAME',
+    T09: 'FIND_FLOWER_BY_IMAGE',
+    T10: 'RECOGNIZE_LETTERS_IN_IMAGE',
+    T11: 'RECOGNIZE_NUMBER_ON_CARD',
+    T12: 'FILL_LETTER_IN_BLANK',
+    T13: 'COUNT_TARGET_LETTER',
+    T14: 'FIND_HIDDEN_LETTER',
+    T15: 'ROTATED_LETTER_INPUT',
+    T16: 'MATCH_SAME_LETTER_TWO_GROUPS',
+    T17: 'MATCH_LOWER_UPPER_CASE',
+    T18: 'MATCH_IMAGE_WITH_SOUND',
+    T19: 'MATCH_OBJECT_WITH_NAME',
+    T20: 'CLASSIFY_NUMBER_AND_LETTER',
+  }
+  for (const [templateId, generator] of Object.entries(expectedGenerators)) {
+    if (questionByTemplate.get(templateId)?.data?.generator !== generator)
+      throw new Error(`${templateId} must use ${generator}`)
+  }
+  const question3Target = questionByTemplate.get('T03')?.data?.target
+  const question4Target = questionByTemplate.get('T04')?.data?.target
   if (!question3Target || !question4Target || question3Target === question4Target)
     throw new Error('Questions 3 and 4 must have different HEAR_AND_IDENTIFY_LETTER targets')
 
@@ -84,8 +82,10 @@ export function validateGeneratedExam(exam: GeneratedExamDefinition): void {
   for (let index = 0; index < exam.questions.length; index += 1) {
     const question = exam.questions[index]
     templateCounts.set(question.templateId, (templateCounts.get(question.templateId) ?? 0) + 1)
-    if (question.number !== index + 1 || question.templateId !== `T${String(index + 1).padStart(2, '0')}`)
-      throw new Error(`Question ${index + 1} must use template T${String(index + 1).padStart(2, '0')}`)
+    const templateNumber = Number(question.templateId.slice(1))
+    if (question.number !== index + 1 || !Number.isInteger(templateNumber)
+      || Math.floor((templateNumber - 1) / BLOCK_SIZE) !== Math.floor(index / BLOCK_SIZE))
+      throw new Error(`Question ${index + 1} must use a template from its assigned five-question group`)
     if (questionIds.has(question.id)) throw new Error(`Duplicate question id: ${question.id}`)
     questionIds.add(question.id)
     validateGeneratedQuestion(question)
@@ -247,8 +247,9 @@ export function generateMockTrangNguyenExam(args: { seed: string; examVersion?: 
   const legacyRandom = examVersion === LEGACY_MOCK_EXAM_VERSION
     ? createSeededRandom(`${examVersion}:fixed-question-set`)
     : undefined
+  const contentVersion = examVersion === MOCK_EXAM_VERSION ? PREVIOUS_MOCK_EXAM_VERSION : examVersion
   const randomForTemplate = (templateNumber: number) => legacyRandom
-    ?? createSeededRandom(`${examVersion}:${args.seed}:T${String(templateNumber).padStart(2, '0')}`)
+    ?? createSeededRandom(`${contentVersion}:${args.seed}:T${String(templateNumber).padStart(2, '0')}`)
   const seedHash = stableHash(args.seed)
   const questions: GeneratedExamQuestion[] = []
   const generationContext: QuestionGenerationContext = { recentQuestionKeys: {} }
@@ -265,7 +266,16 @@ export function generateMockTrangNguyenExam(args: { seed: string; examVersion?: 
         generated.push(generators[index](seedHash, randomForTemplate(templateNumber), generationContext))
       }
     }
-    generated.sort((left, right) => Number(left.templateId.slice(1)) - Number(right.templateId.slice(1)))
+    if (examVersion === MOCK_EXAM_VERSION) {
+      // Keep each template's generated content unchanged; only its position in this group is new.
+      generated.splice(0, generated.length, ...shuffle(
+        generated,
+        createSeededRandom(`${examVersion}:${args.seed}:question-order:group-${block + 1}`),
+      ))
+    } else {
+      // Preserve the exact order of saved v20/v21 attempts.
+      generated.sort((left, right) => Number(left.templateId.slice(1)) - Number(right.templateId.slice(1)))
+    }
     questions.push(...generated)
   }
 

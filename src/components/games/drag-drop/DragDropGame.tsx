@@ -71,12 +71,13 @@ export default function DragDropGame({ config }: { config: DragDropGameConfig })
 }
 
 function ReadyDragDropGame({ config }: { config: DragDropGameConfig }) {
+  const maxRounds = Math.min(MAX_SURVIVAL_LEVEL, Math.max(1, config.maxRounds ?? MAX_SURVIVAL_LEVEL))
   const questionVoiceRef = useRef<QuestionVoicePlayer | null>(null)
   const trackerRef = useRef<GameTracker | undefined>(undefined)
   const targetStartedAtRef = useRef<Record<string, number>>({})
   const targetAttemptsRef = useRef<Record<string, number>>({})
   const [currentLevel, setCurrentLevel] = useState(0)
-  const [levels, setLevels] = useState(config.initialLevels.slice(0, MAX_SURVIVAL_LEVEL).map((item, index) => ({ ...item, id: index + 1 })))
+  const [levels, setLevels] = useState(config.initialLevels.slice(0, maxRounds).map((item, index) => ({ ...item, id: index + 1 })))
   const [score, setScore] = useState(0)
   const [completedTargets, setCompletedTargets] = useState<Record<string, DragAnswerValue>>({})
   const [isTransitioning, setIsTransitioning] = useState(false)
@@ -97,6 +98,7 @@ function ReadyDragDropGame({ config }: { config: DragDropGameConfig }) {
   const [gameStarted, setGameStarted] = useState(false)
   const [loadProgress, setLoadProgress] = useState(0)
   const [drag, setDrag] = useState<DragState>(null)
+  const [keyboardSelectedAnswer, setKeyboardSelectedAnswer] = useState<DragAnswerValue | null>(null)
   const [wrongTarget, setWrongTarget] = useState<string | null>(null)
   const [correctTarget, setCorrectTarget] = useState<string | null>(null)
   const [floatingScore, setFloatingScore] = useState<FloatingScore>(null)
@@ -183,6 +185,13 @@ function ReadyDragDropGame({ config }: { config: DragDropGameConfig }) {
     else questionVoiceRef.current?.play([level.instructionVoice, level.voice], level.voiceFallback)
   }, [level])
 
+  const playGroupAudio = useCallback((audio: NonNullable<CountGroup['audio']>) => {
+    if (!gameStarted || !soundEnabled || gamePaused || gameCompleted || isTransitioning) return
+    const player = questionVoiceRef.current
+    if (audio.url) player?.play([audio.url], audio.text ? { target: audio.text } : undefined, audio.language ?? 'en-US')
+    else if (audio.text) player?.playText(audio.text, audio.language ?? 'en-US')
+  }, [gameCompleted, gamePaused, gameStarted, isTransitioning, soundEnabled])
+
   useEffect(() => {
     if (gameStarted && !gameCompleted && !isTransitioning) playLevelVoice()
     return () => questionVoiceRef.current?.stop()
@@ -211,14 +220,15 @@ function ReadyDragDropGame({ config }: { config: DragDropGameConfig }) {
       if (!cancelled) setLoadProgress(progress)
     })
     void Promise.all([adaptiveLevels, assets]).then(([nextLevels]) => {
-      if (!cancelled) { setLevels(nextLevels.slice(0, MAX_SURVIVAL_LEVEL).map((item, index) => ({ ...item, id: index + 1 }))); setIsReady(true) }
+      if (!cancelled) { setLevels(nextLevels.slice(0, maxRounds).map((item, index) => ({ ...item, id: index + 1 }))); setIsReady(true) }
     })
     return () => { cancelled = true }
-  }, [config, voiceAssets])
+  }, [config, maxRounds, voiceAssets])
 
   useEffect(() => {
     setNumberTray(shuffleNumbers(answerDomain))
     setStolenNumber(null)
+    setKeyboardSelectedAnswer(null)
     const now = Date.now()
     targetStartedAtRef.current = Object.fromEntries(Object.keys(level.answers).map((targetId) => [targetId, now]))
     targetAttemptsRef.current = {}
@@ -234,7 +244,7 @@ function ReadyDragDropGame({ config }: { config: DragDropGameConfig }) {
   const restart = useCallback(() => {
     if (gameStarted && !gameCompleted) {
       const task = trackerRef.current?.finishSession(score, undefined, {
-        levelReached: Math.min(MAX_SURVIVAL_LEVEL, currentLevel + 1),
+        levelReached: Math.min(maxRounds, currentLevel + 1),
         levelsCompleted: currentLevel,
         livesRemaining: livesRef.current,
       })
@@ -252,7 +262,7 @@ function ReadyDragDropGame({ config }: { config: DragDropGameConfig }) {
     setCurrentLevel(0); setScore(0); setCompletedTargets({}); setIsTransitioning(false)
     setLives(MAX_SURVIVAL_LIVES); livesRef.current = MAX_SURVIVAL_LIVES
     correctStreakRef.current = 0; lifeRecoveriesRef.current = 0
-    setGameCompleted(false); setGameVictory(false); setGamePaused(false); setGameStarted(true); setDrag(null); setTrackingTask(undefined); setRewardToast(0)
+    setGameCompleted(false); setGameVictory(false); setGamePaused(false); setGameStarted(true); setDrag(null); setKeyboardSelectedAnswer(null); setTrackingTask(undefined); setRewardToast(0)
     setCappyReaction(null)
     setStolenNumber(null)
     setWolfRounds(createWolfRounds())
@@ -262,20 +272,22 @@ function ReadyDragDropGame({ config }: { config: DragDropGameConfig }) {
       questionVoiceRef.current?.stop()
       setGameStarted(false)
       setIsTransitioning(true)
-      void Promise.resolve(config.loadLevels(levels)).then(next => { setLevels(next.slice(0, MAX_SURVIVAL_LEVEL).map((item, index) => ({ ...item, id: index + 1 }))); reset() })
+      void Promise.resolve(config.loadLevels(levels)).then(next => { setLevels(next.slice(0, maxRounds).map((item, index) => ({ ...item, id: index + 1 }))); reset() })
     } else {
-      void Promise.resolve(config.loadLevels(levels)).then(next => setLevels(next.slice(0, MAX_SURVIVAL_LEVEL).map((item, index) => ({ ...item, id: index + 1 }))))
+      void Promise.resolve(config.loadLevels(levels)).then(next => setLevels(next.slice(0, maxRounds).map((item, index) => ({ ...item, id: index + 1 }))))
       reset()
     }
-  }, [config, currentLevel, gameCompleted, gameStarted, levels, score, startTracking, voices])
+  }, [config, currentLevel, gameCompleted, gameStarted, levels, maxRounds, score, startTracking, voices])
 
-  const finishDrop = useCallback((clientX: number, clientY: number, value: DragAnswerValue) => {
+  const finishDrop = useCallback((clientX: number, clientY: number, value: DragAnswerValue, keyboardTargetId?: string) => {
     const target = document.elementFromPoint(clientX, clientY)?.closest<HTMLElement>('[data-target-id]')
-    const targetId = target?.dataset.targetId
-    if (!targetId || completedTargets[targetId] !== undefined || isTransitioning || gameCompleted) return setDrag(null)
+    const targetId = keyboardTargetId ?? target?.dataset.targetId
+    if (!targetId || completedTargets[targetId] !== undefined || !gameStarted || gamePaused || isTransitioning || gameCompleted) return setDrag(null)
     questionVoiceRef.current?.stop()
+    setKeyboardSelectedAnswer(null)
     const expectedAnswer = level.answers[targetId]
     const correct = expectedAnswer === value
+    config.onAnswer?.({ targetId, correct, selectedAnswer: value, expectedAnswer })
     const attempt = (targetAttemptsRef.current[targetId] ?? 0) + 1
     trackerRef.current?.recordAnswer({
       learningKey: level.learningKeys[targetId], expectedAnswer, selectedAnswer: value, correct,
@@ -286,6 +298,7 @@ function ReadyDragDropGame({ config }: { config: DragDropGameConfig }) {
     targetAttemptsRef.current[targetId] = attempt
     targetStartedAtRef.current[targetId] = Date.now()
     if (correct) {
+      if (config.scorePerCorrectTarget !== undefined) setScore((current) => current + config.scorePerCorrectTarget!)
       if (livesRef.current < MAX_SURVIVAL_LIVES && lifeRecoveriesRef.current < MAX_SURVIVAL_LIFE_RECOVERIES) {
         correctStreakRef.current += 1
         if (correctStreakRef.current >= 3) {
@@ -322,12 +335,12 @@ function ReadyDragDropGame({ config }: { config: DragDropGameConfig }) {
     }
     window.setTimeout(() => setFloatingScore(null), 700)
     setDrag(null)
-  }, [completedTargets, gameCompleted, isTransitioning, level.answerModes, level.answers, level.inputModes, level.learningKeys, level.skills, score, voices])
+  }, [completedTargets, config, gameCompleted, gamePaused, gameStarted, isTransitioning, level.answerModes, level.answers, level.inputModes, level.learningKeys, level.skills, level.sourceLessons, score, voices])
 
   useEffect(() => {
     if (gameCompleted) {
-      const levelReached = Math.min(MAX_SURVIVAL_LEVEL, currentLevel + 1)
-      const levelsCompleted = gameVictory ? MAX_SURVIVAL_LEVEL : currentLevel
+      const levelReached = Math.min(maxRounds, currentLevel + 1)
+      const levelsCompleted = gameVictory ? maxRounds : currentLevel
       const task = trackerRef.current?.finishSession(score, undefined, {
         levelReached, levelsCompleted, livesRemaining: livesRef.current,
       })
@@ -337,7 +350,7 @@ function ReadyDragDropGame({ config }: { config: DragDropGameConfig }) {
         .then(data => { if (data) { setBestLevel(data.bestLevel ?? 0); setCoinBalance(data.coinBalance ?? 0) } })
         .catch(() => {})
     }
-  }, [config.lessonId, currentLevel, gameCompleted, gameVictory, score])
+  }, [config.lessonId, currentLevel, gameCompleted, gameVictory, maxRounds, score])
 
   useEffect(() => {
     if (gameCompleted && gameVictory) voices.playOnce('win', 'voice-win', 'win')
@@ -347,8 +360,8 @@ function ReadyDragDropGame({ config }: { config: DragDropGameConfig }) {
     const targetCount = Object.keys(level.answers).length
     if (!gameStarted || gamePaused || isTransitioning || Object.keys(completedTargets).length !== targetCount) return
     setIsTransitioning(true)
-    setScore((current) => current + 10)
-  }, [completedTargets, gamePaused, gameStarted, isTransitioning, level.answers])
+    if (config.scorePerCorrectTarget === undefined) setScore((current) => current + 10)
+  }, [completedTargets, config.scorePerCorrectTarget, gamePaused, gameStarted, isTransitioning, level.answers])
 
   useEffect(() => {
     if (!isTransitioning || gamePaused || gameCompleted) return
@@ -359,7 +372,7 @@ function ReadyDragDropGame({ config }: { config: DragDropGameConfig }) {
         setRewardToast(Math.round(milestoneReward * survivalRewardMultiplier(playCount + 1)))
         window.setTimeout(() => setRewardToast(0), 1200)
       }
-      if (completedLevel === MAX_SURVIVAL_LEVEL) {
+      if (completedLevel === maxRounds) {
         setGameVictory(true)
         setGameCompleted(true)
         return
@@ -374,14 +387,14 @@ function ReadyDragDropGame({ config }: { config: DragDropGameConfig }) {
         return
       }
       void Promise.resolve(config.loadLevels(levels)).then((batch) => {
-        const additions = batch.slice(0, MAX_SURVIVAL_LEVEL - levels.length)
+        const additions = batch.slice(0, maxRounds - levels.length)
           .map((item, index) => ({ ...item, id: levels.length + index + 1 }))
         if (!additions.length) {
           setGameVictory(false)
           setGameCompleted(true)
           return
         }
-        setLevels(previous => [...previous, ...additions].slice(0, MAX_SURVIVAL_LEVEL))
+        setLevels(previous => [...previous, ...additions].slice(0, maxRounds))
         advance()
       }).catch((error) => {
         console.error('[DragDrop] Could not load the next level batch', error)
@@ -390,11 +403,12 @@ function ReadyDragDropGame({ config }: { config: DragDropGameConfig }) {
       })
     }, 1000)
     return () => window.clearTimeout(timer)
-  }, [config, currentLevel, gameCompleted, gamePaused, isTransitioning, levels, playCount])
+  }, [config, currentLevel, gameCompleted, gamePaused, isTransitioning, levels, maxRounds, playCount])
 
   const beginDrag = (event: ReactPointerEvent, value: DragAnswerValue) => {
     if (!gameStarted || isTransitioning || gameCompleted) return
     event.preventDefault()
+    setKeyboardSelectedAnswer(null)
     event.currentTarget.setPointerCapture(event.pointerId)
     setDrag({ value, x: event.clientX, y: event.clientY, pointerId: event.pointerId })
   }
@@ -424,40 +438,53 @@ function ReadyDragDropGame({ config }: { config: DragDropGameConfig }) {
             {headingTitle && <h2>{headingTitle}</h2>}
             {headingInstruction && <p>{headingInstruction}</p>}
           </div>
-          <div className={styles.questionArea}>
-            {!hasInlineVoiceButton && (hasQuestionVoice || (level.spokenInstruction && canSpeak)) && <button type="button" className={styles.listenButton} onClick={() => hasQuestionVoice ? playLevelVoice() : speakInstruction()} disabled={!gameStarted || !soundEnabled || gamePaused || gameCompleted || isTransitioning} aria-label="Nghe lại câu hỏi"><Volume2 size={28} aria-hidden="true" /></button>}
-            {level.groups && <CountGroups inlineVoiceGroupIds={inlineVoiceGroupIds} inputModes={level.inputModes} wideAnswer={longestAnswer > 3} groups={level.groups} completed={completedTargets} wrongTarget={wrongTarget} correctTarget={correctTarget} voiceButton={hasInlineVoiceButton ? <button type="button" disabled={!gameStarted || !soundEnabled || gamePaused || gameCompleted || isTransitioning} onClick={playLevelVoice} className={styles.listenButton} aria-label="Nghe lại"><Volume2 size={28} aria-hidden="true" /></button> : undefined} />}
-            {level.sequence && <SequenceRow cells={level.sequence} completed={completedTargets} wrongTarget={wrongTarget} correctTarget={correctTarget} />}
-          </div>
           <div ref={answerTrayRef} className={styles.answerTray} data-long-answers={hasLongAnswers || undefined} style={{ gridTemplateColumns: `repeat(${answerColumns}, minmax(0, 1fr))`, fontFamily: '"Game Nunito", Arial, sans-serif' }}>
             {displayedAnswers.map((value) => {
               const stolen = stolenNumber === value
-              return <button key={value} data-answer-tile data-answer-value={value} type="button" disabled={stolen} onPointerDown={(event) => beginDrag(event, value)} onPointerMove={moveDrag} onPointerUp={(event) => endDrag(event, value)} onPointerCancel={() => setDrag(null)} className={`${styles.answerButton} ${stolen ? styles.answerButtonStolen : ''}`} style={{ backgroundColor: stolen ? undefined : colorFor(value) }} aria-label={stolen ? 'Ô số đã bị Sói lấy' : `Kéo ${config.answerNoun ?? 'số'} ${value}`}>{stolen ? '' : <FittedTileContent wrap><GameImageValue value={value} /></FittedTileContent>}</button>
+              return <button key={value} data-answer-tile data-answer-value={value} type="button" disabled={stolen} onKeyDown={(event) => {
+                if (!config.keyboardMatching) return
+                if (keyboardSelectedAnswer === value && event.key === 'Tab' && !event.shiftKey) {
+                  event.preventDefault()
+                  gameAreaRef.current?.querySelector<HTMLElement>('[role="button"][data-target-id]:not([aria-disabled="true"])')?.focus()
+                  return
+                }
+                if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setKeyboardSelectedAnswer(value) }
+              }} onPointerDown={(event) => beginDrag(event, value)} onPointerMove={moveDrag} onPointerUp={(event) => endDrag(event, value)} onPointerCancel={() => setDrag(null)} className={`${styles.answerButton} ${stolen ? styles.answerButtonStolen : ''} ${keyboardSelectedAnswer === value ? styles.answerButtonSelected : ''}`} style={{ backgroundColor: stolen ? undefined : colorFor(value) }} aria-pressed={config.keyboardMatching ? keyboardSelectedAnswer === value : undefined} aria-label={stolen ? 'Ô số đã bị Sói lấy' : `Chọn hoặc kéo ${config.answerNoun ?? 'số'} ${value}`}>{stolen ? '' : <FittedTileContent wrap><GameImageValue value={value} /></FittedTileContent>}</button>
             })}
           </div>
+          <div className={styles.questionArea}>
+            {!hasInlineVoiceButton && (hasQuestionVoice || (level.spokenInstruction && canSpeak)) && <button type="button" className={styles.listenButton} onClick={() => hasQuestionVoice ? playLevelVoice() : speakInstruction()} disabled={!gameStarted || !soundEnabled || gamePaused || gameCompleted || isTransitioning} aria-label="Nghe lại câu hỏi"><Volume2 size={28} aria-hidden="true" /></button>}
+            {level.groups && <CountGroups inlineVoiceGroupIds={inlineVoiceGroupIds} inputModes={level.inputModes} wideAnswer={longestAnswer > 3} groups={level.groups} completed={completedTargets} wrongTarget={wrongTarget} correctTarget={correctTarget} onGroupAudio={playGroupAudio} audioDisabled={!gameStarted || !soundEnabled || gamePaused || gameCompleted || isTransitioning} keyboardMatching={config.keyboardMatching} keyboardSelectedAnswer={keyboardSelectedAnswer} onKeyboardTarget={(targetId, x, y) => { if (keyboardSelectedAnswer !== null) finishDrop(x, y, keyboardSelectedAnswer, targetId) }} voiceButton={hasInlineVoiceButton ? <button type="button" disabled={!gameStarted || !soundEnabled || gamePaused || gameCompleted || isTransitioning} onClick={playLevelVoice} className={styles.listenButton} aria-label="Nghe lại"><Volume2 size={28} aria-hidden="true" /></button> : undefined} />}
+            {level.sequence && <SequenceRow cells={level.sequence} completed={completedTargets} wrongTarget={wrongTarget} correctTarget={correctTarget} />}
+          </div>
         </div>
-        <CappyCompanion active={gameStarted && !gamePaused} round={currentLevel} dragPosition={drag ? { x: drag.x, y: drag.y } : null} reaction={cappyReaction} celebrating={gameCompleted && gameVictory} finalRound={currentLevel === MAX_SURVIVAL_LEVEL - 1} gameRef={gameAreaRef} trayRef={answerTrayRef} />
-        <WolfCompanion active={gameStarted && !gamePaused && !isTransitioning && !gameCompleted && wolfRounds.has(currentLevel)} round={currentLevel} correctValues={wolfCorrectValues} dragActive={drag !== null} gameRef={gameAreaRef} trayRef={answerTrayRef} onSteal={handleWolfSteal} onLaugh={playWolfLaugh} answerDomain={answerDomain} colorFor={colorFor} />
+        <CappyCompanion active={gameStarted && !gamePaused} round={currentLevel} dragPosition={drag ? { x: drag.x, y: drag.y } : null} reaction={cappyReaction} celebrating={gameCompleted && gameVictory} finalRound={currentLevel === maxRounds - 1} gameRef={gameAreaRef} trayRef={answerTrayRef} />
+        <WolfCompanion active={config.wolfEnabled !== false && gameStarted && !gamePaused && !isTransitioning && !gameCompleted && wolfRounds.has(currentLevel)} round={currentLevel} correctValues={wolfCorrectValues} dragActive={drag !== null} gameRef={gameAreaRef} trayRef={answerTrayRef} onSteal={handleWolfSteal} onLaugh={playWolfLaugh} answerDomain={answerDomain} colorFor={colorFor} />
         {drag && <div data-drag-answer className="pointer-events-none fixed z-[100] grid h-14 w-14 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-2xl border-[3px] border-white text-3xl font-black text-white shadow-2xl" style={{ left: drag.x, top: drag.y, backgroundColor: colorFor(drag.value), transform: 'translate(-50%, -50%) scale(1.08)' }}><FittedTileContent><GameImageValue value={drag.value} /></FittedTileContent></div>}
         {floatingScore && <div key={floatingScore.id} className={`pointer-events-none fixed z-[110] text-xl font-black ${styles.floatingScore} ${floatingScore.correct ? 'text-emerald-600' : 'text-red-500'}`} style={{ left: floatingScore.x, top: floatingScore.y, textShadow: '0 2px 0 white, 0 -2px 0 white, 2px 0 0 white, -2px 0 0 white' }}>{floatingScore.value}</div>}
         {isTransitioning && !gameCompleted && <div className="pointer-events-none absolute inset-0 z-30" aria-hidden="true"><div className={styles.fireworks}>{Array.from({ length: 12 }, (_, index) => <span key={index} className={styles.fireworkParticle} />)}</div></div>}
         {rewardToast > 0 && !gameCompleted && <GameRewardToast amount={rewardToast} />}
-        {gameCompleted && trackingTask && <DragDropCompletion score={score} level={currentLevel + 1} victory={gameVictory} bestLevel={bestLevel} playCount={playCount} trackingTask={trackingTask} onRestart={restart} />}
+        {gameCompleted && trackingTask && <DragDropCompletion score={score} level={currentLevel + 1} victory={gameVictory} bestLevel={bestLevel} playCount={playCount} trackingTask={trackingTask} onRestart={restart} maxRounds={maxRounds} extraContent={config.completionContent?.((text) => questionVoiceRef.current?.playText(text, 'en-US'))} onChangeActivity={config.onChangeActivity} returnPath={config.completionReturnPath} />}
       </div>
     </GameShell>
     </GameImagesProvider>
   )
 }
 
-function DropTarget({ id, completed, wrong, correct, large = false }: { id: string; completed?: DragAnswerValue; wrong: boolean; correct: boolean; large?: boolean }) {
-  return <div data-target-id={id} className={`${styles.dropTarget} ${large ? styles.dropTargetLarge : ''} ${completed !== undefined ? styles.dropTargetCompleted : styles.dropTargetEmpty} ${wrong ? styles.shake : ''} ${correct ? 'scale-110' : ''}`}>
+function DropTarget({ id, completed, wrong, correct, large = false, ariaLabel, onActivate, keyboardSelected }: { id: string; completed?: DragAnswerValue; wrong: boolean; correct: boolean; large?: boolean; ariaLabel?: string; onActivate?: (id: string, x: number, y: number) => void; keyboardSelected?: boolean }) {
+  const activate = (element: HTMLDivElement) => {
+    if (!onActivate) return
+    const rect = element.getBoundingClientRect()
+    onActivate(id, rect.left + rect.width / 2, rect.top + rect.height / 2)
+  }
+  return <div data-target-id={id} role={onActivate ? 'button' : undefined} tabIndex={onActivate ? (keyboardSelected && completed === undefined ? 0 : -1) : undefined} aria-label={onActivate ? ariaLabel : undefined} aria-disabled={onActivate ? completed !== undefined : undefined} onClick={onActivate ? (event) => activate(event.currentTarget) : undefined} onKeyDown={onActivate ? (event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); activate(event.currentTarget) } } : undefined} className={`${styles.dropTarget} ${large ? styles.dropTargetLarge : ''} ${completed !== undefined ? styles.dropTargetCompleted : styles.dropTargetEmpty} ${wrong ? styles.shake : ''} ${correct ? 'scale-110' : ''}`}>
     {completed !== undefined
       ? <FittedTileContent wrap><GameImageValue value={completed} size={32} /></FittedTileContent>
       : <span className={styles.targetValue}>?</span>}
   </div>
 }
 
-function CountGroups({ groups, completed, wrongTarget, correctTarget, voiceButton, wideAnswer, inputModes, inlineVoiceGroupIds }: { inlineVoiceGroupIds: Set<string>; inputModes?: DragDropLevel['inputModes']; wideAnswer: boolean; groups: CountGroup[]; completed: Record<string, DragAnswerValue>; wrongTarget: string | null; correctTarget: string | null; voiceButton?: ReactNode }) {
+function CountGroups({ groups, completed, wrongTarget, correctTarget, voiceButton, wideAnswer, inputModes, inlineVoiceGroupIds, onGroupAudio, audioDisabled, keyboardMatching, keyboardSelectedAnswer, onKeyboardTarget }: { inlineVoiceGroupIds: Set<string>; inputModes?: DragDropLevel['inputModes']; wideAnswer: boolean; groups: CountGroup[]; completed: Record<string, DragAnswerValue>; wrongTarget: string | null; correctTarget: string | null; voiceButton?: ReactNode; onGroupAudio: (audio: NonNullable<CountGroup['audio']>) => void; audioDisabled: boolean; keyboardMatching?: boolean; keyboardSelectedAnswer?: DragAnswerValue | null; onKeyboardTarget?: (targetId: string, x: number, y: number) => void }) {
   return <div className={styles.countGroups} data-count={groups.length} style={{ display: 'flex', flexDirection: 'column' }}>
     {groups.map((group) => group.textMatch ? <div key={group.id} data-target-id={group.id} className={`${styles.countGroup} ${wrongTarget === group.id ? styles.shake : ''}`} style={{ justifyContent: 'center', gap: 4, fontFamily: '"Game Nunito", Arial, sans-serif', fontSize: 'clamp(20px, 6cqw, 28px)', fontWeight: 800, flexWrap: 'wrap' }} aria-label={group.label}>
       <span><GameImageValue value={group.textMatch.before} colorful /></span><span><DropTarget large id={group.id} completed={completed[group.id]} wrong={false} correct={correctTarget === group.id} /></span><span><GameImageValue value={group.textMatch.after} colorful /></span>
@@ -481,14 +508,16 @@ function CountGroups({ groups, completed, wrongTarget, correctTarget, voiceButto
         ? { display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: 3 }
         : inlineVoiceGroupIds.has(group.id) ? { display: 'flex', justifyContent: 'center', alignItems: 'center' } : undefined} data-items={group.count} aria-label={`${group.count} ${group.label}`}>
         {(inlineVoiceGroupIds.has(group.id) ? voiceButton : undefined) ?? (group.count > 0 && Array.from({ length: group.count }, (_, itemIndex) => <span key={itemIndex}>
-          {group.imageSrc
+          {group.audio
+            ? <button type="button" className={styles.listenButton} disabled={audioDisabled} onClick={(event) => { event.stopPropagation(); onGroupAudio(group.audio!) }} aria-label="Nghe từ tiếng Anh"><Volume2 size={28} aria-hidden="true" /></button>
+            : group.imageSrc
             ? group.imageCrop
-              ? <span role="img" aria-label={group.imageAlt ?? group.label} style={{ display: 'block', width: 90, height: 60, maxWidth: '100%', backgroundImage: `url(${group.imageSrc})`, backgroundRepeat: 'no-repeat', backgroundSize: `${group.imageCrop.columns * 100}% ${group.imageCrop.rows * 100}%`, backgroundPosition: `${group.imageCrop.columns === 1 ? 0 : group.imageCrop.column / (group.imageCrop.columns - 1) * 100}% ${group.imageCrop.rows === 1 ? 0 : group.imageCrop.row / (group.imageCrop.rows - 1) * 100}%` }} />
+              ? <span role="img" aria-label={group.imageAlt ?? group.label} style={{ display: 'block', width: 90, height: group.imageAspectRatio ? 90 / group.imageAspectRatio : 60, maxWidth: '100%', backgroundImage: `url(${group.imageSrc})`, backgroundRepeat: 'no-repeat', backgroundSize: `${group.imageCrop.columns * 100}% ${group.imageCrop.rows * 100}%`, backgroundPosition: `${group.imageCrop.columns === 1 ? 0 : group.imageCrop.column / (group.imageCrop.columns - 1) * 100}% ${group.imageCrop.rows === 1 ? 0 : group.imageCrop.row / (group.imageCrop.rows - 1) * 100}%` }} />
               : <img src={group.imageSrc} alt={group.imageAlt ?? group.label} draggable={false} style={{ width: 90, height: 90, maxWidth: '100%', objectFit: 'contain' }} />
             : <GameImageValue value={group.icon} size={90} colorful />}
           {group.imageSrc && group.promptText && <span style={{ fontFamily: '"Game Nunito", Arial, sans-serif', fontSize: 'clamp(20px, 5cqw, 26px)', fontWeight: 900, lineHeight: 1.1 }}>{group.promptText}</span>}
         </span>))}
-      </div><DropTarget large id={group.id} completed={completed[group.id]} wrong={false} correct={correctTarget === group.id} />
+      </div><DropTarget large id={group.id} completed={completed[group.id]} wrong={false} correct={correctTarget === group.id} ariaLabel={keyboardSelectedAnswer !== null && keyboardSelectedAnswer !== undefined ? `Ô trả lời cho ${group.label}; đang chọn ${keyboardSelectedAnswer}` : `Ô trả lời cho ${group.label}`} onActivate={keyboardMatching ? onKeyboardTarget : undefined} keyboardSelected={keyboardSelectedAnswer !== null && keyboardSelectedAnswer !== undefined} />
     </div>)}
   </div>
 }
