@@ -11,29 +11,33 @@ export default function SingleChoiceQuestion(props: QuestionRendererProps) {
   const content = question.content
   const findTargetObjects = question.templateId === 'T01'
   const tagNameChoices = question.data?.generator === 'FIND_LETTER_IN_ANIMAL_NAME'
+    || question.data?.generator === 'FIND_LETTER_PAIR_IN_ANIMAL_NAME'
   const toneVoiceOnlyChoices = question.data?.generator === 'IDENTIFY_TONE_FROM_SYLLABLE'
   const flowerVoiceOnlyChoices = question.data?.generator === 'FIND_FLOWER_BY_IMAGE'
-  const voiceOnlyChoices = toneVoiceOnlyChoices || flowerVoiceOnlyChoices
+  const schoolEventQuestion = question.data?.generator === 'IDENTIFY_SCHOOL_EVENT'
+  const schoolEventVoiceOnlyChoices = schoolEventQuestion && question.data?.voiceChoicesAvailable === true
+  const voiceOnlyChoices = toneVoiceOnlyChoices || flowerVoiceOnlyChoices || schoolEventVoiceOnlyChoices
+  const largeImageQuestion = flowerVoiceOnlyChoices || schoolEventQuestion
   const visuals = findTargetObjects
     ? (question.options ?? []).flatMap(option => option.visual ? [option.visual] : [])
     : content?.type === 'visuals' ? content.visuals : undefined
   return <QuestionFrame {...props}>
     {content?.type === 'text' && <div className={styles.questionContent}>{content.text}</div>}
-    {content?.type === 'visual' && content.visual && <div className={`${styles.questionVisuals} ${flowerVoiceOnlyChoices ? styles.flowerQuestionVisuals : ''}`}><QuestionVisual visual={content.visual} large={flowerVoiceOnlyChoices} /></div>}
+    {content?.type === 'visual' && content.visual && <div className={`${styles.questionVisuals} ${largeImageQuestion ? styles.flowerQuestionVisuals : ''}`}><QuestionVisual visual={content.visual} large={largeImageQuestion} /></div>}
     {visuals && <div className={`${styles.questionVisuals} ${findTargetObjects ? styles.findTargetVisuals : ''}`} role={findTargetObjects ? 'group' : undefined} aria-label={findTargetObjects ? `Các hình lựa chọn cho câu ${question.number}` : undefined}>{visuals.map((visual, index) => <QuestionVisual key={`${visual.value}-${index}`} visual={visual} />)}</div>}
     {question.type === 'audio-choice' && !question.promptVoice && <div className={styles.listeningHint}>Nghe kỹ câu hỏi rồi chọn đáp án.</div>}
     <div role="radiogroup" aria-label={`Các lựa chọn câu ${question.number}`} className={`${styles.answerGroup} ${findTargetObjects ? styles.answerGroupFindObjects : ''} ${question.templateId === 'T01' && !findTargetObjects ? styles.answerGroupStar : ''} ${question.templateId === 'T02' ? styles.answerGroupImage : ''} ${flowerVoiceOnlyChoices ? styles.answerGroupFlowerVoice : ''}`}>
       {(question.options ?? []).map(option => <SingleOption
         key={option.id}
         questionId={question.id}
-        option={voiceOnlyChoices ? { ...option, text: undefined, ...(flowerVoiceOnlyChoices ? { visual: undefined } : {}) } : option}
+        option={voiceOnlyChoices ? { ...option, text: undefined, ...((flowerVoiceOnlyChoices || schoolEventVoiceOnlyChoices) ? { visual: undefined } : {}) } : option}
         selected={answer === option.id}
         disabled={disabled}
         playingId={playingId}
         objectChoice={findTargetObjects}
         tagNameChoice={tagNameChoices}
         audioOnly={question.templateId === 'T01' || voiceOnlyChoices}
-        voiceOnlyChoice={flowerVoiceOnlyChoices}
+        voiceOnlyChoice={flowerVoiceOnlyChoices || schoolEventVoiceOnlyChoices}
         largeVisual={question.templateId === 'T02'}
         onSelect={() => onAnswer(question.id, option.id)}
         onPlayAudio={onPlayAudio}

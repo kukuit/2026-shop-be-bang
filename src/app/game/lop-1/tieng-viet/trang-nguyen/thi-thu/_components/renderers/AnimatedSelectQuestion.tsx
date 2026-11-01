@@ -5,6 +5,7 @@ import ExamAudioButton from '../ExamAudioButton'
 import styles from '../exam.module.css'
 import QuestionFrame, { type QuestionRendererProps } from './QuestionFrame'
 import AnimatedQuestionPlayer from './AnimatedQuestionPlayer'
+import AnimatedFruitHarvestQuestion from './AnimatedFruitHarvestQuestion'
 import questionStyles from './AnimatedQuestionPlayer.module.css'
 
 const MOTION_LABELS: Record<AnimatedQuestion24Data['motion'], string> = {
@@ -12,6 +13,9 @@ const MOTION_LABELS: Record<AnimatedQuestion24Data['motion'], string> = {
 }
 
 export default function AnimatedSelectQuestion(props: QuestionRendererProps) {
+  if (props.question.data?.generator === 'ANIMATED_GIRL_HARVEST_FRUIT')
+    return <AnimatedFruitHarvestQuestion {...props} />
+
   const { question, answer, disabled, onAnswer, playingId, onPlayAudio } = props
   const data = question.data as unknown as AnimatedQuestion24Data
   const voiceId = `${question.id}:animation-prompt`

@@ -3,8 +3,6 @@ import type { TestExamQuestion } from './test-types'
 
 export type PreviewTestQuestion = TestExamQuestion & { testAnswer: ExamAnswer }
 
-const QUESTION_28_29_INSTRUCTION_VOICE = '/games/lessons/lop-1/tieng-viet/trang-nguyen/voices/common/hinh-anh-tren-giong-chu-gi.mp3'
-
 export function previewQuestion(generated: GeneratedExamQuestion): PreviewTestQuestion {
   const { correctAnswer, ...question } = generated
   const withTestAnswer = (visibleQuestion: TestExamQuestion): PreviewTestQuestion => ({ ...visibleQuestion, testAnswer: correctAnswer })
@@ -33,9 +31,17 @@ export function previewQuestion(generated: GeneratedExamQuestion): PreviewTestQu
     const { selectionKey: _selectionKey, asset, ...visibleData } = question.data
     if (asset && typeof asset === 'object') {
       const { resemblesLetter: _resemblesLetter, ...visibleAsset } = asset as Record<string, unknown>
-      return withTestAnswer({ ...question, testTrailingVoice: QUESTION_28_29_INSTRUCTION_VOICE, data: { ...visibleData, asset: visibleAsset } })
+      return withTestAnswer({ ...question, data: { ...visibleData, asset: visibleAsset } })
     }
-    return withTestAnswer({ ...question, testTrailingVoice: QUESTION_28_29_INSTRUCTION_VOICE, data: visibleData })
+    return withTestAnswer({ ...question, data: visibleData })
+  }
+  if (question.data?.generator === 'IDENTIFY_SCHOOL_EVENT') {
+    const { targetEventId: _targetEventId, ...visibleData } = question.data
+    return withTestAnswer({ ...question, data: visibleData })
+  }
+  if (question.data?.generator === 'FIND_LETTER_PAIR_IN_ANIMAL_NAME') {
+    const { targetLetters: _targetLetters, ...visibleData } = question.data
+    return withTestAnswer({ ...question, data: visibleData })
   }
   return withTestAnswer(question)
 }

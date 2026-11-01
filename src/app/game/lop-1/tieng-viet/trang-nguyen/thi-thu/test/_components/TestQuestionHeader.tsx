@@ -8,9 +8,10 @@ const TEST_QUESTION_NUMBERS = [
 
 type TestQuestionHeaderProps = {
   questionNumber: number
+  questionLabel?: string
 }
 
-export default function TestQuestionHeader({ questionNumber }: TestQuestionHeaderProps) {
+export default function TestQuestionHeader({ questionNumber, questionLabel }: TestQuestionHeaderProps) {
   const currentIndex = TEST_QUESTION_NUMBERS.indexOf(questionNumber)
   const previousQuestion = currentIndex > 0 ? TEST_QUESTION_NUMBERS[currentIndex - 1] : undefined
   const nextQuestion = currentIndex < TEST_QUESTION_NUMBERS.length - 1
@@ -23,9 +24,9 @@ export default function TestQuestionHeader({ questionNumber }: TestQuestionHeade
       <nav className={styles.pagination} aria-label="Chọn câu test">
         <div className={styles.paginationInner}>
           <span className={styles.label}>
-            Câu {questionNumber} / {TEST_QUESTION_NUMBERS.length}
+            {questionLabel ?? `Câu ${questionNumber} / ${TEST_QUESTION_NUMBERS.length}`}
           </span>
-          <div className={styles.questionList}>
+          {currentIndex >= 0 && <div className={styles.questionList}>
             {TEST_QUESTION_NUMBERS.map((number) => {
               const isCurrent = number === questionNumber
               return (
@@ -41,8 +42,8 @@ export default function TestQuestionHeader({ questionNumber }: TestQuestionHeade
                 </Link>
               )
             })}
-          </div>
-          <div className={styles.stepNavigation}>
+          </div>}
+          {currentIndex >= 0 && <div className={styles.stepNavigation}>
             {previousQuestion ? (
               <Link
                 className={styles.stepLink}
@@ -69,7 +70,7 @@ export default function TestQuestionHeader({ questionNumber }: TestQuestionHeade
                 Câu tiếp theo →
               </span>
             )}
-          </div>
+          </div>}
         </div>
       </nav>
     </>

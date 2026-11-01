@@ -1,0 +1,120 @@
+.garden {
+  box-sizing: border-box;
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  min-height: clamp(180px, 30vw, 270px);
+  overflow: hidden;
+  border: 1px solid #d9eaf0;
+  border-radius: 12px;
+  background:
+    linear-gradient(180deg, transparent 0 72%, rgb(119 164 75 / 12%) 72% 74%, transparent 74%),
+    linear-gradient(180deg, #f2fbff 0%, #eaf8ff 72%, #a8cd7e 72%, #8db663 100%);
+}
+
+.gardenRow {
+  position: absolute;
+  z-index: 1;
+  bottom: 0;
+  left: 50%;
+  display: grid;
+  width: 100%;
+  max-width: 900px;
+  min-width: 0;
+  aspect-ratio: 10 / 3;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  transform: translateX(-50%);
+}
+
+.sun,
+.cloud {
+  position: absolute;
+  z-index: 2;
+  top: 10px;
+  font-size: 19px;
+  line-height: 1;
+}
+
+.sun { left: 12px; }
+.cloud { right: 14px; top: 15px; opacity: .72; }
+
+.plantSlot {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+}
+
+.plantSvg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.plantStem {
+  stroke: #5d833b;
+  stroke-width: 10px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.leafPetiole {
+  fill: none;
+  stroke: #5a8438;
+  stroke-width: 3px;
+  stroke-linecap: round;
+}
+
+.leafShape {
+  stroke: rgb(66 111 46 / 45%);
+  stroke-width: 1px;
+  stroke-linejoin: round;
+}
+
+.flowerPetals {
+  filter: drop-shadow(0 2px 2px rgb(105 60 126 / 18%));
+  stroke: #d58add;
+  stroke-width: 1px;
+  stroke-linejoin: round;
+}
+
+.flowerCenterOuter { fill: #164eaa; }
+.flowerCenterInner { fill: #bfdbfe; }
+
+.flowerLetter {
+  fill: #2563eb;
+  font-family: Nunito, Arial, sans-serif;
+  font-size: 27px;
+  font-weight: 900;
+  text-anchor: middle;
+  dominant-baseline: central;
+  paint-order: stroke;
+  stroke: rgb(255 255 255 / 45%);
+  stroke-width: .7px;
+}
+
+.contactShadow {
+  fill: rgb(67 46 80 / 22%);
+  filter: blur(1px);
+}
+
+.perchedAnimal {
+  overflow: hidden;
+  pointer-events: none;
+}
+
+@media (max-width: 640px) {
+  .garden { min-height: 180px; }
+  .flowerLetter { font-size: 28px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .garden *,
+  .garden *::before,
+  .garden *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

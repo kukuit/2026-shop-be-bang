@@ -144,6 +144,32 @@ export type AnimatedQuestion24Data = {
   voice: string[]
 }
 
+export type AnimatedQuestion33FruitId = 'tao' | 'cam' | 'xoai' | 'le'
+export type AnimatedQuestion33Target = {
+  id: string
+  fruitId: AnimatedQuestion33FruitId
+  fruitName: string
+  letter: string
+  x: number
+  y: number
+  visual: ExamVisual
+}
+export type AnimatedQuestion33Data = {
+  generator: 'ANIMATED_GIRL_HARVEST_FRUIT'
+  subType: 'girl-harvest-fruit-letter'
+  fruitId: AnimatedQuestion33FruitId
+  fruitName: string
+  spriteSheet: string
+  durationMs: number
+  actorStart: { x: number; y: number }
+  taskText: string
+  targets: AnimatedQuestion33Target[]
+  destinationTargetId: string
+  options?: string[]
+  allowedLetters?: string[]
+  voice: string[]
+}
+
 export type ExamOption = {
   id: string
   label?: ExamOptionLabel
@@ -224,9 +250,18 @@ export type ImageResemblesLetterData = {
   generator: 'IMAGE_RESEMBLES_LETTER'
   subType: 'image-resembles-letter'
   sentencePrefix: string
+  instructionVoice?: string
   asset: ImageResemblesLetterAsset
   selectionKey: string
   choices: string[]
+}
+
+export type IdentifySchoolEventData = {
+  generator: 'IDENTIFY_SCHOOL_EVENT'
+  subType: 'identify-school-event'
+  targetEventId: string
+  choices: string[]
+  voiceChoicesAvailable: boolean
 }
 
 export type Question30FruitId = 'tao' | 'cam' | 'chuoi' | 'dua-hau' | 'xoai' | 'nho' | 'dua' | 'le'

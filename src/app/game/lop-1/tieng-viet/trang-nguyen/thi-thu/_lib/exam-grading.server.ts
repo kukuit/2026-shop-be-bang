@@ -65,6 +65,12 @@ export function isValidTrangNguyenAnswerMap(answers: ExamAnswers, exam: Generate
       return typeof answer === 'string' && Array.from(normalized).length === 1
         && Boolean(allowedLetters?.includes(normalized))
     }
+    if (question.type === 'text-input' && question.data?.generator === 'ANIMATED_GIRL_HARVEST_FRUIT') {
+      const allowedLetters = question.data.allowedLetters as string[] | undefined
+      const normalized = typeof answer === 'string' ? normalizeAnswer(answer) : ''
+      return typeof answer === 'string' && Array.from(normalized).length === 1
+        && Boolean(allowedLetters?.includes(normalized))
+    }
     if (question.type === 'hidden-letter-input' || question.type === 'rotated-letter-input') {
       const allowedLetters = question.data?.allowedLetters as string[] | undefined
       const normalized = typeof answer === 'string' ? normalizeAnswer(answer) : ''

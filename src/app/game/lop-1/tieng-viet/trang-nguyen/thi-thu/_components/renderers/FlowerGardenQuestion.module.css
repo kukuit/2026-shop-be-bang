@@ -1,0 +1,54 @@
+.animalQuestions {
+  display: grid;
+  min-width: 0;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.animalQuestion {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+
+.answerLine {
+  display: flex;
+  min-width: 0;
+  max-width: 100%;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  color: #263747;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.answerLine input {
+  box-sizing: border-box;
+  width: 44px;
+  height: 32px;
+  border: 1px solid #9ca3af;
+  border-radius: 4px;
+  background: white;
+  color: #172554;
+  font: inherit;
+  font-weight: 800;
+  text-align: center;
+  text-transform: lowercase;
+}
+
+.answerLine input:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 1px;
+}
+
+.voiceRow {
+  display: flex;
+  min-height: 42px;
+  align-items: center;
+  gap: 9px;
+}
+
+@media (max-width: 640px) {
+  .answerLine { font-size: 14px; }
+}
