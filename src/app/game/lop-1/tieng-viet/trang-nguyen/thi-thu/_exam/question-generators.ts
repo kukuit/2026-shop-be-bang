@@ -11,6 +11,7 @@ import { buildQuestion27Sentence, getQuestion27Sounds, QUESTION_27_PROMPT, QUEST
 import {
   getQuestion29AssetVisual,
   QUESTION_28_29_ENABLED_ASSETS,
+  QUESTION_28_29_INSTRUCTION_VOICE,
   QUESTION_29_ALLOWED_LETTERS,
   QUESTION_29_ASSETS,
   QUESTION_29_LETTER_CONFUSION_MAP,
@@ -30,6 +31,31 @@ import {
   question30SelectionRepeatsRecent,
 } from './question30-knowledge'
 import { getQuestion24ActorPool, getQuestion24TargetPool, getQuestion24Voice, getQuestion24Visual, QUESTION_24_LEARNING_KEY, QUESTION_24_PROMPT, QUESTION_24_PROMPT_VOICE } from './question24-knowledge'
+import { getSchoolEventVisual, SCHOOL_EVENTS, SCHOOL_EVENT_PROMPT, SCHOOL_EVENT_PROMPT_VOICE } from './question31-knowledge'
+import {
+  getQuestion33FruitPool,
+  getQuestion33FruitVisual,
+  getQuestion33Voice,
+  QUESTION_33_FRUIT_IDS,
+  QUESTION_33_GIRL_SPRITE_SHEET,
+  QUESTION_33_LETTERS,
+  QUESTION_33_PROMPT,
+  QUESTION_33_PROMPT_VOICE,
+  QUESTION_33_LEGACY_PROMPT,
+  QUESTION_33_LEGACY_PROMPT_VOICE,
+  QUESTION_33_TASK_START,
+  QUESTION_33_TARGET_POSITIONS,
+} from './question33-knowledge'
+import {
+  generateQuestion34TestRound,
+  QUESTION_34_ANIMALS,
+  QUESTION_34_BAN_VOICE,
+  QUESTION_34_FLOWER_QUESTION_VOICE,
+  QUESTION_34_LETTER_POOL,
+  QUESTION_34_PROMPT,
+  QUESTION_34_PROMPT_VOICE,
+  type Question34TestRound,
+} from './question34-knowledge'
 import { emojiVisual, letterVisual } from './mock-assets'
 import { pick, pickDistractors, shuffle, stableHash } from './shuffle'
 import {
@@ -37,7 +63,7 @@ import {
   VEGETABLES, VIETNAMESE_ALPHABET, WORD_BANK, letterVoice,
   type VietnameseWord,
 } from './vietnamese-data'
-import type { AlphabetOrderData, AnimatedQuestion24Data, AnimatedQuestion24Motion, AnimatedQuestion24TargetMode, ClassificationDragDropData, ClassificationItem, ClassificationManifestId, CommonSoundData, CommonSoundWordItem, CountLetterBoardItem, ExamOption, ExamOptionLabel, ExamQuestion, ExamQuestionType, ExamVisual, FindTargetObjectTheme, GeneratedExamQuestion, HiddenLetterContainerScene, HiddenLetterRelation, HiddenLetterSceneData, HiddenLetterSceneItem, ImageResemblesLetterData, ImageSoundMatchData, ImageWordAnalysisData, LetterBoardData, LetterBoardDecoration, LetterBoardSlot, LetterCardData, LetterCardDecorationIcon, LetterCardDecorationPosition, LetterCardShape, LowerUpperMatchData, LowerUpperMatchItem, NumberCardData, NumberCardDecoration, ObjectSoundMatchData, Question25AnalysisMode, Question25Category, Question25WordKnowledgeItem, Question30Data, Question30Item, RotatedLetterBoardItem, RotatedLetterBoardStyle, SameLetterMatchAsset, SameLetterMatchData, SameLetterMatchItem, VehicleOrderData } from './types'
+import type { AlphabetOrderData, AnimatedQuestion24Data, AnimatedQuestion24Motion, AnimatedQuestion24TargetMode, AnimatedQuestion33Data, ClassificationDragDropData, ClassificationItem, ClassificationManifestId, CommonSoundData, CommonSoundWordItem, CountLetterBoardItem, ExamOption, ExamOptionLabel, ExamQuestion, ExamQuestionType, ExamVisual, FindTargetObjectTheme, GeneratedExamQuestion, HiddenLetterContainerScene, HiddenLetterRelation, HiddenLetterSceneData, HiddenLetterSceneItem, IdentifySchoolEventData, ImageResemblesLetterData, ImageSoundMatchData, ImageWordAnalysisData, LetterBoardData, LetterBoardDecoration, LetterBoardSlot, LetterCardData, LetterCardDecorationIcon, LetterCardDecorationPosition, LetterCardShape, LowerUpperMatchData, LowerUpperMatchItem, NumberCardData, NumberCardDecoration, ObjectSoundMatchData, Question25AnalysisMode, Question25Category, Question25WordKnowledgeItem, Question30Data, Question30Item, RotatedLetterBoardItem, RotatedLetterBoardStyle, SameLetterMatchAsset, SameLetterMatchData, SameLetterMatchItem, VehicleOrderData } from './types'
 
 type Random = () => number
 export type QuestionGenerationContext = { recentQuestionKeys: Record<string, string[]> }
@@ -501,8 +527,39 @@ export const TAG_NAME_TARGET_LETTERS = [
 export type TagNameTargetLetter = typeof TAG_NAME_TARGET_LETTERS[number]
 
 export const TAG_NAME_COMMON_VOICE = '/games/lessons/lop-1/tieng-viet/trang-nguyen/voices/common/the-ten-con-vat-nao-co-chu.mp3'
+export const TAG_NAME_VA_VOICE = '/games/lessons/lop-1/tieng-viet/trang-nguyen/voices/common/va.mp3'
 
 type TagNameItem = typeof tagNameManifest.items[number]
+type TagNameLetterPairTarget = {
+  first: TagNameTargetLetter
+  second: TagNameTargetLetter
+  item: TagNameItem
+}
+
+const normalizeTagNameLetter = (letter: string) => letter.normalize('NFC').toLocaleLowerCase('vi-VN')
+
+const TAG_NAME_LETTER_PAIR_TARGETS: TagNameLetterPairTarget[] = (() => {
+  const targets: TagNameLetterPairTarget[] = []
+  if (!hasFindTargetVoiceFiles([TAG_NAME_COMMON_VOICE, TAG_NAME_VA_VOICE])) return targets
+
+  for (let firstIndex = 0; firstIndex < TAG_NAME_TARGET_LETTERS.length; firstIndex += 1) {
+    const first = TAG_NAME_TARGET_LETTERS[firstIndex]
+    const firstVoice = resolveFindTargetLetterVoice(first)
+    if (!firstVoice) continue
+    for (let secondIndex = firstIndex + 1; secondIndex < TAG_NAME_TARGET_LETTERS.length; secondIndex += 1) {
+      const second = TAG_NAME_TARGET_LETTERS[secondIndex]
+      if (!resolveFindTargetLetterVoice(second)) continue
+      const firstNormalized = normalizeTagNameLetter(first)
+      const secondNormalized = normalizeTagNameLetter(second)
+      const matchingItems = tagNameManifest.items.filter(item => {
+        const letters = new Set(item.letters.map(normalizeTagNameLetter))
+        return letters.has(firstNormalized) && letters.has(secondNormalized)
+      })
+      if (matchingItems.length === 1) targets.push({ first, second, item: matchingItems[0] })
+    }
+  }
+  return targets
+})()
 
 export function generateFindLetterInAnimalNameQuestion(args: {
   seedHash: string
@@ -551,6 +608,93 @@ export function generateFindLetterInAnimalNameQuestion(args: {
     data: { generator: 'FIND_LETTER_IN_ANIMAL_NAME', targetLetter, manifestId: tagNameManifest.id },
     knowledgeKey: 'FIND_LETTER_IN_ANIMAL_NAME',
   })
+}
+
+function tagNamePairKey(letters: readonly string[]): string {
+  return letters.join('|')
+}
+
+export function validateFindLetterPairInAnimalNameQuestion(question: GeneratedExamQuestion): void {
+  const data = question.data as {
+    generator?: string
+    subType?: string
+    targetLetters?: string[]
+    manifestId?: string
+  } | undefined
+  const targetLetters = data?.targetLetters
+  const target = targetLetters && targetLetters.length === 2
+    ? TAG_NAME_LETTER_PAIR_TARGETS.find(candidate => candidate.first === targetLetters[0] && candidate.second === targetLetters[1])
+    : undefined
+  const options = question.options ?? []
+  const expectedPrompt = target ? `Thẻ tên con vật nào có chữ "${target.first}" và "${target.second}"?` : ''
+  const firstVoice = target && resolveFindTargetLetterVoice(target.first)
+  const secondVoice = target && resolveFindTargetLetterVoice(target.second)
+  const expectedVoice = target && firstVoice && secondVoice
+    ? [TAG_NAME_COMMON_VOICE, firstVoice, TAG_NAME_VA_VOICE, secondVoice]
+    : undefined
+
+  if (!target || question.templateId !== 'T32' || question.type !== 'image-choice'
+    || question.knowledgeKey !== 'FIND_LETTER_PAIR_IN_ANIMAL_NAME'
+    || data?.generator !== 'FIND_LETTER_PAIR_IN_ANIMAL_NAME' || data?.subType !== 'tag-name-two-letters'
+    || data.manifestId !== tagNameManifest.id || question.prompt !== expectedPrompt
+    || JSON.stringify(question.promptVoice) !== JSON.stringify(expectedVoice)
+    || options.length !== 4 || options.filter(option => option.id === `tag-name-${target.item.id}`).length !== 1
+    || question.correctAnswer !== `tag-name-${target.item.id}`) {
+    throw new Error('FIND_LETTER_PAIR_IN_ANIMAL_NAME has invalid target letters, prompt, voice, or choices')
+  }
+
+  const targetLetterSet = new Set([normalizeTagNameLetter(target.first), normalizeTagNameLetter(target.second)])
+  const optionItemIds = options.map(option => option.id.replace(/^tag-name-/, ''))
+  if (new Set(optionItemIds).size !== options.length) throw new Error('FIND_LETTER_PAIR_IN_ANIMAL_NAME has duplicate animal choices')
+  for (const option of options) {
+    const item = tagNameManifest.items.find(candidate => candidate.id === option.id.replace(/^tag-name-/, ''))
+    if (!item || option.text !== item.word || JSON.stringify(option.visual) !== JSON.stringify(tagNameAnimalVisual(item)))
+      throw new Error('FIND_LETTER_PAIR_IN_ANIMAL_NAME has an invalid animal image or label')
+    const letters = new Set(item.letters.map(normalizeTagNameLetter))
+    const containsPair = Array.from(targetLetterSet).every(letter => letters.has(letter))
+    if ((item.id === target.item.id) !== containsPair)
+      throw new Error('FIND_LETTER_PAIR_IN_ANIMAL_NAME must have exactly one correct animal choice')
+  }
+}
+
+export function generateFindLetterPairInAnimalNameQuestion(args: {
+  seedHash: string
+  random: Random
+  excludeTargetPairs?: readonly string[]
+}): GeneratedExamQuestion {
+  const excludedPairs = new Set(args.excludeTargetPairs ?? [])
+  const availableTargets = TAG_NAME_LETTER_PAIR_TARGETS.filter(target => !excludedPairs.has(tagNamePairKey([target.first, target.second])))
+  const target = pick(availableTargets.length > 0 ? availableTargets : TAG_NAME_LETTER_PAIR_TARGETS, args.random)
+  if (!target) throw new Error('FIND_LETTER_PAIR_IN_ANIMAL_NAME has no unique letter pairs with available voice')
+
+  const firstVoice = resolveFindTargetLetterVoice(target.first)
+  const secondVoice = resolveFindTargetLetterVoice(target.second)
+  if (!firstVoice || !secondVoice || !hasFindTargetVoiceFiles([TAG_NAME_COMMON_VOICE, TAG_NAME_VA_VOICE]))
+    throw new Error('FIND_LETTER_PAIR_IN_ANIMAL_NAME is missing a prompt or target letter voice')
+
+  const targetLetterSet = new Set([normalizeTagNameLetter(target.first), normalizeTagNameLetter(target.second)])
+  const distractorPool = tagNameManifest.items.filter(item => item.id !== target.item.id && !Array.from(targetLetterSet).every(letter => item.letters.map(normalizeTagNameLetter).includes(letter)))
+  const distractors = pickDistractors({ pool: distractorPool, exclude: [], count: 3, random: args.random })
+  const options = makeOptions([target.item, ...distractors].map(item => ({
+    id: `tag-name-${item.id}`,
+    text: item.word,
+    visual: tagNameAnimalVisual(item),
+  })), args.random)
+  const prompt = `Thẻ tên con vật nào có chữ "${target.first}" và "${target.second}"?`
+  const question = baseQuestion(args.seedHash, 'T32', 'image-choice', prompt, `tag-name-${target.item.id}`, {
+    options,
+    difficulty: 1,
+    promptVoice: [TAG_NAME_COMMON_VOICE, firstVoice, TAG_NAME_VA_VOICE, secondVoice],
+    data: {
+      generator: 'FIND_LETTER_PAIR_IN_ANIMAL_NAME',
+      subType: 'tag-name-two-letters',
+      targetLetters: [target.first, target.second],
+      manifestId: tagNameManifest.id,
+    },
+    knowledgeKey: 'FIND_LETTER_PAIR_IN_ANIMAL_NAME',
+  })
+  validateFindLetterPairInAnimalNameQuestion(question)
+  return question
 }
 
 function tagNameAnimalVisual(item: TagNameItem): ExamVisual {
@@ -1003,6 +1147,161 @@ export function generateFindAnimalByNameQuestion(args: {
     knowledgeKey: 'FIND_ANIMAL_BY_NAME',
   })
   validateFindAnimalByNameQuestion(question)
+  return question
+}
+
+type FindNamedImageCategory = 'animal' | 'object' | 'fruit'
+type FindNamedImageCandidate = {
+  id: string
+  answerId: string
+  category: FindNamedImageCategory
+  manifestId: string
+  word: string
+  prompt: string
+  promptVoice: string[]
+  voice: string
+  visual: ExamVisual
+}
+
+const FIND_NAMED_IMAGE_CATEGORIES: readonly FindNamedImageCategory[] = ['animal', 'object', 'fruit']
+const FIND_NAMED_IMAGE_FRUIT_CLASSIFIER_VOICE = `${TRANG_NGUYEN_VOICE_ROOT}/common/qua.mp3`
+const FIND_NAMED_IMAGE_FRUIT_VOICE_ROOT = `${TRANG_NGUYEN_VOICE_ROOT}/fruits`
+
+function findNamedImageAnswerId(category: FindNamedImageCategory, id: string): string {
+  return `named-image-${category}-${id}`
+}
+
+function getFindNamedImageCandidates(category: FindNamedImageCategory): FindNamedImageCandidate[] {
+  const candidates: FindNamedImageCandidate[] = []
+
+  if (category === 'animal') {
+    if (!hasFindTargetVoiceFiles([FIND_ANIMAL_BY_NAME_COMMON_VOICE])) return candidates
+    for (const item of tagNameManifest.items) {
+      const voice = resolveAnimalVoice(item.word)
+      if (!voice) continue
+      candidates.push({
+        id: item.id,
+        answerId: findNamedImageAnswerId(category, item.id),
+        category,
+        manifestId: tagNameManifest.id,
+        word: item.word,
+        prompt: `Đâu là con ${item.word}?`,
+        promptVoice: [FIND_ANIMAL_BY_NAME_COMMON_VOICE, voice],
+        voice,
+        visual: tagNameAnimalVisual(item),
+      })
+    }
+    return candidates
+  }
+
+  if (category === 'object') {
+    for (const item of objectNameManifest.items) {
+      const voice = resolveObjectNameVoice(item)
+      const prompt = OBJECT_QUESTION_TEXT[item.id]
+      if (!voice || !prompt) continue
+      candidates.push({
+        id: item.id,
+        answerId: findNamedImageAnswerId(category, item.id),
+        category,
+        manifestId: objectNameManifest.id,
+        word: item.word,
+        prompt,
+        promptVoice: [FIND_OBJECT_BY_NAME_COMMON_VOICE, voice],
+        voice,
+        visual: objectNameVisual(item),
+      })
+    }
+    return candidates
+  }
+
+  const promptPrefix = [FIND_OBJECT_BY_NAME_COMMON_VOICE, FIND_NAMED_IMAGE_FRUIT_CLASSIFIER_VOICE]
+  if (!hasFindTargetVoiceFiles(promptPrefix)) return candidates
+  for (const item of QUESTION_25_WORDS) {
+    if (item.category !== 'fruit') continue
+    const visual = getQuestion25Visual(item)
+    const voice = `${FIND_NAMED_IMAGE_FRUIT_VOICE_ROOT}/${item.imageId}.mp3`
+    const promptVoice = [...promptPrefix, voice]
+    if (!visual || !hasFindTargetVoiceFiles(promptVoice)) continue
+    candidates.push({
+      id: item.id,
+      answerId: findNamedImageAnswerId(category, item.id),
+      category,
+      manifestId: item.manifestId,
+      word: item.word,
+      prompt: `Đâu là quả ${item.word}?`,
+      promptVoice,
+      voice,
+      visual,
+    })
+  }
+  return candidates
+}
+
+export function validateFindNamedImageByNameQuestion(question: GeneratedExamQuestion): void {
+  const data = question.data as {
+    category?: unknown
+    targetItemId?: unknown
+    targetWord?: unknown
+    targetVoiceFileName?: unknown
+    manifestId?: unknown
+  } | undefined
+  const category = data?.category
+  if (category !== 'animal' && category !== 'object' && category !== 'fruit')
+    throw new Error('FIND_NAMED_IMAGE_BY_NAME has an invalid category')
+
+  const candidates = getFindNamedImageCandidates(category)
+  const targetId = typeof data?.targetItemId === 'string' ? data.targetItemId : undefined
+  const target = candidates.find(item => item.id === targetId)
+  const options = question.options ?? []
+  const optionIds = options.map(option => option.id)
+
+  if (question.type !== 'image-choice' || question.templateId !== 'T07'
+    || question.data?.generator !== 'FIND_NAMED_IMAGE_BY_NAME'
+    || question.knowledgeKey !== 'FIND_NAMED_IMAGE_BY_NAME'
+    || !target || data?.manifestId !== target.manifestId || data?.targetWord !== target.word
+    || data?.targetVoiceFileName !== target.voice.slice(target.voice.lastIndexOf('/') + 1)
+    || question.prompt !== target.prompt || JSON.stringify(question.promptVoice) !== JSON.stringify(target.promptVoice)
+    || options.length !== 4 || new Set(optionIds).size !== 4
+    || !optionIds.includes(target.answerId)
+    || options.filter(option => option.id === question.correctAnswer).length !== 1
+    || question.correctAnswer !== target.answerId
+    || options.some(option => {
+      const canonical = candidates.find(item => item.answerId === option.id)
+      return !canonical || option.text !== undefined || option.voice !== undefined
+        || JSON.stringify(option.visual) !== JSON.stringify(canonical.visual)
+    }))
+    throw new Error('FIND_NAMED_IMAGE_BY_NAME has invalid target, image choices, answer, or voice sequence')
+}
+
+export function generateFindNamedImageByNameQuestion(args: {
+  seedHash: string
+  random: Random
+  category?: FindNamedImageCategory
+}): GeneratedExamQuestion {
+  const categories = args.category ? [args.category] : FIND_NAMED_IMAGE_CATEGORIES
+  const availableCategories = categories.filter(category => getFindNamedImageCandidates(category).length >= 4)
+  if (!availableCategories.length) throw new Error('FIND_NAMED_IMAGE_BY_NAME has no category with four voiced image choices')
+
+  const category = pick(availableCategories, args.random)
+  const candidates = getFindNamedImageCandidates(category)
+  const target = pick(candidates, args.random)
+  const choices = [target, ...shuffle(candidates.filter(item => item.id !== target.id), args.random).slice(0, 3)]
+  const options = makeOptions(choices.map(item => ({ id: item.answerId, visual: item.visual })), args.random)
+  const question = baseQuestion(args.seedHash, 'T07', 'image-choice', target.prompt, target.answerId, {
+    options,
+    difficulty: 1,
+    promptVoice: target.promptVoice,
+    data: {
+      generator: 'FIND_NAMED_IMAGE_BY_NAME',
+      category,
+      manifestId: target.manifestId,
+      targetItemId: target.id,
+      targetWord: target.word,
+      targetVoiceFileName: target.voice.slice(target.voice.lastIndexOf('/') + 1),
+    },
+    knowledgeKey: 'FIND_NAMED_IMAGE_BY_NAME',
+  })
+  validateFindNamedImageByNameQuestion(question)
   return question
 }
 
@@ -3175,6 +3474,130 @@ function generateT24(seedHash: string, random: Random) {
   return generateQuestion24({ seedHash, random })
 }
 
+function resolveQuestion33Voice(fruitId: AnimatedQuestion33Data['fruitId'], useHarvestNarration = true): string[] {
+  const sequence = getQuestion33Voice(fruitId, useHarvestNarration)
+  return hasFindTargetVoiceFiles(sequence) ? sequence : []
+}
+
+export function validateQuestion33(question: GeneratedExamQuestion): void {
+  const data = question.data as AnimatedQuestion33Data | undefined
+  const fruit = data && getQuestion33FruitPool().find(item => item.id === data.fruitId)
+  const targets = data?.targets ?? []
+  const options = question.options ?? []
+  const answerId = typeof question.correctAnswer === 'string' ? question.correctAnswer : ''
+  const destination = targets.find(target => target.id === data?.destinationTargetId)
+  const isFillLetterQuestion = question.type === 'text-input'
+  const isLegacySelectQuestion = question.type === 'animated-select'
+  const expectedVoice = data ? resolveQuestion33Voice(data.fruitId, isFillLetterQuestion) : []
+  const expectedLetters = targets.map(target => target.letter)
+  const allowedLetters = data?.allowedLetters ?? []
+  const dataOptions = data?.options ?? []
+  const validTargets = Boolean(fruit) && targets.every((target, index) => {
+    const position = QUESTION_33_TARGET_POSITIONS[index]
+    const visual = fruit ? getQuestion33FruitVisual(fruit) : undefined
+    return Boolean(position) && target.id === `fruit-target-${index + 1}`
+      && target.fruitId === data?.fruitId && target.fruitName === fruit?.word
+      && target.x === position?.x && target.y === position?.y
+      && JSON.stringify(target.visual) === JSON.stringify(visual)
+  })
+  const expectedPrompt = isFillLetterQuestion ? QUESTION_33_PROMPT : QUESTION_33_LEGACY_PROMPT
+  const expectedPromptVoice = isFillLetterQuestion ? QUESTION_33_PROMPT_VOICE : QUESTION_33_LEGACY_PROMPT_VOICE
+  const validFillLetterAnswer = isFillLetterQuestion
+    && JSON.stringify(allowedLetters) === JSON.stringify(QUESTION_33_LETTERS)
+    && data?.options === undefined && options.length === 0
+    && answerId === destination?.letter
+  const validLegacySelectAnswer = isLegacySelectQuestion
+    && dataOptions.length === QUESTION_33_LETTERS.length
+    && JSON.stringify(dataOptions) === JSON.stringify(expectedLetters)
+    && allowedLetters.length === 0
+    && answerId === `letter-${destination?.letter}`
+    && options.length === QUESTION_33_LETTERS.length
+    && new Set(options.map(option => option.id)).size === options.length
+    && options.every(option => QUESTION_33_LETTERS.includes(option.text as typeof QUESTION_33_LETTERS[number])
+      && option.id === `letter-${option.text}` && dataOptions.includes(option.text ?? ''))
+    && options.some(option => option.id === answerId && option.text === destination?.letter)
+  if (!data || question.templateId !== 'T33' || (!isFillLetterQuestion && !isLegacySelectQuestion)
+    || question.subType !== 'girl-harvest-fruit-letter' || data.generator !== 'ANIMATED_GIRL_HARVEST_FRUIT'
+    || data.subType !== 'girl-harvest-fruit-letter' || question.knowledgeKey !== 'GIRL_HARVEST_FRUIT_FIND_LETTER'
+    || !fruit || !QUESTION_33_FRUIT_IDS.includes(data.fruitId)
+    || data.fruitName !== fruit.word
+    || question.prompt !== expectedPrompt || question.promptVoice !== expectedPromptVoice
+    || !hasFindTargetVoiceFiles([expectedPromptVoice])
+    || data.spriteSheet !== QUESTION_33_GIRL_SPRITE_SHEET || data.durationMs !== 9000
+    || data.actorStart?.x !== 85 || data.actorStart?.y !== 74
+    || targets.length !== QUESTION_33_LETTERS.length || new Set(targets.map(target => target.id)).size !== targets.length
+    || new Set(targets.map(target => target.letter)).size !== targets.length
+    || targets.some(target => !QUESTION_33_LETTERS.includes(target.letter as typeof QUESTION_33_LETTERS[number]))
+    || !validTargets || !destination
+    || (!validFillLetterAnswer && !validLegacySelectAnswer)
+    || `${QUESTION_33_TASK_START}${fruit.word} có chữ` !== data.taskText
+    || JSON.stringify(data.voice) !== JSON.stringify(expectedVoice)
+    || !hasFindTargetVoiceFiles(expectedVoice))
+    throw new Error('T33 has invalid fruit, letter targets, answer, sprite, or voice data')
+}
+
+export function generateQuestion33(args: { seedHash: string; random: Random; fillLetter?: boolean }) {
+  const fillLetter = args.fillLetter ?? true
+  const fruitPool = getQuestion33FruitPool()
+  const fruit = fruitPool[Math.floor(args.random() * fruitPool.length)]
+  if (!fruit) throw new Error('T33 has no fruit with an image crop')
+  const visual = getQuestion33FruitVisual(fruit)
+  if (!visual) throw new Error(`T33 fruit is missing its sprite: ${fruit.imageId}`)
+  const letters = shuffle(QUESTION_33_LETTERS, args.random)
+  const correctIndex = Math.floor(args.random() * letters.length)
+  const targets = letters.map((letter, index) => {
+    const position = QUESTION_33_TARGET_POSITIONS[index]
+    if (!position) throw new Error('T33 has no position for a fruit target')
+    return {
+      id: `fruit-target-${index + 1}`,
+      fruitId: fruit.id as AnimatedQuestion33Data['fruitId'],
+      fruitName: fruit.word,
+      letter,
+      x: position.x,
+      y: position.y,
+      visual,
+    }
+  })
+  const destination = targets[correctIndex]
+  if (!destination) throw new Error('T33 has no selected fruit to harvest')
+  const voice = resolveQuestion33Voice(fruit.id as AnimatedQuestion33Data['fruitId'], fillLetter)
+  const questionOptions = fillLetter ? undefined : makeOptions(
+    letters.map(letter => ({ id: `letter-${letter}`, text: letter, visual: letterVisual(letter) })),
+    args.random,
+  )
+  const data: AnimatedQuestion33Data = {
+    generator: 'ANIMATED_GIRL_HARVEST_FRUIT',
+    subType: 'girl-harvest-fruit-letter',
+    fruitId: fruit.id as AnimatedQuestion33Data['fruitId'],
+    fruitName: fruit.word,
+    taskText: `${QUESTION_33_TASK_START}${fruit.word} có chữ`,
+    spriteSheet: QUESTION_33_GIRL_SPRITE_SHEET,
+    durationMs: 9000,
+    actorStart: { x: 85, y: 74 },
+    targets,
+    destinationTargetId: destination.id,
+    ...(fillLetter ? { allowedLetters: [...QUESTION_33_LETTERS] } : { options: targets.map(target => target.letter) }),
+    voice,
+  }
+  const question = baseQuestion(
+    args.seedHash,
+    'T33',
+    fillLetter ? 'text-input' : 'animated-select',
+    fillLetter ? QUESTION_33_PROMPT : QUESTION_33_LEGACY_PROMPT,
+    fillLetter ? destination.letter : `letter-${destination.letter}`,
+    {
+      difficulty: 2,
+      promptVoice: fillLetter ? QUESTION_33_PROMPT_VOICE : QUESTION_33_LEGACY_PROMPT_VOICE,
+      options: questionOptions,
+      subType: 'girl-harvest-fruit-letter',
+      knowledgeKey: 'GIRL_HARVEST_FRUIT_FIND_LETTER',
+      data,
+    },
+  )
+  validateQuestion33(question)
+  return question
+}
+
 const QUESTION_25_MODE_LABEL: Record<Question25AnalysisMode, string> = {
   initial: 'âm đầu',
   rhyme: 'vần',
@@ -3552,6 +3975,7 @@ export function generateImageResemblesLetterQuestion(args: {
     generator: 'IMAGE_RESEMBLES_LETTER',
     subType: 'image-resembles-letter',
     sentencePrefix: QUESTION_29_SENTENCE_PREFIX,
+    instructionVoice: QUESTION_28_29_INSTRUCTION_VOICE,
     asset,
     selectionKey: `${args.templateId}:${asset.id}`,
     choices: options.map(option => option.id),
@@ -3613,6 +4037,7 @@ export function validateImageResemblesLetterQuestion(question: GeneratedExamQues
     || data.subType !== 'image-resembles-letter' || question.knowledgeKey !== 'RECOGNIZE_LETTER_BY_SHAPE'
     || question.prompt !== QUESTION_25_PROMPT || JSON.stringify(question.promptVoice) !== JSON.stringify(promptVoice)
     || data.sentencePrefix !== QUESTION_29_SENTENCE_PREFIX
+    || data.instructionVoice !== QUESTION_28_29_INSTRUCTION_VOICE
     || data.selectionKey !== `${question.templateId}:${asset.id}`
     || question.content?.type !== 'visual' || JSON.stringify(question.content.visual) !== JSON.stringify(expectedVisual)
     || options.length !== 4 || new Set(optionIds).size !== 4
@@ -3744,6 +4169,149 @@ function generateT30(seedHash: string, random: Random, context?: QuestionGenerat
     recentSelectionSignatures: context?.recentQuestionKeys[QUESTION_30_RECENT_KEY] ?? [],
   })
   if (context) context.recentQuestionKeys[QUESTION_30_RECENT_KEY] = [(question.data as Question30Data).selectionSignature]
+  return question
+}
+
+function schoolEventChoiceId(eventId: string): string {
+  return `school-event-${eventId}`
+}
+
+function schoolEventVoicesAvailable(): boolean {
+  return SCHOOL_EVENTS.every(event => hasFindTargetVoiceFiles([event.voice]))
+}
+
+export function validateIdentifySchoolEventQuestion(question: GeneratedExamQuestion): void {
+  const data = question.data as IdentifySchoolEventData | undefined
+  const target = SCHOOL_EVENTS.find(event => event.id === data?.targetEventId)
+  const options = question.options ?? []
+  const voiceChoicesAvailable = schoolEventVoicesAvailable()
+  const expectedPromptVoice = hasFindTargetVoiceFiles([SCHOOL_EVENT_PROMPT_VOICE]) ? [SCHOOL_EVENT_PROMPT_VOICE] : undefined
+  const optionEventIds = options.map(option => option.id.startsWith('school-event-') ? option.id.slice('school-event-'.length) : '')
+
+  if (!target || question.templateId !== 'T31' || question.type !== 'image-choice'
+    || question.data?.generator !== 'IDENTIFY_SCHOOL_EVENT' || data?.subType !== 'identify-school-event'
+    || question.knowledgeKey !== 'IDENTIFY_SCHOOL_EVENT' || question.prompt !== SCHOOL_EVENT_PROMPT
+    || JSON.stringify(question.promptVoice) !== JSON.stringify(expectedPromptVoice)
+    || question.content?.type !== 'visual' || JSON.stringify(question.content.visual) !== JSON.stringify(getSchoolEventVisual(target))
+    || options.length !== SCHOOL_EVENTS.length || new Set(optionEventIds).size !== SCHOOL_EVENTS.length
+    || SCHOOL_EVENTS.some(event => {
+      const option = options.find(candidate => candidate.id === schoolEventChoiceId(event.id))
+      const expectedVoice = hasFindTargetVoiceFiles([event.voice]) ? event.voice : undefined
+      return !option || option.text !== event.label || option.voice !== expectedVoice || option.visual !== undefined
+    })
+    || !data?.choices || JSON.stringify(data.choices) !== JSON.stringify(options.map(option => option.id))
+    || data.voiceChoicesAvailable !== voiceChoicesAvailable
+    || question.correctAnswer !== schoolEventChoiceId(target.id)
+    || options.filter(option => option.id === question.correctAnswer).length !== 1)
+    throw new Error('IDENTIFY_SCHOOL_EVENT has invalid image, choices, answer, or voice assets')
+}
+
+export function generateIdentifySchoolEventQuestion(args: { seedHash: string; random: Random }): GeneratedExamQuestion {
+  const target = pick(SCHOOL_EVENTS, args.random)
+  const voiceChoicesAvailable = schoolEventVoicesAvailable()
+  const options = makeOptions(SCHOOL_EVENTS.map(event => ({
+    id: schoolEventChoiceId(event.id),
+    text: event.label,
+    voice: hasFindTargetVoiceFiles([event.voice]) ? event.voice : undefined,
+  })), args.random)
+  const promptVoice = hasFindTargetVoiceFiles([SCHOOL_EVENT_PROMPT_VOICE]) ? [SCHOOL_EVENT_PROMPT_VOICE] : undefined
+  const data: IdentifySchoolEventData = {
+    generator: 'IDENTIFY_SCHOOL_EVENT',
+    subType: 'identify-school-event',
+    targetEventId: target.id,
+    choices: options.map(option => option.id),
+    voiceChoicesAvailable,
+  }
+  const question = baseQuestion(args.seedHash, 'T31', 'image-choice', SCHOOL_EVENT_PROMPT, schoolEventChoiceId(target.id), {
+    options,
+    difficulty: 1,
+    promptVoice,
+    content: { type: 'visual', visual: getSchoolEventVisual(target) },
+    data,
+    knowledgeKey: 'IDENTIFY_SCHOOL_EVENT',
+  })
+  validateIdentifySchoolEventQuestion(question)
+  return question
+}
+
+type Question34ExamData = {
+  generator: 'ANIMAL_PERCHED_ON_FLOWER_LETTER'
+  subType: 'animal-perched-on-flower-letter'
+  flowers: Question34TestRound['flowers']
+  animals: Question34TestRound['animals']
+  leftItems: Array<{ id: string }>
+  rightItems: Array<{ id: string }>
+  allowedLetters: string[]
+}
+
+export function validateQuestion34(question: GeneratedExamQuestion): void {
+  const data = question.data as Question34ExamData | undefined
+  const flowers = data?.flowers ?? []
+  const animals = data?.animals ?? []
+  const expectedAnswer = Object.fromEntries(animals.map(animal => [
+    animal.id,
+    flowers[animal.flowerIndex]?.letter ?? '',
+  ]))
+  const expectedPromptVoice = hasFindTargetVoiceFiles([QUESTION_34_PROMPT_VOICE])
+    ? QUESTION_34_PROMPT_VOICE : undefined
+  const animalIds = new Set(animals.map(animal => animal.id))
+  const flowerIndexes = animals.map(animal => animal.flowerIndex)
+  const isValidAnimal = (animal: Question34TestRound['animals'][number]) => {
+    const source = QUESTION_34_ANIMALS.find(candidate => candidate.id === animal.id)
+    return Boolean(source)
+      && animal.label === source?.label
+      && animal.voice === source?.voice
+      && JSON.stringify(animal.visual) === JSON.stringify(source?.visual)
+      && hasFindTargetVoiceFiles([animal.voice])
+      && Number.isInteger(animal.flowerIndex)
+      && animal.flowerIndex >= 0 && animal.flowerIndex < flowers.length
+  }
+
+  if (!data || question.templateId !== 'T34' || question.type !== 'matching'
+    || question.subType !== 'animal-perched-on-flower-letter'
+    || data.generator !== 'ANIMAL_PERCHED_ON_FLOWER_LETTER'
+    || data.subType !== 'animal-perched-on-flower-letter'
+    || question.knowledgeKey !== 'ANIMAL_PERCHED_ON_FLOWER_LETTER'
+    || question.prompt !== QUESTION_34_PROMPT
+    || question.promptVoice !== expectedPromptVoice
+    || !hasFindTargetVoiceFiles([QUESTION_34_BAN_VOICE, QUESTION_34_FLOWER_QUESTION_VOICE])
+    || flowers.length !== 3 || new Set(flowers.map(flower => flower.letter)).size !== flowers.length
+    || flowers.some((flower, index) => flower.id !== `flower-${index + 1}`
+      || !QUESTION_34_LETTER_POOL.includes(flower.letter as typeof QUESTION_34_LETTER_POOL[number]))
+    || animals.length !== 2 || animalIds.size !== animals.length || !animals.every(isValidAnimal)
+    || new Set(flowerIndexes).size !== flowerIndexes.length
+    || JSON.stringify(data.allowedLetters) !== JSON.stringify(flowers.map(flower => flower.letter))
+    || JSON.stringify(data.leftItems.map(item => item.id)) !== JSON.stringify(animals.map(animal => animal.id))
+    || JSON.stringify(data.rightItems.map(item => item.id)) !== JSON.stringify(flowers.map(flower => flower.letter))
+    || JSON.stringify(question.correctAnswer) !== JSON.stringify(expectedAnswer))
+    throw new Error('T34 has invalid flowers, perched animals, answers, or voice assets')
+}
+
+export function generateQuestion34(args: { seedHash: string; random: Random }): GeneratedExamQuestion {
+  const round = generateQuestion34TestRound(args)
+  const correctAnswer = Object.fromEntries(round.animals.map(animal => [
+    animal.id,
+    round.flowers[animal.flowerIndex]?.letter ?? '',
+  ]))
+  const data: Question34ExamData = {
+    generator: 'ANIMAL_PERCHED_ON_FLOWER_LETTER',
+    subType: 'animal-perched-on-flower-letter',
+    flowers: round.flowers,
+    animals: round.animals,
+    leftItems: round.animals.map(animal => ({ id: animal.id })),
+    rightItems: round.flowers.map(flower => ({ id: flower.letter })),
+    allowedLetters: round.flowers.map(flower => flower.letter),
+  }
+  const promptVoice = hasFindTargetVoiceFiles([QUESTION_34_PROMPT_VOICE])
+    ? QUESTION_34_PROMPT_VOICE : undefined
+  const question = baseQuestion(args.seedHash, 'T34', 'matching', QUESTION_34_PROMPT, correctAnswer, {
+    difficulty: 2,
+    promptVoice,
+    subType: 'animal-perched-on-flower-letter',
+    knowledgeKey: 'ANIMAL_PERCHED_ON_FLOWER_LETTER',
+    data,
+  })
+  validateQuestion34(question)
   return question
 }
 

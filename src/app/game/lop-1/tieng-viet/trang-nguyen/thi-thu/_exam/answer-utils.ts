@@ -27,7 +27,16 @@ export function isQuestionAnswered(question: ExamQuestion | undefined, answer: E
     case 'hidden-letter-input':
     case 'rotated-letter-input':
       return typeof answer === 'string' && answer.trim().length > 0
-    case 'matching':
+    case 'matching': {
+      if (question.data?.generator === 'ANIMAL_PERCHED_ON_FLOWER_LETTER') {
+        const animalIds = (question.data.leftItems as Array<{ id: string }> | undefined)?.map(item => item.id) ?? []
+        return animalIds.length > 0 && !Array.isArray(answer) && typeof answer === 'object'
+          && Object.keys(answer).length === animalIds.length
+          && animalIds.every(id => typeof answer[id] === 'string' && answer[id].length === 1)
+          && new Set(Object.values(answer)).size === animalIds.length
+      }
+      return !Array.isArray(answer) && typeof answer === 'object' && Object.keys(answer).length > 0
+    }
     case 'drag-to-slot':
       return !Array.isArray(answer) && typeof answer === 'object' && Object.keys(answer).length > 0
     case 'drag-fill': {

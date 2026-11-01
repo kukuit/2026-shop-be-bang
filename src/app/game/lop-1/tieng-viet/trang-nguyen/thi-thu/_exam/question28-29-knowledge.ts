@@ -32,6 +32,8 @@ const QUESTION_29_LETTER_BY_IMAGE_ID: Record<string, string> = {
 const manifest = realObjectLetterShapesManifest
 const manifestId = 'real-object-letter-shapes' as const
 
+export const QUESTION_28_29_INSTRUCTION_VOICE = '/games/lessons/lop-1/tieng-viet/trang-nguyen/voices/common/hinh-anh-tren-giong-chu-gi.mp3'
+
 export const QUESTION_29_ASSETS: readonly ImageResemblesLetterAsset[] = Object.entries(QUESTION_29_LETTER_BY_IMAGE_ID)
   .flatMap(([imageId, resemblesLetter]) => manifest.items.some(item => item.id === imageId)
     ? [{ id: `shape-${imageId}`, manifestId, imageId, resemblesLetter }]

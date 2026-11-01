@@ -47,7 +47,7 @@ export function useExamAudio() {
     }
 
     stop()
-    const sources = typeof src === 'string' ? [src] : [...src]
+    const sources = typeof src === 'string' ? [src] : Array.from(src ?? [])
     if (!sources.length) return
     playingIdRef.current = id
     const clear = () => {

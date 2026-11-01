@@ -1,0 +1,18 @@
+{
+  "id": "school-events-4sheet",
+  "image": "/games/lessons/lop-1/tieng-viet/trang-nguyen/images/school-events-4sheet.webp",
+  "width": 1254,
+  "height": 1254,
+  "grid": {
+    "columns": 2,
+    "rows": 2,
+    "cellWidth": 627,
+    "cellHeight": 627
+  },
+  "items": [
+    { "id": "le-khai-giang", "row": 0, "col": 0, "x": 0, "y": 0, "width": 627, "height": 627 },
+    { "id": "le-be-giang", "row": 0, "col": 1, "x": 627, "y": 0, "width": 627, "height": 627 },
+    { "id": "tet-thieu-nhi", "row": 1, "col": 0, "x": 0, "y": 627, "width": 627, "height": 627 },
+    { "id": "ngay-nha-giao-viet-nam", "row": 1, "col": 1, "x": 627, "y": 627, "width": 627, "height": 627 }
+  ]
+}

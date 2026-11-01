@@ -3,9 +3,7 @@
 import { useState } from 'react'
 import type { ExamAnswer, ExamQuestion } from '../../_exam/types'
 import type { TestExamQuestion } from './test-types'
-import ExamAudioButton from '../../_components/ExamAudioButton'
 import QuestionRenderer, { type QuestionRendererProps } from '../../_components/QuestionRenderer'
-import styles from './TestQuestionRenderer.module.css'
 
 type Feedback = {
   submittedAnswer: ExamAnswer | undefined
@@ -52,8 +50,7 @@ export default function TestQuestionRenderer({
 }: Omit<QuestionRendererProps, 'question'> & { question: TestExamQuestion & { correctAnswer?: ExamAnswer }; testAnswer?: ExamAnswer }) {
   const [feedback, setFeedback] = useState<Feedback | null>(null)
   const expected = testAnswer ?? question.testAnswer ?? question.correctAnswer
-  const { testAnswer: _testAnswer, testTrailingVoice, correctAnswer: _correctAnswer, ...visibleQuestion } = question
-  const trailingVoiceId = `${question.id}:test-trailing-voice`
+  const { testAnswer: _testAnswer, correctAnswer: _correctAnswer, ...visibleQuestion } = question
   const currentFeedback = feedback && sameSubmission(feedback.submittedAnswer, rendererProps.answer) ? feedback : null
 
   function checkAnswer() {
@@ -80,19 +77,8 @@ export default function TestQuestionRenderer({
           : null
 
   return <>
-    {testTrailingVoice
-      ? <div className={styles.questionWithTrailingVoice}>
-        <QuestionRenderer {...rendererProps} question={visibleQuestion} />
-        <div className={styles.trailingVoiceRow}>
-          <ExamAudioButton
-            active={rendererProps.playingId === trailingVoiceId}
-            label={`Nghe câu hỏi hình ảnh trên giống chữ gì ở câu ${question.number}`}
-            onClick={() => rendererProps.onPlayAudio(trailingVoiceId, testTrailingVoice)}
-          />
-        </div>
-      </div>
-      : <QuestionRenderer {...rendererProps} question={visibleQuestion} />}
-    <div className={`${testTrailingVoice ? '' : '-mt-3'} mb-5 flex flex-wrap items-center gap-3 rounded-b-lg border border-t-0 border-slate-200 bg-slate-50 px-4 py-3`}>
+    <QuestionRenderer {...rendererProps} question={visibleQuestion} />
+    <div className="-mt-3 mb-5 flex flex-wrap items-center gap-3 rounded-b-lg border border-t-0 border-slate-200 bg-slate-50 px-4 py-3">
       <button
         type="button"
         disabled={rendererProps.disabled}

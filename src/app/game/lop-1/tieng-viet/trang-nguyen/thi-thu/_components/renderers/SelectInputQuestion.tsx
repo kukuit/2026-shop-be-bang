@@ -4,6 +4,7 @@ import QuestionFrame, { type QuestionRendererProps } from './QuestionFrame'
 import QuestionVisual from './QuestionVisual'
 import ExamAudioButton from '../ExamAudioButton'
 import styles from '../exam.module.css'
+import { QUESTION_28_29_INSTRUCTION_VOICE } from '../../_exam/question28-29-knowledge'
 import type { CommonSoundData, ExamOption, ImageResemblesLetterData, ImageWordAnalysisData } from '../../_exam/types'
 
 export default function SelectInputQuestion(props: QuestionRendererProps) {
@@ -83,6 +84,8 @@ export default function SelectInputQuestion(props: QuestionRendererProps) {
   if (question.data?.generator === 'IMAGE_RESEMBLES_LETTER') {
     const data = question.data as unknown as ImageResemblesLetterData
     const selectedValue = typeof answer === 'string' ? answer : ''
+    const instructionAudioId = `${question.id}:image-letter-instruction`
+    const instructionVoice = data.instructionVoice ?? QUESTION_28_29_INSTRUCTION_VOICE
     return <QuestionFrame {...props}>
       <div className={styles.imageWordAnalysis}>
         {question.content?.type === 'visual' && question.content.visual && <div className={styles.imageResemblesLetterVisual}>
@@ -101,6 +104,14 @@ export default function SelectInputQuestion(props: QuestionRendererProps) {
             {(question.options ?? []).map(option => <option key={option.id} value={option.id}>{option.text ?? option.id}</option>)}
           </select>
           <span>.</span>
+        </div>
+        <div className={styles.answerVoiceRow}>
+          <ExamAudioButton
+            compact
+            active={props.playingId === instructionAudioId}
+            label={`Nghe câu hỏi hình ảnh trên giống chữ gì ở câu ${question.number}`}
+            onClick={() => props.onPlayAudio(instructionAudioId, instructionVoice)}
+          />
         </div>
       </div>
     </QuestionFrame>

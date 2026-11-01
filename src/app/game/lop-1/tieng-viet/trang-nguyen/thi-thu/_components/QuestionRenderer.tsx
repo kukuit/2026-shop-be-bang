@@ -21,6 +21,8 @@ import SortingQuestion from './renderers/SortingQuestion'
 import TextInputQuestion from './renderers/TextInputQuestion'
 import VideoSelectQuestion from './renderers/VideoSelectQuestion'
 import AnimatedSelectQuestion from './renderers/AnimatedSelectQuestion'
+import AnimatedFruitHarvestQuestion from './renderers/AnimatedFruitHarvestQuestion'
+import FlowerGardenQuestion from './renderers/FlowerGardenQuestion'
 
 export type QuestionRendererProps = {
   question: ExamQuestion
@@ -43,6 +45,7 @@ export default function QuestionRenderer(props: QuestionRendererProps) {
       return <MultiSelectQuestion {...props} />
     case 'text-input':
       if (props.question.data?.generator === 'FILL_LETTER_IN_BLANK') return <LetterInputQuestion {...props} />
+      if (props.question.data?.generator === 'ANIMATED_GIRL_HARVEST_FRUIT') return <AnimatedFruitHarvestQuestion {...props} />
       return <TextInputQuestion {...props} />
     case 'hidden-letter-input':
       return <HiddenLetterInputQuestion {...props} />
@@ -52,6 +55,7 @@ export default function QuestionRenderer(props: QuestionRendererProps) {
       if (props.question.data?.generator === 'COUNT_TARGET_LETTER') return <CountLetterInputQuestion {...props} />
       return <NumberInputQuestion {...props} />
     case 'matching':
+      if (props.question.data?.generator === 'ANIMAL_PERCHED_ON_FLOWER_LETTER') return <FlowerGardenQuestion {...props} />
       return <MatchingQuestion {...props} />
     case 'drag-match':
       return <DragMatchQuestion {...props} />

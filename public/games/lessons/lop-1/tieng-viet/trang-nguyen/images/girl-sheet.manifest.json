@@ -1,0 +1,230 @@
+{
+  "frames": {
+    "walk_1": {
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 256,
+        "h": 256
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 256,
+        "h": 256
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 256
+      }
+    },
+    "walk_2": {
+      "frame": {
+        "x": 256,
+        "y": 0,
+        "w": 256,
+        "h": 256
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 256,
+        "h": 256
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 256
+      }
+    },
+    "walk_3": {
+      "frame": {
+        "x": 512,
+        "y": 0,
+        "w": 256,
+        "h": 256
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 256,
+        "h": 256
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 256
+      }
+    },
+    "walk_4": {
+      "frame": {
+        "x": 768,
+        "y": 0,
+        "w": 256,
+        "h": 256
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 256,
+        "h": 256
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 256
+      }
+    },
+    "reach": {
+      "frame": {
+        "x": 0,
+        "y": 256,
+        "w": 256,
+        "h": 256
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 256,
+        "h": 256
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 256
+      }
+    },
+    "pick": {
+      "frame": {
+        "x": 256,
+        "y": 256,
+        "w": 256,
+        "h": 256
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 256,
+        "h": 256
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 256
+      }
+    },
+    "lower_hand": {
+      "frame": {
+        "x": 512,
+        "y": 256,
+        "w": 256,
+        "h": 256
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 256,
+        "h": 256
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 256
+      }
+    },
+    "happy": {
+      "frame": {
+        "x": 768,
+        "y": 256,
+        "w": 256,
+        "h": 256
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 256,
+        "h": 256
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 256
+      }
+    }
+  },
+  "animations": {
+    "walk": {
+      "frames": [
+        "walk_1",
+        "walk_2",
+        "walk_3",
+        "walk_4"
+      ],
+      "frameRate": 8,
+      "repeat": -1
+    },
+    "reach": {
+      "frames": [
+        "reach"
+      ],
+      "frameRate": 1,
+      "repeat": 0
+    },
+    "pick": {
+      "frames": [
+        "pick"
+      ],
+      "frameRate": 1,
+      "repeat": 0
+    },
+    "lower_hand": {
+      "frames": [
+        "lower_hand"
+      ],
+      "frameRate": 1,
+      "repeat": 0
+    },
+    "happy": {
+      "frames": [
+        "happy"
+      ],
+      "frameRate": 1,
+      "repeat": 0
+    },
+    "pick_sequence": {
+      "frames": [
+        "reach",
+        "pick",
+        "lower_hand",
+        "happy"
+      ],
+      "frameRate": 3,
+      "repeat": 0
+    }
+  },
+  "meta": {
+    "image": "girl-sheet.webp",
+    "size": {
+      "w": 1024,
+      "h": 512
+    },
+    "scale": "1",
+    "grid": {
+      "columns": 4,
+      "rows": 2,
+      "frameWidth": 256,
+      "frameHeight": 256
+    },
+    "format": "RGBA",
+    "notes": "Image source may contain light background; alpha transparency was not verified as fully transparent."
+  }
+}
