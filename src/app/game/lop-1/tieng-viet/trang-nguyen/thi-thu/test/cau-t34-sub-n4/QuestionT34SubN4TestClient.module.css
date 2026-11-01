@@ -12,7 +12,7 @@
   box-sizing: border-box;
   min-width: 0;
   display: grid;
-  gap: 14px;
+  gap: 12px;
   padding: 18px;
   border: 1px solid #d8e2e8;
   border-radius: 14px;
@@ -20,7 +20,9 @@
   box-shadow: 0 3px 14px rgb(30 64 83 / 8%);
 }
 
-.instructions { margin-bottom: 14px; }
+.instructions {
+  margin-bottom: 14px;
+}
 
 .prompt {
   min-width: 0;
@@ -33,7 +35,9 @@
   font-weight: 700;
 }
 
-.prompt p { margin: 0; }
+.prompt p {
+  margin: 0;
+}
 
 .actions {
   display: flex;
@@ -55,7 +59,10 @@
   cursor: pointer;
 }
 
-.actions button + button { background: #e7f0f4; color: #244350; }
+.actions button + button {
+  background: #e7f0f4;
+  color: #244350;
+}
 
 .volume {
   display: flex;
@@ -66,7 +73,10 @@
   font-size: 13px;
 }
 
-.volume input { width: 92px; accent-color: #036b82; }
+.volume input {
+  width: 92px;
+  accent-color: #036b82;
+}
 
 .score {
   color: #15803d;
@@ -74,7 +84,9 @@
   font-weight: 800;
 }
 
-.question { margin-bottom: 14px; }
+.question {
+  margin-bottom: 14px;
+}
 
 .questionTitle {
   margin: 0;
@@ -139,8 +151,12 @@
   font-weight: 700;
 }
 
-.correct { color: #15803d; }
-.incorrect { color: #b91c1c; }
+.correct {
+  color: #15803d;
+}
+.incorrect {
+  color: #b91c1c;
+}
 
 .note {
   margin: 0;
@@ -149,10 +165,21 @@
 }
 
 @media (max-width: 640px) {
-  .test { padding: 10px; }
+  .test {
+    padding: 10px;
+  }
   .instructions,
-  .question { gap: 10px; padding: 12px; }
-  .prompt { font-size: 15px; }
-  .answerLine { font-size: 14px; }
-  .volume { margin-left: 0; }
+  .question {
+    gap: 10px;
+    padding: 12px;
+  }
+  .prompt {
+    font-size: 15px;
+  }
+  .answerLine {
+    font-size: 14px;
+  }
+  .volume {
+    margin-left: 0;
+  }
 }
